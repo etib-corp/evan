@@ -1,4 +1,0 @@
-Checks: 'clang-analyzer-*,bugprone-*,performance-*,readability-*'
-WarningsAsErrors: ''
-HeaderFilterRegex: 'headers/.*'
-FormatStyle: file
