@@ -19,11 +19,4 @@
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef TESTING
-
-int main(int argc, char *argv[], char *envp[])
-{
-	return 0;
-}
-
-#endif
+#include "evan.hpp"
