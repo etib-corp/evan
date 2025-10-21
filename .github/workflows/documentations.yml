@@ -1,0 +1,72 @@
+name: Doxygen CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate Doxygen Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz --no-install-recommends
+
+      - name: Configure CMake with Documentation
+        run: |
+          cmake -B build -S . -DBUILD_DOCS=ON
+
+      - name: Build Documentation
+        run: |
+          cmake --build build --target docs
+
+      - name: Save build output
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: docs
+          path: build/docs/generated-docs/html
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Deploy to GitHub Pages
+    needs: generate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+        with:
+          submodules: recursive
+
+      - name: Restore build output
+        uses: actions/download-artifact@v5.0.0
+        with:
+          name: docs
+          path: docs/html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5.0.0
+
+      - name: Upload artifact to Pages
+        uses: actions/upload-pages-artifact@v4.0.0
+        with:
+          path: docs/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5
