@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** GraphicalContext
 */
 
 #include "xr/GraphicalContext.hpp"
 
-maverik::xr::GraphicalContext::GraphicalContext(
+evan::xr::GraphicalContext::GraphicalContext(
     const GraphicalContextPropertiesXR &properties)
     : _XRinstance(properties._XRinstance), _XRsystemID(properties._XRsystemID) {
   createInstance();
@@ -18,7 +18,7 @@ maverik::xr::GraphicalContext::GraphicalContext(
   renderingProperties._vulkanInstance = _instance;
 
   _renderingContext =
-      std::make_shared<maverik::xr::RenderingContext>(renderingProperties);
+      std::make_shared<evan::xr::RenderingContext>(renderingProperties);
 
   initializeSession();
 
@@ -35,12 +35,12 @@ maverik::xr::GraphicalContext::GraphicalContext(
   swapchainProperties._graphicsQueue = vulkanContext->graphicsQueue;
 
   _swapchainContext =
-      std::make_shared<maverik::xr::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::xr::SwapchainContext>(swapchainProperties);
 }
 
-maverik::xr::GraphicalContext::~GraphicalContext() {}
+evan::xr::GraphicalContext::~GraphicalContext() {}
 
-void maverik::xr::GraphicalContext::initializeSession() {
+void evan::xr::GraphicalContext::initializeSession() {
   if (_XRsession != XR_NULL_HANDLE)
     return;
 
@@ -72,7 +72,7 @@ void maverik::xr::GraphicalContext::initializeSession() {
   }
 }
 
-void maverik::xr::GraphicalContext::createVisualizedSpace() {
+void evan::xr::GraphicalContext::createVisualizedSpace() {
   XrReferenceSpaceCreateInfo spaceCreateInfo{};
   spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
   spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
@@ -87,7 +87,7 @@ void maverik::xr::GraphicalContext::createVisualizedSpace() {
   _XRvisualizedSpaces.push_back(space);
 }
 
-void maverik::xr::GraphicalContext::createInstance() {
+void evan::xr::GraphicalContext::createInstance() {
   XrGraphicsRequirementsVulkan2KHR graphicsRequirements{};
   PFN_xrGetVulkanGraphicsRequirements2KHR xrGetVulkanGraphicsRequirements2KHR =
       nullptr;
@@ -122,7 +122,7 @@ void maverik::xr::GraphicalContext::createInstance() {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = "test",
       .applicationVersion = 0u,
-      .pEngineName = "maverik",
+      .pEngineName = "evan",
       .engineVersion = 0u,
       .apiVersion = VK_API_VERSION_1_3,
   };
@@ -159,6 +159,6 @@ void maverik::xr::GraphicalContext::createInstance() {
 }
 
 std::vector<std::string>
-maverik::xr::GraphicalContext::getInstanceExtensions() {
+evan::xr::GraphicalContext::getInstanceExtensions() {
   return {XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
 }

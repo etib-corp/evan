@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AGraphicalContext
 */
@@ -13,7 +13,7 @@
 #include <memory>
 #include <string>
 
-namespace maverik {
+namespace evan {
 /**
  * @brief Abstract base class representing a graphical context for Vulkan
  * rendering.
@@ -99,4 +99,4 @@ protected:
   VkInstance _instance =
       VK_NULL_HANDLE; // Vulkan instance for the graphical context
 };
-} // namespace maverik
+} // namespace evan

@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Vertex
 */
@@ -8,9 +8,9 @@
 #ifndef VERTEX_HPP_
 #define VERTEX_HPP_
 
-#include "maverik.hpp"
+#include "evan.hpp"
 
-namespace maverik {
+namespace evan {
 /**
  * @brief Vertex structure.
  *
@@ -91,6 +91,6 @@ struct Vertex {
            texCoord == other.texCoord;
   }
 };
-} // namespace maverik
+} // namespace evan
 
 #endif /* !VERTEX_HPP_ */

@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ASwapchainContext
 */
@@ -8,12 +8,12 @@
 #pragma once
 
 #include "ASwapchain.hpp"
-#include "maverik.hpp"
+#include "evan.hpp"
 
 #include <memory>
 #include <vector>
 
-namespace maverik {
+namespace evan {
 class ASwapchainContext {
 public:
   virtual ~ASwapchainContext() = default;
@@ -71,4 +71,4 @@ protected:
   std::vector<ASwapchain<XrSwapchain>> _swapchain; // OpenXR swapchains
 #endif
 };
-} // namespace maverik
+} // namespace evan

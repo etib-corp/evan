@@ -1,6 +1,6 @@
 /*
 ** EPITECH PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Version
 */
@@ -8,9 +8,9 @@
 #ifndef VERSION_HPP_
 #define VERSION_HPP_
 
-#include "maverik.hpp"
+#include "evan.hpp"
 
-namespace maverik {
+namespace evan {
 /**
  * @class Version
  * @brief Represents a software version using major, minor, and patch numbers.
@@ -60,6 +60,6 @@ public:
   unsigned int _minor; // Minor version number
   unsigned int _patch; // Patch version number
 };
-} // namespace maverik
+} // namespace evan
 
 #endif /* !VERSION_HPP_ */

@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** GraphicalContext
 */
@@ -12,7 +12,7 @@
 #include "xr/RenderingContext.hpp"
 #include "xr/SwapchainContext.hpp"
 
-namespace maverik {
+namespace evan {
 namespace xr {
 
 /**
@@ -38,7 +38,7 @@ struct GraphicalContextPropertiesXR {
  * Vulkan instance, initialization of the XR session, and management of
  * visualized reference spaces.
  */
-class GraphicalContext : public maverik::AGraphicalContext {
+class GraphicalContext : public evan::AGraphicalContext {
 public:
   /**
    * @brief Constructs a GraphicalContext object for XR rendering.
@@ -132,4 +132,4 @@ private:
       _XRvisualizedSpaces; // Container for visualized reference spaces
 };
 } // namespace xr
-} // namespace maverik
+} // namespace evan

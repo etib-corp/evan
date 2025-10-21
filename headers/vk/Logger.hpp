@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Logger
 */
@@ -10,22 +10,22 @@
 #include "ALogger.hpp"
 
 /**
- * @namespace maverik
+ * @namespace evan
  */
-namespace maverik {
+namespace evan {
 /**
  * @namespace vk
  */
 namespace vk {
 /**
  * @class Logger
- * @brief The `maverik::vk::Logger` class is a concrete implementation of the
- * `maverik::ALogger` interface, designed to log messages to a specified output
+ * @brief The `evan::vk::Logger` class is a concrete implementation of the
+ * `evan::ALogger` interface, designed to log messages to a specified output
  * stream. It provides functionality to log messages with a log level and caller
  * information, and it supports initialization with a program name and an
  * optional environment setting.
  */
-class Logger : public maverik::ALogger {
+class Logger : public evan::ALogger {
 public:
   /**
    * @brief Construct a new Logger object
@@ -45,7 +45,7 @@ public:
   ~Logger() override = default;
 
   /**
-   * @brief The log method in the `maverik::vk::Logger` class is a virtual
+   * @brief The log method in the `evan::vk::Logger` class is a virtual
    * function that overrides a base class method. It logs a message with a
    * specified log level and caller information, taking three constant string
    * references as parameters and ensuring no modification to the class state
@@ -62,4 +62,4 @@ private:
                          ///< messages will be written
 };
 }; // namespace vk
-} // namespace maverik
+} // namespace evan

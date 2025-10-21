@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Software
 */
 
 #include "xr/Software.hpp"
 
-maverik::xr::Software::Software(
+evan::xr::Software::Software(
     const std::shared_ptr<PlatformData> &platformData) {
   _platform = std::make_shared<AndroidPlatform>(platformData);
   _graphicalContext = nullptr;
@@ -18,12 +18,12 @@ maverik::xr::Software::Software(
   properties._XRinstance = _XRinstance;
   properties._XRsystemID = _XRsystemID;
   _graphicalContext =
-      std::make_shared<maverik::xr::GraphicalContext>(properties);
+      std::make_shared<evan::xr::GraphicalContext>(properties);
 }
 
-maverik::xr::Software::~Software() {}
+evan::xr::Software::~Software() {}
 
-void maverik::xr::Software::createInstance() {
+void evan::xr::Software::createInstance() {
   if (_XRinstance != XR_NULL_HANDLE)
     return;
   std::vector<const char *> extensions{
@@ -42,7 +42,7 @@ void maverik::xr::Software::createInstance() {
   createInfo.enabledExtensionNames = extensions.data();
   createInfo.enabledApiLayerCount = 0;
   createInfo.enabledApiLayerNames = nullptr;
-  std::strcpy(createInfo.applicationInfo.applicationName, "maverik");
+  std::strcpy(createInfo.applicationInfo.applicationName, "evan");
   createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
   if (xrCreateInstance(&createInfo, &_XRinstance) != XR_SUCCESS) {
@@ -51,7 +51,7 @@ void maverik::xr::Software::createInstance() {
   }
 }
 
-void maverik::xr::Software::initializeSystem() {
+void evan::xr::Software::initializeSystem() {
   if (_XRsystemID != XR_NULL_SYSTEM_ID)
     return;
 

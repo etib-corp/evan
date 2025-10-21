@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AAssetManager
 */
@@ -15,11 +15,11 @@
 #include <utility>
 
 /**
- * @namespace maverik
- * @brief The maverik namespace contains classes and functions for the maverik
+ * @namespace evan
+ * @brief The evan namespace contains classes and functions for the evan
  * project.
  */
-namespace maverik {
+namespace evan {
 /**
  * @class AAssetManager
  * @brief The AAssetManager class is an abstract base class for managing file
@@ -41,7 +41,7 @@ public:
    * This method is responsible for loading the asset from the specified path
    * by reading the file content and storing it in the _assets map.
    */
-  virtual std::shared_ptr<maverik::FileAsset> add(const std::string &path) = 0;
+  virtual std::shared_ptr<evan::FileAsset> add(const std::string &path) = 0;
 
   /**
    * @brief Removes an asset from the manager.
@@ -89,11 +89,11 @@ public:
    * This method retrieves the asset from the _assets map.
    * If the asset does not exist, it returns a nullptr.
    */
-  std::shared_ptr<maverik::FileAsset> get(const std::string &path);
+  std::shared_ptr<evan::FileAsset> get(const std::string &path);
 
 protected:
-  std::map<std::string, std::shared_ptr<maverik::FileAsset>>
+  std::map<std::string, std::shared_ptr<evan::FileAsset>>
       _assets; ///> The map of assets, where the key is the path and the value
                ///is a shared pointer to the FileAsset object.
 };
-} // namespace maverik
+} // namespace evan

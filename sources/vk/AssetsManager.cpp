@@ -1,14 +1,14 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AssetsManager
 */
 
 #include "vk/AssetsManager.hpp"
 
-std::shared_ptr<maverik::FileAsset>
-maverik::vk::AssetsManager::add(const std::string &path) {
+std::shared_ptr<evan::FileAsset>
+evan::vk::AssetsManager::add(const std::string &path) {
   if (this->exists(path)) {
     return _assets[path];
   }
@@ -24,7 +24,7 @@ maverik::vk::AssetsManager::add(const std::string &path) {
   file.seekg(0, std::ios::beg);
   file.read(&content[0], content.size());
   file.close();
-  _assets[path] = std::make_shared<maverik::FileAsset>(content);
+  _assets[path] = std::make_shared<evan::FileAsset>(content);
   if (!_assets[path]) {
     std::cerr << "Failed to create FileAsset for: " << path << std::endl;
     return nullptr;
@@ -32,7 +32,7 @@ maverik::vk::AssetsManager::add(const std::string &path) {
   return _assets[path];
 }
 
-void maverik::vk::AssetsManager::remove(const std::string &path, bool save) {
+void evan::vk::AssetsManager::remove(const std::string &path, bool save) {
   auto it = _assets.find(path);
   if (it != _assets.end()) {
     if (save) {
@@ -44,7 +44,7 @@ void maverik::vk::AssetsManager::remove(const std::string &path, bool save) {
   }
 }
 
-bool maverik::vk::AssetsManager::save(const std::string &path,
+bool evan::vk::AssetsManager::save(const std::string &path,
                                       const std::string &newPath) {
   auto it = _assets.find(path);
   if (it == _assets.end()) {

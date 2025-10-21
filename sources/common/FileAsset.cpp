@@ -1,17 +1,17 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** FileAsset
 */
 
 #include "FileAsset.hpp"
 
-maverik::FileAsset::FileAsset(const std::string &content) : _content(content) {}
+evan::FileAsset::FileAsset(const std::string &content) : _content(content) {}
 
-maverik::FileAsset::~FileAsset() {}
+evan::FileAsset::~FileAsset() {}
 
-size_t maverik::FileAsset::write(const void *ptr, size_t size, size_t nmemb) {
+size_t evan::FileAsset::write(const void *ptr, size_t size, size_t nmemb) {
   size_t lenBefore = _content.size();
   size_t newLen = lenBefore + size * nmemb;
   if (newLen > _content.capacity()) {
@@ -22,7 +22,7 @@ size_t maverik::FileAsset::write(const void *ptr, size_t size, size_t nmemb) {
   return (_content.size() - lenBefore) / size;
 }
 
-size_t maverik::FileAsset::read(void *ptr, size_t size, size_t count) {
+size_t evan::FileAsset::read(void *ptr, size_t size, size_t count) {
   size_t toRead = size * count;
   if (_pos + toRead > _content.size())
     toRead = _content.size() - _pos;
@@ -31,11 +31,11 @@ size_t maverik::FileAsset::read(void *ptr, size_t size, size_t count) {
   return toRead / size;
 }
 
-size_t maverik::FileAsset::read(std::string &str, size_t size, size_t count) {
+size_t evan::FileAsset::read(std::string &str, size_t size, size_t count) {
   return this->read(&str[0], size, count);
 }
 
-int maverik::FileAsset::seek(long offset, Seek whence) {
+int evan::FileAsset::seek(long offset, Seek whence) {
   switch (whence) {
   case FileAsset::Seek::SET:
     _pos = offset;
@@ -52,4 +52,4 @@ int maverik::FileAsset::seek(long offset, Seek whence) {
   return 0;
 }
 
-size_t maverik::FileAsset::tell() { return _pos; }
+size_t evan::FileAsset::tell() { return _pos; }

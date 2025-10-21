@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ARenderingContext
 */
 
 #pragma once
 
-#include "maverik.hpp"
+#include "evan.hpp"
 #include <array>
 #include <memory>
 
@@ -62,7 +62,7 @@ struct VulkanContext {
 
 #endif
 
-namespace maverik {
+namespace evan {
 class ARenderingContext {
 public:
   virtual ~ARenderingContext() = default;
@@ -161,4 +161,4 @@ protected:
   std::shared_ptr<VulkanContext>
       _vulkanContext; // Shared pointer to Vulkan context
 };
-} // namespace maverik
+} // namespace evan

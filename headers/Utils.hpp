@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Utils
 */
@@ -16,7 +16,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace maverik {
+namespace evan {
 class Utils {
 public:
   virtual ~Utils() = default;
@@ -447,6 +447,6 @@ private:
   checkDeviceExtensionSupport(VkPhysicalDevice device,
                               std::vector<const char *> deviceExtensions);
 };
-} // namespace maverik
+} // namespace evan
 
 #endif /* !UTILS_HPP_ */

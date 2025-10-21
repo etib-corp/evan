@@ -1,6 +1,6 @@
 /*
 ** EPITECH PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** GraphicalContext
 */
@@ -25,21 +25,21 @@ defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 // Public methods //
 ////////////////////
 
-maverik::vk::GraphicalContext::GraphicalContext() {
+evan::vk::GraphicalContext::GraphicalContext() {
   _appName = "Hello, World !";
   _appVersion = new Version(1, 0, 0);
-  _engineName = "Maverik";
+  _engineName = "Evan";
   _engineVersion = new Version(1, 0, 0);
 
   this->createInstance();
 
-  maverik::vk::RenderingContext::WindowProperties windowProperties = {
+  evan::vk::RenderingContext::WindowProperties windowProperties = {
       .width = 800, .height = 600, .title = _appName};
-  _renderingContext = std::make_shared<maverik::vk::RenderingContext>(
+  _renderingContext = std::make_shared<evan::vk::RenderingContext>(
       windowProperties, _instance);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
-  maverik::vk::SwapchainContext::SwapchainContextCreationProperties
+  evan::vk::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
@@ -50,10 +50,10 @@ maverik::vk::GraphicalContext::GraphicalContext() {
                              ._instance = _instance};
 
   _swapchainContext =
-      std::make_shared<maverik::vk::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::vk::SwapchainContext>(swapchainProperties);
 }
 
-maverik::vk::GraphicalContext::GraphicalContext(const std::string &appName,
+evan::vk::GraphicalContext::GraphicalContext(const std::string &appName,
                                                 const Version &appVersion,
                                                 const std::string &engineName,
                                                 const Version &engineVersion,
@@ -66,13 +66,13 @@ maverik::vk::GraphicalContext::GraphicalContext(const std::string &appName,
 
   this->createInstance();
 
-  maverik::vk::RenderingContext::WindowProperties windowProperties = {
+  evan::vk::RenderingContext::WindowProperties windowProperties = {
       .width = windowWidth, .height = windowHeight, .title = _appName};
-  _renderingContext = std::make_shared<maverik::vk::RenderingContext>(
+  _renderingContext = std::make_shared<evan::vk::RenderingContext>(
       windowProperties, _instance);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
-  maverik::vk::SwapchainContext::SwapchainContextCreationProperties
+  evan::vk::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
@@ -83,10 +83,10 @@ maverik::vk::GraphicalContext::GraphicalContext(const std::string &appName,
                              ._instance = _instance};
 
   _swapchainContext =
-      std::make_shared<maverik::vk::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::vk::SwapchainContext>(swapchainProperties);
 }
 
-maverik::vk::GraphicalContext::~GraphicalContext() {
+evan::vk::GraphicalContext::~GraphicalContext() {
   delete _appVersion;
   delete _engineVersion;
 
@@ -100,7 +100,7 @@ maverik::vk::GraphicalContext::~GraphicalContext() {
   vkDestroyInstance(_instance, nullptr);
 }
 
-void maverik::vk::GraphicalContext::createInstance() {
+void evan::vk::GraphicalContext::createInstance() {
   if (enableValidationLayers && !this->checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers requested, but not available!");
   }
@@ -179,7 +179,7 @@ void maverik::vk::GraphicalContext::createInstance() {
 }
 
 std::vector<std::string>
-maverik::vk::GraphicalContext::getInstanceExtensions() {
+evan::vk::GraphicalContext::getInstanceExtensions() {
   uint32_t glfwExtensionCount = 0;
   const char **glfwExtensions =
       glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -197,7 +197,7 @@ maverik::vk::GraphicalContext::getInstanceExtensions() {
 // Private methods //
 /////////////////////
 
-void maverik::vk::GraphicalContext::populateDebugMessengerCreateInfo(
+void evan::vk::GraphicalContext::populateDebugMessengerCreateInfo(
     VkDebugUtilsMessengerCreateInfoEXT &createInfo,
     debugCallback_t debugCallback) {
   createInfo = {};
@@ -211,7 +211,7 @@ void maverik::vk::GraphicalContext::populateDebugMessengerCreateInfo(
   createInfo.pfnUserCallback = debugCallback;
 }
 
-bool maverik::vk::GraphicalContext::checkValidationLayerSupport() {
+bool evan::vk::GraphicalContext::checkValidationLayerSupport() {
   uint32_t layerCount;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
   std::vector<VkLayerProperties> availableLayers(layerCount);

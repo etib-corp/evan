@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AssetsManager
 */
@@ -11,11 +11,11 @@
 #include <iostream>
 
 /**
- * @namespace maverik
- * @brief The maverik namespace contains classes and functions for the maverik
+ * @namespace evan
+ * @brief The evan namespace contains classes and functions for the evan
  * project.
  */
-namespace maverik {
+namespace evan {
 /**
  * @namespace vk
  * @brief The vk namespace contains classes and functions for the Vulkan
@@ -47,7 +47,7 @@ public:
    * @return A shared pointer to the FileAsset object. If the file can't be
    * opened, it returns a nullptr and logs an error message.
    */
-  std::shared_ptr<maverik::FileAsset> add(const std::string &path) override;
+  std::shared_ptr<evan::FileAsset> add(const std::string &path) override;
 
   /**
    * @brief Removes an asset from the manager.
@@ -73,4 +73,4 @@ public:
   bool save(const std::string &path, const std::string &newPath = "") override;
 };
 } // namespace vk
-} // namespace maverik
+} // namespace evan

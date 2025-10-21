@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** SwapchainContext
 */
@@ -20,7 +20,7 @@
 #define MAX_FRAMES_IN_FLIGHT 2
 #endif
 
-namespace maverik {
+namespace evan {
 namespace vk {
 /**
  * @class SwapchainContext
@@ -526,6 +526,6 @@ private:
                                   VkSampler textureSampler);
 };
 } // namespace vk
-} // namespace maverik
+} // namespace evan
 
 #endif /* !SWAPCHAINCONTEXT_HPP_ */

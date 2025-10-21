@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ARenderingContext
 */
@@ -12,7 +12,7 @@
 ///////////////////////
 
 VkSampleCountFlagBits
-maverik::ARenderingContext::getMaxUsableSampleCount() const {
+evan::ARenderingContext::getMaxUsableSampleCount() const {
   VkPhysicalDeviceProperties physicalDeviceProperties;
   vkGetPhysicalDeviceProperties(_physicalDevice, &physicalDeviceProperties);
   VkSampleCountFlags counts =
@@ -35,7 +35,7 @@ maverik::ARenderingContext::getMaxUsableSampleCount() const {
   return VK_SAMPLE_COUNT_1_BIT;
 }
 
-void maverik::ARenderingContext::createCommandPool() {
+void evan::ARenderingContext::createCommandPool() {
   if (_logicalDevice == VK_NULL_HANDLE) {
     std::cerr << "Logical device is not initialized" << std::endl;
     return;

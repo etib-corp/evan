@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** SwapchainContext
 */
@@ -13,10 +13,10 @@
 
 #include "ASwapchainContext.hpp"
 #include "Utils.hpp"
-#include "maverik.hpp"
+#include "evan.hpp"
 #include "xr/Openxr-include.hpp"
 
-namespace maverik {
+namespace evan {
 namespace xr {
 
 /**
@@ -277,6 +277,6 @@ private:
 };
 
 } // namespace xr
-} // namespace maverik
+} // namespace evan
 
 #endif /* !SWAPCHAINCONTEXT_HPP_ */

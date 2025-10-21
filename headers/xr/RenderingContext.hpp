@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** RenderingContext
 */
@@ -13,7 +13,7 @@
 
 #include "Utils.hpp"
 
-namespace maverik {
+namespace evan {
 namespace xr {
 
 /**
@@ -40,7 +40,7 @@ struct RenderingContextPropertiesXR {
  * logical device creation tailored for XR rendering.
  *
  */
-class RenderingContext : public maverik::ARenderingContext {
+class RenderingContext : public evan::ARenderingContext {
 public:
   /**
    * @brief Constructs a RenderingContext object with the specified properties.
@@ -101,4 +101,4 @@ private:
       VK_NULL_HANDLE; // The Vulkan instance associated with the XR session
 };
 } // namespace xr
-} // namespace maverik
+} // namespace evan

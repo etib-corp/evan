@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** SwapchainContext
 */
 
 #include "xr/SwapchainContext.hpp"
 
-maverik::xr::SwapchainContext::SwapchainContext(
+evan::xr::SwapchainContext::SwapchainContext(
     const SwapchainContextCreationPropertiesXR &properties)
     : _instance(properties._instance), _systemId(properties._systemId),
       _session(properties._session),
@@ -18,9 +18,9 @@ maverik::xr::SwapchainContext::SwapchainContext(
   init();
 }
 
-maverik::xr::SwapchainContext::~SwapchainContext() {}
+evan::xr::SwapchainContext::~SwapchainContext() {}
 
-VkFormat maverik::xr::SwapchainContext::selectSwapchainFormat(
+VkFormat evan::xr::SwapchainContext::selectSwapchainFormat(
     const std::vector<int64_t> &swapchainFormats) {
   constexpr VkFormat kPreferredSwapchainFormats[] = {
       VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM,
@@ -40,7 +40,7 @@ VkFormat maverik::xr::SwapchainContext::selectSwapchainFormat(
   return static_cast<VkFormat>(*swapchainFormatIt);
 }
 
-void maverik::xr::SwapchainContext::init() {
+void evan::xr::SwapchainContext::init() {
   if (_instance == XR_NULL_HANDLE || _session == XR_NULL_HANDLE) {
     std::cerr << "SwapchainContext: Invalid instance or session" << std::endl;
     return;
@@ -98,7 +98,7 @@ void maverik::xr::SwapchainContext::init() {
       return;
     }
     _swapchain.push_back(swapchain);
-    std::shared_ptr<maverik::xr::SwapChainImage> swapchainImage =
+    std::shared_ptr<evan::xr::SwapChainImage> swapchainImage =
         createSwapchainImage(swapchainCreateInfo, swapchain);
 
     _swapchainImages[swapchain.swapchain] = swapchainImage;
@@ -111,8 +111,8 @@ void maverik::xr::SwapchainContext::init() {
   }
 }
 
-std::shared_ptr<maverik::xr::SwapChainImage>
-maverik::xr::SwapchainContext::createSwapchainImage(
+std::shared_ptr<evan::xr::SwapChainImage>
+evan::xr::SwapchainContext::createSwapchainImage(
     XrSwapchainCreateInfo &swapchainCreateInfo,
     ASwapchain<XrSwapchain> &swapchain) {
   uint32_t imageCount = 0;
@@ -126,14 +126,14 @@ maverik::xr::SwapchainContext::createSwapchainImage(
   properties._commandPool = _commandPool;
   properties._graphicsQueue = _graphicsQueue;
 
-  std::shared_ptr<maverik::xr::SwapChainImage> swapchainImage =
+  std::shared_ptr<evan::xr::SwapChainImage> swapchainImage =
       std::make_shared<SwapChainImage>();
   swapchainImage->init(properties);
 
   return swapchainImage;
 }
 
-void maverik::xr::SwapChainImage::init(
+void evan::xr::SwapChainImage::init(
     const SwapchainImageCreationPropertiesXR &properties) {
   _device = properties._device;
   _physicalDevice = properties._physicalDevice;
@@ -164,7 +164,7 @@ void maverik::xr::SwapChainImage::init(
   }
 }
 
-void maverik::xr::SwapChainImage::createColorResources() {
+void evan::xr::SwapChainImage::createColorResources() {
   Utils::CreateImageProperties properties = {
       ._logicalDevice = _device,
       ._physicalDevice = _physicalDevice,
@@ -204,7 +204,7 @@ void maverik::xr::SwapChainImage::createColorResources() {
   Utils::transitionImageLayout(transitionProperties);
 }
 
-void maverik::xr::SwapChainImage::createDepthResources() {
+void evan::xr::SwapChainImage::createDepthResources() {
   VkFormat depthFormat = Utils::findSupportedDepthFormat(_physicalDevice);
   Utils::CreateImageProperties properties = {
       ._logicalDevice = _device,
@@ -243,7 +243,7 @@ void maverik::xr::SwapChainImage::createDepthResources() {
   Utils::transitionImageLayout(transitionProperties);
 }
 
-void maverik::xr::SwapChainImage::createFrameBuffers() {
+void evan::xr::SwapChainImage::createFrameBuffers() {
   for (size_t i = 0; i < _swapchainImageViews.size(); i++) {
     VkImageView attachments[] = {_colorImageView, _depthImageView,
                                  _swapchainImageViews[i]};
@@ -276,16 +276,16 @@ void maverik::xr::SwapChainImage::createFrameBuffers() {
 }
 
 XrSwapchainImageBaseHeader *
-maverik::xr::SwapChainImage::getFirstImagePointer() {
+evan::xr::SwapChainImage::getFirstImagePointer() {
   if (_swapchainImages.empty()) {
     return nullptr;
   }
   return reinterpret_cast<XrSwapchainImageBaseHeader *>(&_swapchainImages[0]);
 }
 
-void maverik::xr::SwapchainContext::createRenderPass() {
+void evan::xr::SwapchainContext::createRenderPass() {
   VkAttachmentDescription depthAttachment{};
-  depthAttachment.format = maverik::Utils::findDepthFormat(_physicalDevice);
+  depthAttachment.format = evan::Utils::findDepthFormat(_physicalDevice);
   depthAttachment.samples = _msaaSamples;
   depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -361,7 +361,7 @@ void maverik::xr::SwapchainContext::createRenderPass() {
   }
 }
 
-void maverik::xr::SwapchainContext::createGraphicsPipeline() {
+void evan::xr::SwapchainContext::createGraphicsPipeline() {
   auto vertShaderCode = Utils::readFile("shaders/vert.spv");
   auto fragShaderCode = Utils::readFile("shaders/frag.spv");
 

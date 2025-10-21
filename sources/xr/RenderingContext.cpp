@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** RenderingContext
 */
 
 #include "xr/RenderingContext.hpp"
 
-maverik::xr::RenderingContext::RenderingContext(
+evan::xr::RenderingContext::RenderingContext(
     const RenderingContextPropertiesXR &properties)
     : _XRinstance(properties._XRinstance), _XRsystemID(properties._XRsystemID),
       _vulkanInstance(properties._vulkanInstance) {
@@ -22,9 +22,9 @@ maverik::xr::RenderingContext::RenderingContext(
       _msaaSamples);
 }
 
-maverik::xr::RenderingContext::~RenderingContext() {}
+evan::xr::RenderingContext::~RenderingContext() {}
 
-void maverik::xr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
+void evan::xr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   if (_XRinstance == XR_NULL_HANDLE) {
     std::cerr << "XR instance is not initialized" << std::endl;
     return;
@@ -55,7 +55,7 @@ void maverik::xr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   }
 }
 
-void maverik::xr::RenderingContext::createLogicalDevice() {
+void evan::xr::RenderingContext::createLogicalDevice() {
   if (_physicalDevice == VK_NULL_HANDLE) {
     std::cerr << "Physical device is not initialized" << std::endl;
     return;

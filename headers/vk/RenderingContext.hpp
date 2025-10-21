@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** RenderingContext
 */
@@ -73,7 +73,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-namespace maverik {
+namespace evan {
 namespace vk {
 /**
  * @brief Rendering context class for Vulkan.
@@ -291,6 +291,6 @@ private:
   VkSampleCountFlagBits getMaxUsableSampleCount();
 };
 } // namespace vk
-} // namespace maverik
+} // namespace evan
 
 #endif /* !RENDERINGCONTEXT_HPP_ */

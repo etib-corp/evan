@@ -40,7 +40,7 @@ protected:
  * @brief Test constructor with valid parameters
  */
 TEST_F(VersionTest, ConstructorSetsCorrectValues) {
-  maverik::Version version(1, 2, 3);
+  evan::Version version(1, 2, 3);
   
   EXPECT_EQ(version._major, 1);
   EXPECT_EQ(version._minor, 2);
@@ -51,7 +51,7 @@ TEST_F(VersionTest, ConstructorSetsCorrectValues) {
  * @brief Test constructor with zero values
  */
 TEST_F(VersionTest, ConstructorWithZeroValues) {
-  maverik::Version version(0, 0, 0);
+  evan::Version version(0, 0, 0);
   
   EXPECT_EQ(version._major, 0);
   EXPECT_EQ(version._minor, 0);
@@ -63,7 +63,7 @@ TEST_F(VersionTest, ConstructorWithZeroValues) {
  */
 TEST_F(VersionTest, ConstructorWithMaxValues) {
   unsigned int max_val = 999;
-  maverik::Version version(max_val, max_val, max_val);
+  evan::Version version(max_val, max_val, max_val);
   
   EXPECT_EQ(version._major, max_val);
   EXPECT_EQ(version._minor, max_val);
@@ -74,7 +74,7 @@ TEST_F(VersionTest, ConstructorWithMaxValues) {
  * @brief Test to_uint32_t conversion with standard version numbers
  */
 TEST_F(VersionTest, ToUint32tStandardConversion) {
-  maverik::Version version(1, 0, 0);
+  evan::Version version(1, 0, 0);
   uint32_t result = version.to_uint32_t();
   
   // VK_MAKE_VERSION(1, 0, 0) should produce a specific bit pattern
@@ -86,7 +86,7 @@ TEST_F(VersionTest, ToUint32tStandardConversion) {
  * @brief Test to_uint32_t conversion with version 1.2.3
  */
 TEST_F(VersionTest, ToUint32tVersion123) {
-  maverik::Version version(1, 2, 3);
+  evan::Version version(1, 2, 3);
   uint32_t result = version.to_uint32_t();
   
   uint32_t expected = VK_MAKE_VERSION(1, 2, 3);
@@ -97,7 +97,7 @@ TEST_F(VersionTest, ToUint32tVersion123) {
  * @brief Test to_uint32_t conversion with zero version
  */
 TEST_F(VersionTest, ToUint32tZeroVersion) {
-  maverik::Version version(0, 0, 0);
+  evan::Version version(0, 0, 0);
   uint32_t result = version.to_uint32_t();
   
   uint32_t expected = VK_MAKE_VERSION(0, 0, 0);
@@ -111,14 +111,14 @@ TEST_F(VersionTest, ToUint32tZeroVersion) {
 TEST_F(VersionTest, ToUint32tVariousVersions) {
   // Test version 2.1.5
   {
-    maverik::Version version(2, 1, 5);
+    evan::Version version(2, 1, 5);
     uint32_t expected = VK_MAKE_VERSION(2, 1, 5);
     EXPECT_EQ(version.to_uint32_t(), expected);
   }
   
   // Test version 3.4.7
   {
-    maverik::Version version(3, 4, 7);
+    evan::Version version(3, 4, 7);
     uint32_t expected = VK_MAKE_VERSION(3, 4, 7);
     EXPECT_EQ(version.to_uint32_t(), expected);
   }
@@ -128,10 +128,10 @@ TEST_F(VersionTest, ToUint32tVariousVersions) {
  * @brief Test that different versions produce different uint32_t values
  */
 TEST_F(VersionTest, DifferentVersionsProduceDifferentValues) {
-  maverik::Version version1(1, 0, 0);
-  maverik::Version version2(2, 0, 0);
-  maverik::Version version3(1, 1, 0);
-  maverik::Version version4(1, 0, 1);
+  evan::Version version1(1, 0, 0);
+  evan::Version version2(2, 0, 0);
+  evan::Version version3(1, 1, 0);
+  evan::Version version4(1, 0, 1);
   
   uint32_t val1 = version1.to_uint32_t();
   uint32_t val2 = version2.to_uint32_t();
@@ -150,7 +150,7 @@ TEST_F(VersionTest, DifferentVersionsProduceDifferentValues) {
  * @brief Test multiple calls to to_uint32_t return consistent results
  */
 TEST_F(VersionTest, ToUint32tConsistentResults) {
-  maverik::Version version(5, 6, 7);
+  evan::Version version(5, 6, 7);
   
   uint32_t result1 = version.to_uint32_t();
   uint32_t result2 = version.to_uint32_t();
@@ -164,7 +164,7 @@ TEST_F(VersionTest, ToUint32tConsistentResults) {
  * @brief Test that version fields can be modified after construction
  */
 TEST_F(VersionTest, VersionFieldsCanBeModified) {
-  maverik::Version version(1, 2, 3);
+  evan::Version version(1, 2, 3);
   
   version._major = 4;
   version._minor = 5;

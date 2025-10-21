@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ASwapchain
 */
@@ -9,10 +9,10 @@
 
 #include <string>
 
-namespace maverik {
+namespace evan {
 template <typename T> struct ASwapchain {
   int32_t _width;
   int32_t _height;
   T swapchain;
 };
-} // namespace maverik
+} // namespace evan

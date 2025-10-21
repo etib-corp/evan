@@ -1,6 +1,6 @@
 /*
 ** EPITECH PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Software
 */
@@ -17,15 +17,15 @@
 ** The default values are:
 ** - Application name `_appName`: "Hello, World !"
 ** - Application version `_appVersion`: 1.0.0
-** - Engine name `_engineName`: "Maverik"
+** - Engine name `_engineName`: "Evan"
 ** - Engine version `_engine`: 1.0.0
 */
-maverik::vk::Software::Software() {
+evan::vk::Software::Software() {
   this->_appName = "Hello, World !";
   this->_appVersion = new Version(1, 0, 0);
-  this->_engineName = "Maverik";
+  this->_engineName = "Evan";
   this->_engineVersion = new Version(1, 0, 0);
-  this->_graphicalContext = std::make_shared<maverik::vk::GraphicalContext>();
+  this->_graphicalContext = std::make_shared<evan::vk::GraphicalContext>();
 }
 
 /*
@@ -41,7 +41,7 @@ maverik::vk::Software::Software() {
 ** @param engineVersion the engine version
 **
 */
-maverik::vk::Software::Software(const std::string &appName,
+evan::vk::Software::Software(const std::string &appName,
                                 const Version &appVersion,
                                 const std::string &engineName,
                                 const Version &engineVersion) {
@@ -49,8 +49,8 @@ maverik::vk::Software::Software(const std::string &appName,
   this->_appVersion = new Version(appVersion);
   this->_engineName = engineName;
   this->_engineVersion = new Version(engineVersion);
-  this->_graphicalContext = std::make_shared<maverik::vk::GraphicalContext>(
+  this->_graphicalContext = std::make_shared<evan::vk::GraphicalContext>(
       appName, appVersion, engineName, engineVersion);
 }
 
-maverik::vk::Software::~Software() {}
+evan::vk::Software::~Software() {}

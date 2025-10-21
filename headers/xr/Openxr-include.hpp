@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** openxr-include
 */
@@ -11,7 +11,7 @@
 #define XR_USE_GRAPHICS_API_VULKAN
 #define VK_USE_PLATFORM_ANDROID_KHR
 
-#include "maverik.hpp"
+#include "evan.hpp"
 
 #include <jni.h>
 #include <openxr/openxr.h>

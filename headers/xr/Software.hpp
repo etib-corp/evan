@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** Software
 */
@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace maverik {
+namespace evan {
 namespace xr {
 /**
  * @class Software
@@ -88,4 +88,4 @@ private:
 };
 
 } // namespace xr
-} // namespace maverik
+} // namespace evan

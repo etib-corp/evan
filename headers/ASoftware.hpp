@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ASoftware
 */
@@ -8,15 +8,15 @@
 #pragma once
 
 #include "AGraphicalContext.hpp"
-#include "maverik.hpp"
+#include "evan.hpp"
 #include <iostream>
 
 #include "Version.hpp"
 
-namespace maverik {
+namespace evan {
 /**
  * @brief Abstract base class representing a software application within the
- * maverik namespace.
+ * evan namespace.
  *
  * This class provides a common interface for software applications, including
  * access to graphical context and versioning information for both the
@@ -45,4 +45,4 @@ protected:
 
   std::shared_ptr<AGraphicalContext> _graphicalContext; // Graphical context
 };
-} // namespace maverik
+} // namespace evan

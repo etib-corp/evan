@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** ASoftware
 */
 
 #include "ASoftware.hpp"
 
-std::shared_ptr<maverik::AGraphicalContext>
-maverik::ASoftware::getGraphicalContext() {
+std::shared_ptr<evan::AGraphicalContext>
+evan::ASoftware::getGraphicalContext() {
   return this->_graphicalContext;
 }

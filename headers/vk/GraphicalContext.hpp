@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** GraphicalContext
 */
@@ -16,7 +16,7 @@
 
 #include "Version.hpp"
 
-namespace maverik {
+namespace evan {
 namespace vk {
 /**
  * @brief List of Vulkan validation layers to enable.
@@ -78,7 +78,7 @@ const bool enableValidationLayers = true;
  * The GraphicalContext class encapsulates Vulkan-specific functionality
  * and integrates with the rendering and swapchain contexts.
  */
-class GraphicalContext : public maverik::AGraphicalContext {
+class GraphicalContext : public evan::AGraphicalContext {
 public:
   /*
   ** @brief Callback type for the debug messenger.
@@ -108,7 +108,7 @@ public:
    *
    * @note The default window size is set to 800x600 pixels.
    * @note The default application name is "Hello, World !" and the engine name
-   * is "Maverik".
+   * is "Evan".
    * @note The default application and engine versions are set to 1.0.0
    */
   GraphicalContext();
@@ -203,4 +203,4 @@ private:
       debugCallback_t debugCallback);
 };
 } // namespace vk
-} // namespace maverik
+} // namespace evan

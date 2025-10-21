@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** FileAsset
 */
@@ -13,14 +13,14 @@
 #include <string>
 
 /**
- * @namespace maverik
- * @brief The maverik namespace contains classes and functions for the maverik
+ * @namespace evan
+ * @brief The evan namespace contains classes and functions for the evan
  * project.
  */
-namespace maverik {
+namespace evan {
 /**
  * @class FileAsset
- * @brief The FileAsset class represents a file asset in the maverik project.
+ * @brief The FileAsset class represents a file asset in the evan project.
  *
  * This class provides methods to read and write binary data to and from a file.
  */
@@ -99,4 +99,4 @@ protected:
   std::string _content; ///> The content of the file
   size_t _pos;          ///> The current position in the file
 };
-} // namespace maverik
+} // namespace evan

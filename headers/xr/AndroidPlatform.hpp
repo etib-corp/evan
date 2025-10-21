@@ -1,6 +1,6 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AndroidPlatform
 */
@@ -15,7 +15,7 @@ struct PlatformData {
   void *applicationActivity;
 };
 
-namespace maverik {
+namespace evan {
 namespace xr {
 /**
  * @class AndroidPlatform
@@ -69,4 +69,4 @@ private:
 };
 
 } // namespace xr
-} // namespace maverik
+} // namespace evan

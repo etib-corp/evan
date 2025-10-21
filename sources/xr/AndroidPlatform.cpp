@@ -1,13 +1,13 @@
 /*
 ** ETIB PROJECT, 2025
-** maverik
+** evan
 ** File description:
 ** AndroidPlatform
 */
 
 #include "xr/AndroidPlatform.hpp"
 
-maverik::xr::AndroidPlatform::AndroidPlatform(
+evan::xr::AndroidPlatform::AndroidPlatform(
     std::shared_ptr<PlatformData> platformData) {
   PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
 
@@ -30,4 +30,4 @@ maverik::xr::AndroidPlatform::AndroidPlatform(
   _instanceCreateInfoAndroid.applicationVM = platformData->applicationVM;
 }
 
-maverik::xr::AndroidPlatform::~AndroidPlatform() {}
+evan::xr::AndroidPlatform::~AndroidPlatform() {}
