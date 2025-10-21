@@ -28,13 +28,22 @@ set_evan_target_properties(test_${PROJECT_NAME})
 # Configure include directories
 target_include_directories(test_${PROJECT_NAME} PRIVATE
     ${TEST_HEADERS_DIR}
+    ${CMAKE_SOURCE_DIR}/headers
 )
 
 # Link libraries
 target_link_libraries(test_${PROJECT_NAME} PRIVATE
-    evan
     gtest_main
+    ${PROJECT_NAME}
+    glm::glm
 )
+
+# Link platform-specific dependencies
+if(ENABLE_XR)
+    target_link_libraries(test_${PROJECT_NAME} PRIVATE openxr_loader vulkan)
+else()
+    target_link_libraries(test_${PROJECT_NAME} PRIVATE glfw)
+endif()
 
 # Discover and register tests
 include(GoogleTest)
