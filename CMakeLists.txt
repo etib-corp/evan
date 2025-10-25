@@ -38,7 +38,11 @@ option(BUILD_SHARED_LIBS "Build as shared library" OFF)
 
 # Check that at least one build mode is selected
 if(NOT BUILD_FOR_OPENXR AND NOT BUILD_FOR_GLFW)
-    message(FATAL_ERROR "At least one of BUILD_FOR_OPENXR or BUILD_FOR_GLFW must be ON.")
+    if(BUILD_DOCS)
+        message(STATUS "No backend selected; proceeding because BUILD_DOCS=ON (docs target only).")
+    else()
+        message(FATAL_ERROR "At least one of BUILD_FOR_OPENXR or BUILD_FOR_GLFW must be ON.")
+    endif()
 endif()
 
 # Set the files directories
