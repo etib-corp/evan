@@ -94,6 +94,9 @@ if(BUILD_FOR_OPENXR)
     )
     FetchContent_MakeAvailable(OpenXR-SDK)
 
+    # Find JNI
+    find_package(JNI REQUIRED)
+
     # Add XR compile definition
     add_compile_definitions(__XR__)
 
@@ -104,7 +107,7 @@ if(BUILD_FOR_OPENXR)
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link XR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader ndk)
+    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader JNI::JNI)
 endif()
 
 if(BUILD_FOR_GLFW)
