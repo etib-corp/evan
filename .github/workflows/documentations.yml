@@ -30,7 +30,7 @@ jobs:
 
       - name: Configure CMake with Documentation
         run: |
-          cmake -B build -S . -DBUILD_DOCS=ON
+          cmake -B build -S . -DBUILD_DOCS=ON -DBUILD_FOR_GLFW=ON
 
       - name: Build Documentation
         run: |
