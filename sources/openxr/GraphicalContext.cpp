@@ -5,9 +5,9 @@
 ** GraphicalContext
 */
 
-#include "xr/GraphicalContext.hpp"
+#include "openxr/GraphicalContext.hpp"
 
-evan::xr::GraphicalContext::GraphicalContext(
+evan::openxr::GraphicalContext::GraphicalContext(
     const GraphicalContextPropertiesXR &properties)
     : _XRinstance(properties._XRinstance), _XRsystemID(properties._XRsystemID) {
   createInstance();
@@ -18,7 +18,7 @@ evan::xr::GraphicalContext::GraphicalContext(
   renderingProperties._vulkanInstance = _instance;
 
   _renderingContext =
-      std::make_shared<evan::xr::RenderingContext>(renderingProperties);
+      std::make_shared<evan::openxr::RenderingContext>(renderingProperties);
 
   initializeSession();
 
@@ -35,12 +35,12 @@ evan::xr::GraphicalContext::GraphicalContext(
   swapchainProperties._graphicsQueue = vulkanContext->graphicsQueue;
 
   _swapchainContext =
-      std::make_shared<evan::xr::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::openxr::SwapchainContext>(swapchainProperties);
 }
 
-evan::xr::GraphicalContext::~GraphicalContext() {}
+evan::openxr::GraphicalContext::~GraphicalContext() {}
 
-void evan::xr::GraphicalContext::initializeSession() {
+void evan::openxr::GraphicalContext::initializeSession() {
   if (_XRsession != XR_NULL_HANDLE)
     return;
 
@@ -67,12 +67,12 @@ void evan::xr::GraphicalContext::initializeSession() {
 
   if (xrCreateSession(_XRinstance, &sessionCreateInfo, &_XRsession) !=
       XR_SUCCESS) {
-    std::cerr << "Failed to create XR session" << std::endl;
+    std::cerr << "Failed to create OpenXR session" << std::endl;
     return;
   }
 }
 
-void evan::xr::GraphicalContext::createVisualizedSpace() {
+void evan::openxr::GraphicalContext::createVisualizedSpace() {
   XrReferenceSpaceCreateInfo spaceCreateInfo{};
   spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
   spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
@@ -87,7 +87,7 @@ void evan::xr::GraphicalContext::createVisualizedSpace() {
   _XRvisualizedSpaces.push_back(space);
 }
 
-void evan::xr::GraphicalContext::createInstance() {
+void evan::openxr::GraphicalContext::createInstance() {
   XrGraphicsRequirementsVulkan2KHR graphicsRequirements{};
   PFN_xrGetVulkanGraphicsRequirements2KHR xrGetVulkanGraphicsRequirements2KHR =
       nullptr;
@@ -159,6 +159,6 @@ void evan::xr::GraphicalContext::createInstance() {
 }
 
 std::vector<std::string>
-evan::xr::GraphicalContext::getInstanceExtensions() {
+evan::openxr::GraphicalContext::getInstanceExtensions() {
   return {XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
 }

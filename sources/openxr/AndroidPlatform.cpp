@@ -5,9 +5,9 @@
 ** AndroidPlatform
 */
 
-#include "xr/AndroidPlatform.hpp"
+#include "openxr/AndroidPlatform.hpp"
 
-evan::xr::AndroidPlatform::AndroidPlatform(
+evan::openxr::AndroidPlatform::AndroidPlatform(
     std::shared_ptr<PlatformData> platformData) {
   PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
 
@@ -30,4 +30,4 @@ evan::xr::AndroidPlatform::AndroidPlatform(
   _instanceCreateInfoAndroid.applicationVM = platformData->applicationVM;
 }
 
-evan::xr::AndroidPlatform::~AndroidPlatform() {}
+evan::openxr::AndroidPlatform::~AndroidPlatform() {}

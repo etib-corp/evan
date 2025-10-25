@@ -30,7 +30,7 @@
 
 #endif
 
-#ifdef __XR__
+#ifdef __OPENXR__
 
 #include <openxr/openxr.h>
 #include <vulkan/vulkan.h>

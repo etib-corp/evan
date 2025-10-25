@@ -8,22 +8,22 @@
 #pragma once
 
 #include "ASoftware.hpp"
-#include "xr/AndroidPlatform.hpp"
-#include "xr/GraphicalContext.hpp"
-#include "xr/Openxr-include.hpp"
+#include "openxr/AndroidPlatform.hpp"
+#include "openxr/GraphicalContext.hpp"
+#include "openxr/Openxr-include.hpp"
 
 #include <algorithm>
 #include <cstring>
 
 namespace evan {
-namespace xr {
+namespace openxr {
 /**
  * @class Software
  *
- * @brief A class that represents a software implementation for an XR platform.
+ * @brief A class that represents a software implementation for an OpenXR platform.
  *
  * Inherits from the ASoftware abstract base class and provides functionality to
- * create an XR instance, initialize the system, and manage the platform and
+ * create an OpenXR instance, initialize the system, and manage the platform and
  * graphical context.
  */
 class Software : public ASoftware {
@@ -46,19 +46,19 @@ public:
 protected:
   /**
    * @brief Creates an OpenXR instance, initializes the graphical context, and
-   * sets up an XR session.
+   * sets up an OpenXR session.
    *
    * This function performs the following steps:
-   * 1. Checks if the XR instance is already created. If so, it returns
+   * 1. Checks if the OpenXR instance is already created. If so, it returns
    * immediately.
    * 2. Prepares a list of required extensions, including platform-specific and
    * graphical context extensions.
-   * 3. Fills out the XrInstanceCreateInfo structure and creates the XR
+   * 3. Fills out the XrInstanceCreateInfo structure and creates the OpenXR
    * instance.
-   * 4. Retrieves the XR system ID for the head-mounted display form factor.
+   * 4. Retrieves the OpenXR system ID for the head-mounted display form factor.
    * 5. Initializes the graphical context and retrieves the Vulkan context.
    * 6. Sets up the Vulkan graphics binding for OpenXR.
-   * 7. Creates an XR session using the initialized XR instance and system ID.
+   * 7. Creates an OpenXR session using the initialized OpenXR instance and system ID.
    *
    * @note If any step fails, an error message is logged to std::cerr, and the
    * function returns without completing the remaining steps.
@@ -67,25 +67,25 @@ protected:
   void createInstance();
 
   /**
-   * @brief Initializes the XR system by retrieving the system ID for the
+   * @brief Initializes the OpenXR system by retrieving the system ID for the
    * head-mounted display form factor.
    *
-   * This function checks if the XR instance is valid and then calls
+   * This function checks if the OpenXR instance is valid and then calls
    * `xrGetSystem` to obtain the system ID for the
    * `XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY` form factor. If successful, it stores
    * the system ID in the `_XRsystemID` member variable.
    *
-   * @note If the XR instance is not valid or if `xrGetSystem` fails, an error
+   * @note If the OpenXR instance is not valid or if `xrGetSystem` fails, an error
    * message is logged to std::cerr.
    */
   void initializeSystem();
 
   XrInstance _XRinstance = XR_NULL_HANDLE;    // OpenXR instance handle
-  XrSystemId _XRsystemID = XR_NULL_SYSTEM_ID; // XR system ID
+  XrSystemId _XRsystemID = XR_NULL_SYSTEM_ID; // OpenXR system ID
   std::shared_ptr<AndroidPlatform>
       _platform; // Platform-specific implementation (e.g., Android)
 private:
 };
 
-} // namespace xr
+} // namespace openxr
 } // namespace evan

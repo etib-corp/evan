@@ -14,10 +14,10 @@
 #include "ASwapchainContext.hpp"
 #include "Utils.hpp"
 #include "Evan.hpp"
-#include "xr/Openxr-include.hpp"
+#include "openxr/Openxr-include.hpp"
 
 namespace evan {
-namespace xr {
+namespace openxr {
 
 /**
  * @brief Properties required to create a SwapchainContext for OpenXR
@@ -276,7 +276,7 @@ private:
                         // SwapchainImage objects
 };
 
-} // namespace xr
+} // namespace openxr
 } // namespace evan
 
 #endif /* !SWAPCHAINCONTEXT_HPP_ */

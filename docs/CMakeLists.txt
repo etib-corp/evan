@@ -27,7 +27,7 @@ FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
 
 # Configure Doxygen settings using modern CMake variables
 # These variables are automatically processed by doxygen_add_docs()
-set(DOXYGEN_PROJECT_BRIEF "Evan is a component-based UI framework library built around a primitive rendering system. It's designed for building user interfaces across XR platforms and traditional platforms with custom rendering backends and input handling. The framework is lightweight, flexible, and easy to integrate into existing projects.")
+set(DOXYGEN_PROJECT_BRIEF "Evan is a component-based UI framework library built around a primitive rendering system. It's designed for building user interfaces across OpenXR platforms and traditional platforms with custom rendering backends and input handling. The framework is lightweight, flexible, and easy to integrate into existing projects.")
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated-docs)
 
 # Configure appearance and theme

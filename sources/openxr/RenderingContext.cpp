@@ -5,9 +5,9 @@
 ** RenderingContext
 */
 
-#include "xr/RenderingContext.hpp"
+#include "openxr/RenderingContext.hpp"
 
-evan::xr::RenderingContext::RenderingContext(
+evan::openxr::RenderingContext::RenderingContext(
     const RenderingContextPropertiesXR &properties)
     : _XRinstance(properties._XRinstance), _XRsystemID(properties._XRsystemID),
       _vulkanInstance(properties._vulkanInstance) {
@@ -22,11 +22,11 @@ evan::xr::RenderingContext::RenderingContext(
       _msaaSamples);
 }
 
-evan::xr::RenderingContext::~RenderingContext() {}
+evan::openxr::RenderingContext::~RenderingContext() {}
 
-void evan::xr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
+void evan::openxr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   if (_XRinstance == XR_NULL_HANDLE) {
-    std::cerr << "XR instance is not initialized" << std::endl;
+    std::cerr << "OpenXR instance is not initialized" << std::endl;
     return;
   }
 
@@ -55,7 +55,7 @@ void evan::xr::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   }
 }
 
-void evan::xr::RenderingContext::createLogicalDevice() {
+void evan::openxr::RenderingContext::createLogicalDevice() {
   if (_physicalDevice == VK_NULL_HANDLE) {
     std::cerr << "Physical device is not initialized" << std::endl;
     return;

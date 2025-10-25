@@ -32,7 +32,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Feature options
-option(BUILD_FOR_OPENXR "Build with XR support" OFF)
+option(BUILD_FOR_OPENXR "Build with OpenXR support" OFF)
 option(BUILD_FOR_GLFW "Build with GLFW support" OFF)
 option(BUILD_SHARED_LIBS "Build as shared library" OFF)
 
@@ -85,7 +85,7 @@ endif()
 # Link common dependencies
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
 
-# Configure XR or Vulkan mode
+# Configure for OpenXR
 if(BUILD_FOR_OPENXR)
     message(STATUS "Building with OpenXR support")
 
@@ -101,19 +101,20 @@ if(BUILD_FOR_OPENXR)
     # Find JNI
     find_package(JNI REQUIRED)
 
-    # Add XR compile definition
-    add_compile_definitions(__XR__)
+    # Add OpenXR compile definition
+    add_compile_definitions(__OPENXR__)
 
-    # Collect XR-specific source files
-    file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/xr/*.cpp")
-    
-    # Create library with XR support
+    # Collect OpenXR-specific source files
+    file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/openxr/*.cpp")
+
+    # Create library with OpenXR support
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
-    # Link XR dependencies
+    # Link OpenXR dependencies
     target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader JNI::JNI)
 endif()
 
+# Configure for GLFW
 if(BUILD_FOR_GLFW)
     message(STATUS "Building with GLFW support")
 

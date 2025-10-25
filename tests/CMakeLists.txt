@@ -40,7 +40,7 @@ target_link_libraries(test_${PROJECT_NAME} PRIVATE
 
 if(BUILD_FOR_OPENXR)
     target_link_libraries(test_${PROJECT_NAME} PRIVATE OpenXR-SDK)
-    target_compile_definitions(test_${PROJECT_NAME} PRIVATE __XR__)
+    target_compile_definitions(test_${PROJECT_NAME} PRIVATE __OPENXR__)
 endif()
 
 if(BUILD_FOR_GLFW)

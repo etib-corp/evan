@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "xr/Openxr-include.hpp"
+#include "openxr/Openxr-include.hpp"
 #include <memory>
 
 struct PlatformData {
@@ -16,7 +16,7 @@ struct PlatformData {
 };
 
 namespace evan {
-namespace xr {
+namespace openxr {
 /**
  * @class AndroidPlatform
  *
@@ -68,5 +68,5 @@ protected:
 private:
 };
 
-} // namespace xr
+} // namespace openxr
 } // namespace evan

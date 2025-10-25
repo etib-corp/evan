@@ -50,7 +50,7 @@ struct VulkanContext {
   GLFWwindow *window;
   VkSampleCountFlagBits msaaSamples;
 };
-#elif __XR__
+#elif __OPENXR__
 struct VulkanContext {
   VkDevice logicalDevice;
   VkPhysicalDevice physicalDevice;

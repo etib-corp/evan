@@ -67,7 +67,7 @@ protected:
 
 #if defined(__GLFW__)
   ASwapchain<VkSwapchainKHR> _swapchain; // Vulkan swapchain
-#elif defined(__XR__)
+#elif defined(__OPENXR__)
   std::vector<ASwapchain<XrSwapchain>> _swapchain; // OpenXR swapchains
 #endif
 };
