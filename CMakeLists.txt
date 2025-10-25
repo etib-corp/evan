@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(evan
     VERSION 1.0.0
-    DESCRIPTION "Evan - Graphics Engine Library"
+    DESCRIPTION "Evan"
     HOMEPAGE_URL "https://etib-corp.github.io/evan"
     LANGUAGES CXX
 )
@@ -32,8 +32,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Feature options
-option(ENABLE_XR "Enable XR support" OFF)
+option(BUILD_FOR_OPENXR "Build with XR support" OFF)
+option(BUILD_FOR_GLFW "Build with GLFW support" OFF)
 option(BUILD_SHARED_LIBS "Build as shared library" OFF)
+
+# Check that at least one build mode is selected
+if(NOT BUILD_FOR_OPENXR AND NOT BUILD_FOR_GLFW)
+    message(FATAL_ERROR "At least one of BUILD_FOR_OPENXR or BUILD_FOR_GLFW must be ON.")
+endif()
 
 # Set the files directories
 set(HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/headers")
@@ -42,88 +48,88 @@ set(SOURCES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sources")
 # Add the headers directories
 include_directories(${HEADERS_DIR})
 
+# FetchContent module
 include(FetchContent)
 
-# Fetch GLM (OpenGL Mathematics)
+# Fetch Vulkan-Headers
+FetchContent_Declare(Vulkan-Headers
+    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+    GIT_TAG v1.4.329
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(Vulkan-Headers)
+
+set(GLM_BUILD_TESTS OFF)
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.1
+    GIT_TAG 1.0.2
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(glm)
 
 # Collect common source files
-file(GLOB_RECURSE SOURCES_COMMON "${SOURCES_DIR}/common/*.cpp" "${SOURCES_DIR}/Version.cpp")
+file(GLOB SOURCES_COMMON "${SOURCES_DIR}/common/*.cpp" "${SOURCES_DIR}/*.cpp")
 
-# Platform-specific library paths (macOS uses Homebrew)
-if(APPLE)
-    include_directories(/opt/homebrew/include)
-    link_directories(/opt/homebrew/lib)
+if(BUILD_SHARED_LIBS)
+    add_library(${PROJECT_NAME} SHARED ${SOURCES_COMMON})
+else()
+    add_library(${PROJECT_NAME} STATIC ${SOURCES_COMMON})
 endif()
 
+# Link common dependencies
+target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
+
 # Configure XR or Vulkan mode
-if(ENABLE_XR)
-    message(STATUS "Building with XR support enabled")
-    
-    # XR requires C++20
-    if(CMAKE_CXX_STANDARD LESS 20)
-        set(CMAKE_CXX_STANDARD 20)
-    endif()
-    
-    # Add XR compile definition
-    add_compile_definitions(__XR__)
+if(BUILD_FOR_OPENXR)
+    message(STATUS "Building with OpenXR support")
 
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
         GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-        GIT_TAG release-1.0.33  # Must match the Meta Quest loader OpenXR version
-        # https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk#current-openxr-version
+        GIT_TAG release-1.1.53  
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(OpenXR-SDK)
 
+    # Add XR compile definition
+    add_compile_definitions(__XR__)
+
     # Collect XR-specific source files
     file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/xr/*.cpp")
     
     # Create library with XR support
-    if(BUILD_SHARED_LIBS)
-        add_library(${PROJECT_NAME} SHARED ${SOURCES_COMMON} ${SOURCES_XR})
-    else()
-        add_library(${PROJECT_NAME} STATIC ${SOURCES_COMMON} ${SOURCES_XR})
-    endif()
+    target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link XR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader vulkan glm::glm)
-    
-else()
-    message(STATUS "Building with Vulkan support (standard mode)")
-    
-    # Add Vulkan compile definition
-    add_compile_definitions(__VK__)
+    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader ndk)
+endif()
+
+if(BUILD_FOR_GLFW)
+    message(STATUS "Building with GLFW support")
 
     # Fetch GLFW for window management
     FetchContent_Declare(glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG 3.3.8
+        GIT_TAG 3.4
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(glfw)
 
+    # Add Vulkan compile definition
+    add_compile_definitions(__GLFW__)
+
     # Collect Vulkan-specific source files
-    file(GLOB_RECURSE SOURCES_VK "${SOURCES_DIR}/vk/*.cpp")
+    file(GLOB_RECURSE GLFW_SOURCES "${SOURCES_DIR}/glfw/*.cpp")
 
     # Create library with Vulkan support
-    if(BUILD_SHARED_LIBS)
-        add_library(${PROJECT_NAME} SHARED ${SOURCES_COMMON} ${SOURCES_VK})
-    else()
-        add_library(${PROJECT_NAME} STATIC ${SOURCES_COMMON} ${SOURCES_VK})
-    endif()
+    target_sources(${PROJECT_NAME} PRIVATE ${GLFW_SOURCES})
 
     # Link Vulkan dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE glfw glm::glm)
+    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif()
 
 # Set common target properties

@@ -17,11 +17,11 @@
  */
 namespace evan {
 /**
- * @namespace vk
- * @brief The vk namespace contains classes and functions for the Vulkan
+ * @namespace glfw
+ * @brief The glfw namespace contains classes and functions for the Vulkan
  * graphics API.
  */
-namespace vk {
+namespace glfw {
 /**
  * @class AssetsManager
  * @brief The AssetsManager class is responsible for managing file assets.
@@ -72,5 +72,5 @@ public:
    */
   bool save(const std::string &path, const std::string &newPath = "") override;
 };
-} // namespace vk
+} // namespace glfw
 } // namespace evan

@@ -8,7 +8,7 @@
 #ifndef VERTEX_HPP_
 #define VERTEX_HPP_
 
-#include "evan.hpp"
+#include "Evan.hpp"
 
 namespace evan {
 /**

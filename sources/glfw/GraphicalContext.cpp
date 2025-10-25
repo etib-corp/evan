@@ -5,7 +5,7 @@
 ** GraphicalContext
 */
 
-#include "vk/GraphicalContext.hpp"
+#include "glfw/GraphicalContext.hpp"
 
 //////////////////////
 // Static functions //
@@ -25,7 +25,7 @@ defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 // Public methods //
 ////////////////////
 
-evan::vk::GraphicalContext::GraphicalContext() {
+evan::glfw::GraphicalContext::GraphicalContext() {
   _appName = "Hello, World !";
   _appVersion = new Version(1, 0, 0);
   _engineName = "Evan";
@@ -33,13 +33,13 @@ evan::vk::GraphicalContext::GraphicalContext() {
 
   this->createInstance();
 
-  evan::vk::RenderingContext::WindowProperties windowProperties = {
+  evan::glfw::RenderingContext::WindowProperties windowProperties = {
       .width = 800, .height = 600, .title = _appName};
-  _renderingContext = std::make_shared<evan::vk::RenderingContext>(
+  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(
       windowProperties, _instance);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
-  evan::vk::SwapchainContext::SwapchainContextCreationProperties
+  evan::glfw::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
@@ -50,10 +50,10 @@ evan::vk::GraphicalContext::GraphicalContext() {
                              ._instance = _instance};
 
   _swapchainContext =
-      std::make_shared<evan::vk::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::glfw::SwapchainContext>(swapchainProperties);
 }
 
-evan::vk::GraphicalContext::GraphicalContext(const std::string &appName,
+evan::glfw::GraphicalContext::GraphicalContext(const std::string &appName,
                                                 const Version &appVersion,
                                                 const std::string &engineName,
                                                 const Version &engineVersion,
@@ -66,13 +66,13 @@ evan::vk::GraphicalContext::GraphicalContext(const std::string &appName,
 
   this->createInstance();
 
-  evan::vk::RenderingContext::WindowProperties windowProperties = {
+  evan::glfw::RenderingContext::WindowProperties windowProperties = {
       .width = windowWidth, .height = windowHeight, .title = _appName};
-  _renderingContext = std::make_shared<evan::vk::RenderingContext>(
+  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(
       windowProperties, _instance);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
-  evan::vk::SwapchainContext::SwapchainContextCreationProperties
+  evan::glfw::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
@@ -83,10 +83,10 @@ evan::vk::GraphicalContext::GraphicalContext(const std::string &appName,
                              ._instance = _instance};
 
   _swapchainContext =
-      std::make_shared<evan::vk::SwapchainContext>(swapchainProperties);
+      std::make_shared<evan::glfw::SwapchainContext>(swapchainProperties);
 }
 
-evan::vk::GraphicalContext::~GraphicalContext() {
+evan::glfw::GraphicalContext::~GraphicalContext() {
   delete _appVersion;
   delete _engineVersion;
 
@@ -100,7 +100,7 @@ evan::vk::GraphicalContext::~GraphicalContext() {
   vkDestroyInstance(_instance, nullptr);
 }
 
-void evan::vk::GraphicalContext::createInstance() {
+void evan::glfw::GraphicalContext::createInstance() {
   if (enableValidationLayers && !this->checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers requested, but not available!");
   }
@@ -179,7 +179,7 @@ void evan::vk::GraphicalContext::createInstance() {
 }
 
 std::vector<std::string>
-evan::vk::GraphicalContext::getInstanceExtensions() {
+evan::glfw::GraphicalContext::getInstanceExtensions() {
   uint32_t glfwExtensionCount = 0;
   const char **glfwExtensions =
       glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -197,7 +197,7 @@ evan::vk::GraphicalContext::getInstanceExtensions() {
 // Private methods //
 /////////////////////
 
-void evan::vk::GraphicalContext::populateDebugMessengerCreateInfo(
+void evan::glfw::GraphicalContext::populateDebugMessengerCreateInfo(
     VkDebugUtilsMessengerCreateInfoEXT &createInfo,
     debugCallback_t debugCallback) {
   createInfo = {};
@@ -211,7 +211,7 @@ void evan::vk::GraphicalContext::populateDebugMessengerCreateInfo(
   createInfo.pfnUserCallback = debugCallback;
 }
 
-bool evan::vk::GraphicalContext::checkValidationLayerSupport() {
+bool evan::glfw::GraphicalContext::checkValidationLayerSupport() {
   uint32_t layerCount;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
   std::vector<VkLayerProperties> availableLayers(layerCount);

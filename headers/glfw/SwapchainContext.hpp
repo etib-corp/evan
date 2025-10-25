@@ -21,7 +21,7 @@
 #endif
 
 namespace evan {
-namespace vk {
+namespace glfw {
 /**
  * @class SwapchainContext
  * @brief Manages a Vulkan swapchain context for rendering operations.
@@ -525,7 +525,7 @@ private:
                                   VkImageView textureImageView,
                                   VkSampler textureSampler);
 };
-} // namespace vk
+} // namespace glfw
 } // namespace evan
 
 #endif /* !SWAPCHAINCONTEXT_HPP_ */

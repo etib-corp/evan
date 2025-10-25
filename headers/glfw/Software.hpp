@@ -8,14 +8,14 @@
 #pragma once
 
 #include "ASoftware.hpp"
-#include "vk/GraphicalContext.hpp"
+#include "glfw/GraphicalContext.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <iostream>
 
 namespace evan {
-namespace vk {
+namespace glfw {
 class Software : public ASoftware {
 public:
   // Constructors
@@ -26,5 +26,5 @@ public:
   // Destructor
   ~Software();
 };
-} // namespace vk
+} // namespace glfw
 } // namespace evan

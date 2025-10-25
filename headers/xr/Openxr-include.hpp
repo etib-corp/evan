@@ -11,9 +11,8 @@
 #define XR_USE_GRAPHICS_API_VULKAN
 #define VK_USE_PLATFORM_ANDROID_KHR
 
-#include "evan.hpp"
+#include "Evan.hpp"
 
-#include <jni.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <vulkan/vulkan.h>

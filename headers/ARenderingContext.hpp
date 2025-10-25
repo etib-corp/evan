@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "evan.hpp"
+#include "Evan.hpp"
 #include <array>
 #include <memory>
 
@@ -39,7 +39,7 @@
  * @var VulkanContext::graphicsQueueFamilyIndex
  * The index of the queue family that supports graphics operations.
  */
-#ifdef __VK__
+#ifdef __GLFW__
 struct VulkanContext {
   VkDevice logicalDevice;
   VkPhysicalDevice physicalDevice;

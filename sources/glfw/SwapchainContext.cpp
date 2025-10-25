@@ -5,7 +5,7 @@
 ** SwapchainContext
 */
 
-#include "vk/SwapchainContext.hpp"
+#include "glfw/SwapchainContext.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -52,7 +52,7 @@ defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 // Public methods //
 ////////////////////
 
-evan::vk::SwapchainContext::SwapchainContext(
+evan::glfw::SwapchainContext::SwapchainContext(
     const SwapchainContextCreationProperties &properties) {
   struct TextureImageCreationProperties textureImageProperties = {
       properties._physicalDevice, properties._logicalDevice,
@@ -86,9 +86,9 @@ evan::vk::SwapchainContext::SwapchainContext(
   this->createGraphicsPipeline();
 }
 
-evan::vk::SwapchainContext::~SwapchainContext() {}
+evan::glfw::SwapchainContext::~SwapchainContext() {}
 
-void evan::vk::SwapchainContext::recreate(
+void evan::glfw::SwapchainContext::recreate(
     const SwapchainContextCreationProperties &properties) {
   int width = 0;
   int height = 0;
@@ -119,7 +119,7 @@ void evan::vk::SwapchainContext::recreate(
 // Protected methods //
 ///////////////////////
 
-void evan::vk::SwapchainContext::setupDebugMessenger(VkInstance instance) {
+void evan::glfw::SwapchainContext::setupDebugMessenger(VkInstance instance) {
   if (!enableValidationLayers)
     return;
 
@@ -132,7 +132,7 @@ void evan::vk::SwapchainContext::setupDebugMessenger(VkInstance instance) {
   }
 }
 
-void evan::vk::SwapchainContext::createDescriptorPool(
+void evan::glfw::SwapchainContext::createDescriptorPool(
     VkDevice logicalDevice) {
   std::array<VkDescriptorPoolSize, 2> poolSizes{};
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -152,7 +152,7 @@ void evan::vk::SwapchainContext::createDescriptorPool(
   }
 }
 
-void evan::vk::SwapchainContext::createDescriptorSetLayout(
+void evan::glfw::SwapchainContext::createDescriptorSetLayout(
     VkDevice logicalDevice) {
   VkDescriptorSetLayoutBinding uboLayoutBinding{};
   uboLayoutBinding.binding = 0;
@@ -182,7 +182,7 @@ void evan::vk::SwapchainContext::createDescriptorSetLayout(
   }
 }
 
-void evan::vk::SwapchainContext::createDescriptorSets(
+void evan::glfw::SwapchainContext::createDescriptorSets(
     VkDevice logicalDevice,
     std::map<VkImageView, VkSampler> imagesViewsAndSamplers) {
   for (const auto [imageView, sampler] : imagesViewsAndSamplers) {
@@ -190,7 +190,7 @@ void evan::vk::SwapchainContext::createDescriptorSets(
   }
 }
 
-void evan::vk::SwapchainContext::init(VkSurfaceKHR surface,
+void evan::glfw::SwapchainContext::init(VkSurfaceKHR surface,
                                          VkPhysicalDevice physicalDevice,
                                          VkDevice logicalDevice,
                                          GLFWwindow *window) {
@@ -258,7 +258,7 @@ void evan::vk::SwapchainContext::init(VkSurfaceKHR surface,
   this->createImageViews(logicalDevice);
 }
 
-void evan::vk::SwapchainContext::createImageViews(VkDevice logicalDevice) {
+void evan::glfw::SwapchainContext::createImageViews(VkDevice logicalDevice) {
   _imageViews.resize(_swapchainImages.size());
 
   for (uint32_t i = 0; i < _swapchainImages.size(); i++) {
@@ -268,7 +268,7 @@ void evan::vk::SwapchainContext::createImageViews(VkDevice logicalDevice) {
   }
 }
 
-void evan::vk::SwapchainContext::createFramebuffers(
+void evan::glfw::SwapchainContext::createFramebuffers(
     VkDevice logicalDevice, VkRenderPass renderPass) {
   _swapchainFramebuffers.resize(_imageViews.size());
 
@@ -292,7 +292,7 @@ void evan::vk::SwapchainContext::createFramebuffers(
   }
 }
 
-void evan::vk::SwapchainContext::cleanup(VkDevice logicalDevice) {
+void evan::glfw::SwapchainContext::cleanup(VkDevice logicalDevice) {
   for (auto framebuffer : _swapchainFramebuffers) {
     vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
   }
@@ -304,7 +304,7 @@ void evan::vk::SwapchainContext::cleanup(VkDevice logicalDevice) {
   vkDestroySwapchainKHR(logicalDevice, _swapchain.swapchain, nullptr);
 }
 
-void evan::vk::SwapchainContext::createTextureImage(
+void evan::glfw::SwapchainContext::createTextureImage(
     const std::string &texturePath,
     const TextureImageCreationProperties &properties) {
   int texWidth = 0;
@@ -393,7 +393,7 @@ void evan::vk::SwapchainContext::createTextureImage(
   vkFreeMemory(properties._logicalDevice, stagingBufferMemory, nullptr);
 }
 
-void evan::vk::SwapchainContext::createTextureImageView(
+void evan::glfw::SwapchainContext::createTextureImageView(
     VkDevice logicalDevice) {
   for (const auto &[textureName, textureImage] : _textureImage) {
     _textureImageView[textureName] = Utils::createImageView(
@@ -402,7 +402,7 @@ void evan::vk::SwapchainContext::createTextureImageView(
   }
 }
 
-void evan::vk::SwapchainContext::createTextureSampler(
+void evan::glfw::SwapchainContext::createTextureSampler(
     VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
     const std::string &textureName, VkSamplerCreateInfo samplerInfo) {
   VkPhysicalDeviceProperties properties{};
@@ -421,7 +421,7 @@ void evan::vk::SwapchainContext::createTextureSampler(
   }
 }
 
-void evan::vk::SwapchainContext::createRenderPass() {
+void evan::glfw::SwapchainContext::createRenderPass() {
   auto swapchainSupport = evan::Utils::querySwapChainSupport(
       _creationProperties._physicalDevice, _creationProperties._surface);
   auto swapchainFormat =
@@ -506,7 +506,7 @@ void evan::vk::SwapchainContext::createRenderPass() {
   }
 }
 
-void evan::vk::SwapchainContext::createGraphicsPipeline() {
+void evan::glfw::SwapchainContext::createGraphicsPipeline() {
   auto vertShaderCode = Utils::readFile("shaders/vert.spv");
   auto fragShaderCode = Utils::readFile("shaders/frag.spv");
 
@@ -656,7 +656,7 @@ void evan::vk::SwapchainContext::createGraphicsPipeline() {
 // Private methods //
 /////////////////////
 
-VkSurfaceFormatKHR evan::vk::SwapchainContext::chooseSwapSurfaceFormat(
+VkSurfaceFormatKHR evan::glfw::SwapchainContext::chooseSwapSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR> &availableFormats) {
   for (const auto &availableFormat : availableFormats) {
     if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
@@ -667,7 +667,7 @@ VkSurfaceFormatKHR evan::vk::SwapchainContext::chooseSwapSurfaceFormat(
   return availableFormats[0];
 }
 
-VkPresentModeKHR evan::vk::SwapchainContext::chooseSwapPresentMode(
+VkPresentModeKHR evan::glfw::SwapchainContext::chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR> &availablePresentModes) {
   for (const auto &availablePresentMode : availablePresentModes) {
     if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
@@ -678,7 +678,7 @@ VkPresentModeKHR evan::vk::SwapchainContext::chooseSwapPresentMode(
   return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D evan::vk::SwapchainContext::chooseSwapExtent(
+VkExtent2D evan::glfw::SwapchainContext::chooseSwapExtent(
     const VkSurfaceCapabilitiesKHR &capabilities, GLFWwindow *window) {
   int width = 0;
   int height = 0;
@@ -702,7 +702,7 @@ VkExtent2D evan::vk::SwapchainContext::chooseSwapExtent(
   return actualExtent;
 }
 
-void evan::vk::SwapchainContext::createColorResources(
+void evan::glfw::SwapchainContext::createColorResources(
     VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
     VkSampleCountFlagBits msaaSamples) {
   VkFormat colorFormat = _swapchainColorFormat;
@@ -725,7 +725,7 @@ void evan::vk::SwapchainContext::createColorResources(
                                            logicalDevice, _mipLevels);
 }
 
-void evan::vk::SwapchainContext::createDepthResources(
+void evan::glfw::SwapchainContext::createDepthResources(
     const TextureImageCreationProperties &properties) {
   VkFormat depthFormat = Utils::findDepthFormat(properties._physicalDevice);
   Utils::CreateImageProperties depthImageProperties = {
@@ -758,7 +758,7 @@ void evan::vk::SwapchainContext::createDepthResources(
   Utils::transitionImageLayout(transitionProperties);
 }
 
-VkSamplerCreateInfo evan::vk::SwapchainContext::getDefaultSamplerInfo(
+VkSamplerCreateInfo evan::glfw::SwapchainContext::getDefaultSamplerInfo(
     const VkPhysicalDeviceProperties &properties) {
   VkSamplerCreateInfo samplerInfo{};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -780,7 +780,7 @@ VkSamplerCreateInfo evan::vk::SwapchainContext::getDefaultSamplerInfo(
   return samplerInfo;
 }
 
-void evan::vk::SwapchainContext::createSingleDescriptorSets(
+void evan::glfw::SwapchainContext::createSingleDescriptorSets(
     VkDevice logicalDevice, VkImageView textureImageView,
     VkSampler textureSampler) {
   std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT,
@@ -832,7 +832,7 @@ void evan::vk::SwapchainContext::createSingleDescriptorSets(
   }
 }
 
-void evan::vk::SwapchainContext::createUniformBuffers(
+void evan::glfw::SwapchainContext::createUniformBuffers(
     VkDevice logicalDevice, VkPhysicalDevice physicalDevice) {
   VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 

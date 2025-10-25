@@ -74,7 +74,7 @@ const bool enableValidationLayers = true;
 #endif
 
 namespace evan {
-namespace vk {
+namespace glfw {
 /**
  * @brief Rendering context class for Vulkan.
  *
@@ -290,7 +290,7 @@ private:
    */
   VkSampleCountFlagBits getMaxUsableSampleCount();
 };
-} // namespace vk
+} // namespace glfw
 } // namespace evan
 
 #endif /* !RENDERINGCONTEXT_HPP_ */

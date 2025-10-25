@@ -5,7 +5,7 @@
 ** RenderingContext
 */
 
-#include "vk/RenderingContext.hpp"
+#include "glfw/RenderingContext.hpp"
 
 ////////////////////
 // Static methods //
@@ -43,7 +43,7 @@ defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 // Public methods //
 ////////////////////
 
-evan::vk::RenderingContext::RenderingContext(
+evan::glfw::RenderingContext::RenderingContext(
     const WindowProperties &windowProperties, VkInstance instance) {
   this->initWindow(windowProperties.width, windowProperties.height,
                    windowProperties.title);
@@ -70,9 +70,9 @@ evan::vk::RenderingContext::RenderingContext(
   _vulkanContext->msaaSamples = _msaaSamples;
 }
 
-evan::vk::RenderingContext::~RenderingContext() {}
+evan::glfw::RenderingContext::~RenderingContext() {}
 
-void evan::vk::RenderingContext::initWindow(unsigned int width,
+void evan::glfw::RenderingContext::initWindow(unsigned int width,
                                                unsigned int height,
                                                const std::string &title) {
   if (!glfwInit()) {
@@ -92,7 +92,7 @@ void evan::vk::RenderingContext::initWindow(unsigned int width,
 // Protected methods //
 ///////////////////////
 
-void evan::vk::RenderingContext::createSurface(VkInstance instance) {
+void evan::glfw::RenderingContext::createSurface(VkInstance instance) {
 #ifdef _WIN32
   VkWin32SurfaceCreateInfoKHR createInfo{};
 
@@ -115,7 +115,7 @@ void evan::vk::RenderingContext::createSurface(VkInstance instance) {
 #endif
 }
 
-void evan::vk::RenderingContext::pickPhysicalDevice(VkInstance instance) {
+void evan::glfw::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -139,7 +139,7 @@ void evan::vk::RenderingContext::pickPhysicalDevice(VkInstance instance) {
   }
 }
 
-void evan::vk::RenderingContext::createLogicalDevice() {
+void evan::glfw::RenderingContext::createLogicalDevice() {
   Utils::QueueFamilyIndices indices =
       Utils::findQueueFamilies(_physicalDevice, _surface);
 
@@ -193,7 +193,7 @@ void evan::vk::RenderingContext::createLogicalDevice() {
                    &_presentQueue);
 }
 
-void evan::vk::RenderingContext::createCommandPool() {
+void evan::glfw::RenderingContext::createCommandPool() {
   Utils::QueueFamilyIndices queueFamilyIndices =
       Utils::findQueueFamilies(_physicalDevice, _surface);
 
@@ -208,7 +208,7 @@ void evan::vk::RenderingContext::createCommandPool() {
   }
 }
 
-void evan::vk::RenderingContext::createVertexBuffer() {
+void evan::glfw::RenderingContext::createVertexBuffer() {
   VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
@@ -251,7 +251,7 @@ void evan::vk::RenderingContext::createVertexBuffer() {
   vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
 }
 
-void evan::vk::RenderingContext::createIndexBuffer() {
+void evan::glfw::RenderingContext::createIndexBuffer() {
   VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
 
   VkBuffer stagingBuffer;
@@ -294,7 +294,7 @@ void evan::vk::RenderingContext::createIndexBuffer() {
   vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
 }
 
-void evan::vk::RenderingContext::createCommandBuffers() {
+void evan::glfw::RenderingContext::createCommandBuffers() {
   _commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
   VkCommandBufferAllocateInfo allocInfo{};
@@ -309,7 +309,7 @@ void evan::vk::RenderingContext::createCommandBuffers() {
   }
 }
 
-void evan::vk::RenderingContext::createSyncObjects() {
+void evan::glfw::RenderingContext::createSyncObjects() {
   _imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
   _renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
   _inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -339,7 +339,7 @@ void evan::vk::RenderingContext::createSyncObjects() {
 // Private methods //
 /////////////////////
 
-VkSampleCountFlagBits evan::vk::RenderingContext::getMaxUsableSampleCount() {
+VkSampleCountFlagBits evan::glfw::RenderingContext::getMaxUsableSampleCount() {
   VkPhysicalDeviceProperties physicalDeviceProperties;
   vkGetPhysicalDeviceProperties(_physicalDevice, &physicalDeviceProperties);
 

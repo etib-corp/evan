@@ -8,7 +8,7 @@
 #pragma once
 
 #include "ASwapchain.hpp"
-#include "evan.hpp"
+#include "Evan.hpp"
 
 #include <memory>
 #include <vector>
@@ -65,7 +65,7 @@ protected:
   VkPipelineLayout _pipelineLayout; // Vulkan pipeline layout
   VkPipeline _graphicsPipeline;     // Vulkan graphics pipeline
 
-#if defined(__VK__)
+#if defined(__GLFW__)
   ASwapchain<VkSwapchainKHR> _swapchain; // Vulkan swapchain
 #elif defined(__XR__)
   std::vector<ASwapchain<XrSwapchain>> _swapchain; // OpenXR swapchains

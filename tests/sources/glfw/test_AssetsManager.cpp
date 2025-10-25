@@ -20,6 +20,4 @@
  SOFTWARE.
  */
 
-#pragma once
-
-#include "vk/AssetsManager.hpp"
+#include "glfw/test_AssetsManager.hpp"

@@ -8,7 +8,7 @@
 #ifndef VERSION_HPP_
 #define VERSION_HPP_
 
-#include "evan.hpp"
+#include "Evan.hpp"
 
 namespace evan {
 /**

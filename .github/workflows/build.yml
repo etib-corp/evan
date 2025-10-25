@@ -49,6 +49,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_TESTS=ON
+          -DBUILD_FOR_GLFW=ON
           -S ${{ github.workspace }}
 
       - name: Build

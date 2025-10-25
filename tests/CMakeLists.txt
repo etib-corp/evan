@@ -32,9 +32,21 @@ target_include_directories(test_${PROJECT_NAME} PRIVATE
 
 # Link libraries
 target_link_libraries(test_${PROJECT_NAME} PRIVATE
-    xider
+    evan
+    glm
+    Vulkan-Headers
     gtest_main
 )
+
+if(BUILD_FOR_OPENXR)
+    target_link_libraries(test_${PROJECT_NAME} PRIVATE OpenXR-SDK)
+    target_compile_definitions(test_${PROJECT_NAME} PRIVATE __XR__)
+endif()
+
+if(BUILD_FOR_GLFW)
+    target_link_libraries(test_${PROJECT_NAME} PRIVATE glfw)
+    target_compile_definitions(test_${PROJECT_NAME} PRIVATE __GLFW__)
+endif()
 
 # Discover and register tests
 include(GoogleTest)

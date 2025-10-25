@@ -5,9 +5,9 @@
 ** Logger
 */
 
-#include "vk/Logger.hpp"
+#include "glfw/Logger.hpp"
 
-evan::vk::Logger::Logger(std::ostream &stream,
+evan::glfw::Logger::Logger(std::ostream &stream,
                             const std::string &programName,
                             const evan::ALogger::Environment &env)
     : _stream(stream) {
@@ -15,7 +15,7 @@ evan::vk::Logger::Logger(std::ostream &stream,
   _programName = programName + "    ";
 }
 
-void evan::vk::Logger::log(const std::string &message,
+void evan::glfw::Logger::log(const std::string &message,
                               const std::string &logLevel,
                               const std::string &caller) const {
   std::string out = "";

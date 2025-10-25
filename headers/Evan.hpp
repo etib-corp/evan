@@ -14,7 +14,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#ifdef __VK__
+#ifdef __GLFW__
 
 #include <vulkan/vulkan.hpp>
 
@@ -33,7 +33,6 @@
 #ifdef __XR__
 
 #include <openxr/openxr.h>
-
 #include <vulkan/vulkan.h>
 
 #endif

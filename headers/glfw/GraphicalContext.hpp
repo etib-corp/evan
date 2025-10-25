@@ -11,13 +11,13 @@
 
 #include "AGraphicalContext.hpp"
 
-#include "vk/RenderingContext.hpp"
-#include "vk/SwapchainContext.hpp"
+#include "glfw/RenderingContext.hpp"
+#include "glfw/SwapchainContext.hpp"
 
 #include "Version.hpp"
 
 namespace evan {
-namespace vk {
+namespace glfw {
 /**
  * @brief List of Vulkan validation layers to enable.
  *
@@ -202,5 +202,5 @@ private:
       VkDebugUtilsMessengerCreateInfoEXT &createInfo,
       debugCallback_t debugCallback);
 };
-} // namespace vk
+} // namespace glfw
 } // namespace evan
