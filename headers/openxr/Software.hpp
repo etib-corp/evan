@@ -20,7 +20,8 @@ namespace openxr {
 /**
  * @class Software
  *
- * @brief A class that represents a software implementation for an OpenXR platform.
+ * @brief A class that represents a software implementation for an OpenXR
+ * platform.
  *
  * Inherits from the ASoftware abstract base class and provides functionality to
  * create an OpenXR instance, initialize the system, and manage the platform and
@@ -58,7 +59,8 @@ protected:
    * 4. Retrieves the OpenXR system ID for the head-mounted display form factor.
    * 5. Initializes the graphical context and retrieves the Vulkan context.
    * 6. Sets up the Vulkan graphics binding for OpenXR.
-   * 7. Creates an OpenXR session using the initialized OpenXR instance and system ID.
+   * 7. Creates an OpenXR session using the initialized OpenXR instance and
+   * system ID.
    *
    * @note If any step fails, an error message is logged to std::cerr, and the
    * function returns without completing the remaining steps.
@@ -75,8 +77,8 @@ protected:
    * `XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY` form factor. If successful, it stores
    * the system ID in the `_XRsystemID` member variable.
    *
-   * @note If the OpenXR instance is not valid or if `xrGetSystem` fails, an error
-   * message is logged to std::cerr.
+   * @note If the OpenXR instance is not valid or if `xrGetSystem` fails, an
+   * error message is logged to std::cerr.
    */
   void initializeSystem();
 

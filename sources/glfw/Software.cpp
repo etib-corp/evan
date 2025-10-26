@@ -42,9 +42,9 @@ evan::glfw::Software::Software() {
 **
 */
 evan::glfw::Software::Software(const std::string &appName,
-                                const Version &appVersion,
-                                const std::string &engineName,
-                                const Version &engineVersion) {
+                               const Version &appVersion,
+                               const std::string &engineName,
+                               const Version &engineVersion) {
   this->_appName = appName;
   this->_appVersion = new Version(appVersion);
   this->_engineName = engineName;

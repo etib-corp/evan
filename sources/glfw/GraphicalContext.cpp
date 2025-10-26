@@ -54,11 +54,11 @@ evan::glfw::GraphicalContext::GraphicalContext() {
 }
 
 evan::glfw::GraphicalContext::GraphicalContext(const std::string &appName,
-                                                const Version &appVersion,
-                                                const std::string &engineName,
-                                                const Version &engineVersion,
-                                                unsigned int windowWidth,
-                                                unsigned int windowHeight) {
+                                               const Version &appVersion,
+                                               const std::string &engineName,
+                                               const Version &engineVersion,
+                                               unsigned int windowWidth,
+                                               unsigned int windowHeight) {
   _appName = appName;
   _appVersion = new Version(appVersion);
   _engineName = engineName;
@@ -178,8 +178,7 @@ void evan::glfw::GraphicalContext::createInstance() {
   }
 }
 
-std::vector<std::string>
-evan::glfw::GraphicalContext::getInstanceExtensions() {
+std::vector<std::string> evan::glfw::GraphicalContext::getInstanceExtensions() {
   uint32_t glfwExtensionCount = 0;
   const char **glfwExtensions =
       glfwGetRequiredInstanceExtensions(&glfwExtensionCount);

@@ -57,7 +57,7 @@ std::vector<char> evan::Utils::readFile(const std::string &filename) {
  */
 evan::Utils::SwapChainSupportDetails
 evan::Utils::querySwapChainSupport(VkPhysicalDevice device,
-                                      VkSurfaceKHR surface) {
+                                   VkSurfaceKHR surface) {
   SwapChainSupportDetails details;
   uint32_t formatCount;
   uint32_t presentModeCount;
@@ -97,8 +97,7 @@ evan::Utils::querySwapChainSupport(VkPhysicalDevice device,
  * indices will remain incomplete.
  */
 evan::Utils::QueueFamilyIndices
-evan::Utils::findQueueFamilies(VkPhysicalDevice device,
-                                  VkSurfaceKHR surface) {
+evan::Utils::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
   QueueFamilyIndices indices;
 
   uint32_t queueFamilyCount = 0;
@@ -186,8 +185,8 @@ evan::Utils::findQueueFamilies(VkPhysicalDevice device) {
  * @throws std::runtime_error If no suitable memory type is found.
  */
 uint32_t evan::Utils::findMemoryType(VkPhysicalDevice physicalDevice,
-                                        uint32_t typeFilter,
-                                        VkMemoryPropertyFlags properties) {
+                                     uint32_t typeFilter,
+                                     VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties memProperties;
 
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -411,9 +410,9 @@ void evan::Utils::transitionImageLayout(
  * present mode).
  * - Confirms that the device supports anisotropic sampling.
  */
-bool evan::Utils::isDeviceSuitable(
-    VkPhysicalDevice device, VkSurfaceKHR surface,
-    std::vector<const char *> deviceExtensions) {
+bool evan::Utils::isDeviceSuitable(VkPhysicalDevice device,
+                                   VkSurfaceKHR surface,
+                                   std::vector<const char *> deviceExtensions) {
   QueueFamilyIndices indices = Utils::findQueueFamilies(device, surface);
   bool extensionsSupported =
       Utils::checkDeviceExtensionSupport(device, deviceExtensions);
@@ -548,8 +547,7 @@ void evan::Utils::copyBufferToImage(
  * @throws std::runtime_error If the image format does not support linear
  * blitting.
  */
-void evan::Utils::generateMipmaps(
-    const GenerateMipmapsProperties &properties) {
+void evan::Utils::generateMipmaps(const GenerateMipmapsProperties &properties) {
   VkFormatProperties formatProperties;
   vkGetPhysicalDeviceFormatProperties(
       properties._physicalDevice, properties._imageFormat, &formatProperties);
@@ -681,8 +679,8 @@ void evan::Utils::copyBuffer(const CopyBufferProperties &properties) {
  * @return VkSampleCountFlagBits The maximum supported sample count for both
  * color and depth framebuffers.
  */
-VkSampleCountFlagBits evan::Utils::getMaxUsableSampleCount(
-    const VkPhysicalDevice &physicalDevice) {
+VkSampleCountFlagBits
+evan::Utils::getMaxUsableSampleCount(const VkPhysicalDevice &physicalDevice) {
   VkPhysicalDeviceProperties physicalDeviceProperties;
   vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
   VkSampleCountFlags counts =
@@ -719,9 +717,8 @@ VkSampleCountFlagBits evan::Utils::getMaxUsableSampleCount(
  * the creation of shader modules. The input SPIR-V bytecode is passed as a
  * vector of bytes, which is converted to the required format for Vulkan.
  */
-VkShaderModule
-evan::Utils::createShaderModule(VkDevice logicalDevice,
-                                   const std::vector<char> &code) {
+VkShaderModule evan::Utils::createShaderModule(VkDevice logicalDevice,
+                                               const std::vector<char> &code) {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size();
@@ -858,9 +855,9 @@ evan::Utils::findSupportedDepthFormat(VkPhysicalDevice physicalDevice) {
  */
 
 VkImageView evan::Utils::createImageView(VkImage image, VkFormat format,
-                                            VkImageAspectFlags aspectFlags,
-                                            VkDevice logicalDevice,
-                                            uint32_t mipLevels) {
+                                         VkImageAspectFlags aspectFlags,
+                                         VkDevice logicalDevice,
+                                         uint32_t mipLevels) {
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image = image;
@@ -963,7 +960,7 @@ bool evan::Utils::hasStencilComponent(VkFormat format) {
  */
 VkCommandBuffer
 evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
-                                        VkCommandPool commandPool) {
+                                     VkCommandPool commandPool) {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -998,9 +995,9 @@ evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
  * @param commandBuffer The command buffer to be ended, submitted, and freed.
  */
 void evan::Utils::endSingleTimeCommands(VkDevice logicalDevice,
-                                           VkCommandPool commandPool,
-                                           VkQueue graphicsQueue,
-                                           VkCommandBuffer commandBuffer) {
+                                        VkCommandPool commandPool,
+                                        VkQueue graphicsQueue,
+                                        VkCommandBuffer commandBuffer) {
   vkEndCommandBuffer(commandBuffer);
 
   VkSubmitInfo submitInfo{};

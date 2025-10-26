@@ -11,8 +11,7 @@
 // Protected methods //
 ///////////////////////
 
-VkSampleCountFlagBits
-evan::ARenderingContext::getMaxUsableSampleCount() const {
+VkSampleCountFlagBits evan::ARenderingContext::getMaxUsableSampleCount() const {
   VkPhysicalDeviceProperties physicalDeviceProperties;
   vkGetPhysicalDeviceProperties(_physicalDevice, &physicalDeviceProperties);
   VkSampleCountFlags counts =

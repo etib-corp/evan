@@ -73,8 +73,8 @@ evan::glfw::RenderingContext::RenderingContext(
 evan::glfw::RenderingContext::~RenderingContext() {}
 
 void evan::glfw::RenderingContext::initWindow(unsigned int width,
-                                               unsigned int height,
-                                               const std::string &title) {
+                                              unsigned int height,
+                                              const std::string &title) {
   if (!glfwInit()) {
     throw std::runtime_error("Failed to initialize GLFW");
   }

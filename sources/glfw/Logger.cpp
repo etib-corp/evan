@@ -7,17 +7,16 @@
 
 #include "glfw/Logger.hpp"
 
-evan::glfw::Logger::Logger(std::ostream &stream,
-                            const std::string &programName,
-                            const evan::ALogger::Environment &env)
+evan::glfw::Logger::Logger(std::ostream &stream, const std::string &programName,
+                           const evan::ALogger::Environment &env)
     : _stream(stream) {
   _env = env == evan::ALogger::DEV ? "DEV    " : "PROD   ";
   _programName = programName + "    ";
 }
 
 void evan::glfw::Logger::log(const std::string &message,
-                              const std::string &logLevel,
-                              const std::string &caller) const {
+                             const std::string &logLevel,
+                             const std::string &caller) const {
   std::string out = "";
   std::stringstream ss;
   std::time_t t = std::time(nullptr);

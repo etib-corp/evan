@@ -45,7 +45,7 @@ void evan::glfw::AssetsManager::remove(const std::string &path, bool save) {
 }
 
 bool evan::glfw::AssetsManager::save(const std::string &path,
-                                      const std::string &newPath) {
+                                     const std::string &newPath) {
   auto it = _assets.find(path);
   if (it == _assets.end()) {
     std::cerr << "Asset not found: " << path << std::endl;

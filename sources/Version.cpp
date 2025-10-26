@@ -8,7 +8,7 @@
 #include "Version.hpp"
 
 evan::Version::Version(unsigned int major, unsigned int minor,
-                          unsigned int patch) {
+                       unsigned int patch) {
   this->_major = major;
   this->_minor = minor;
   this->_patch = patch;

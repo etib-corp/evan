@@ -41,7 +41,7 @@ protected:
  */
 TEST_F(VersionTest, ConstructorSetsCorrectValues) {
   evan::Version version(1, 2, 3);
-  
+
   EXPECT_EQ(version._major, 1);
   EXPECT_EQ(version._minor, 2);
   EXPECT_EQ(version._patch, 3);
@@ -52,7 +52,7 @@ TEST_F(VersionTest, ConstructorSetsCorrectValues) {
  */
 TEST_F(VersionTest, ConstructorWithZeroValues) {
   evan::Version version(0, 0, 0);
-  
+
   EXPECT_EQ(version._major, 0);
   EXPECT_EQ(version._minor, 0);
   EXPECT_EQ(version._patch, 0);
@@ -64,7 +64,7 @@ TEST_F(VersionTest, ConstructorWithZeroValues) {
 TEST_F(VersionTest, ConstructorWithMaxValues) {
   unsigned int max_val = 999;
   evan::Version version(max_val, max_val, max_val);
-  
+
   EXPECT_EQ(version._major, max_val);
   EXPECT_EQ(version._minor, max_val);
   EXPECT_EQ(version._patch, max_val);
@@ -76,7 +76,7 @@ TEST_F(VersionTest, ConstructorWithMaxValues) {
 TEST_F(VersionTest, ToUint32tStandardConversion) {
   evan::Version version(1, 0, 0);
   uint32_t result = version.to_uint32_t();
-  
+
   // VK_MAKE_VERSION(1, 0, 0) should produce a specific bit pattern
   uint32_t expected = VK_MAKE_VERSION(1, 0, 0);
   EXPECT_EQ(result, expected);
@@ -88,7 +88,7 @@ TEST_F(VersionTest, ToUint32tStandardConversion) {
 TEST_F(VersionTest, ToUint32tVersion123) {
   evan::Version version(1, 2, 3);
   uint32_t result = version.to_uint32_t();
-  
+
   uint32_t expected = VK_MAKE_VERSION(1, 2, 3);
   EXPECT_EQ(result, expected);
 }
@@ -99,7 +99,7 @@ TEST_F(VersionTest, ToUint32tVersion123) {
 TEST_F(VersionTest, ToUint32tZeroVersion) {
   evan::Version version(0, 0, 0);
   uint32_t result = version.to_uint32_t();
-  
+
   uint32_t expected = VK_MAKE_VERSION(0, 0, 0);
   EXPECT_EQ(result, expected);
   EXPECT_EQ(result, 0);
@@ -115,7 +115,7 @@ TEST_F(VersionTest, ToUint32tVariousVersions) {
     uint32_t expected = VK_MAKE_VERSION(2, 1, 5);
     EXPECT_EQ(version.to_uint32_t(), expected);
   }
-  
+
   // Test version 3.4.7
   {
     evan::Version version(3, 4, 7);
@@ -132,12 +132,12 @@ TEST_F(VersionTest, DifferentVersionsProduceDifferentValues) {
   evan::Version version2(2, 0, 0);
   evan::Version version3(1, 1, 0);
   evan::Version version4(1, 0, 1);
-  
+
   uint32_t val1 = version1.to_uint32_t();
   uint32_t val2 = version2.to_uint32_t();
   uint32_t val3 = version3.to_uint32_t();
   uint32_t val4 = version4.to_uint32_t();
-  
+
   EXPECT_NE(val1, val2);
   EXPECT_NE(val1, val3);
   EXPECT_NE(val1, val4);
@@ -151,11 +151,11 @@ TEST_F(VersionTest, DifferentVersionsProduceDifferentValues) {
  */
 TEST_F(VersionTest, ToUint32tConsistentResults) {
   evan::Version version(5, 6, 7);
-  
+
   uint32_t result1 = version.to_uint32_t();
   uint32_t result2 = version.to_uint32_t();
   uint32_t result3 = version.to_uint32_t();
-  
+
   EXPECT_EQ(result1, result2);
   EXPECT_EQ(result2, result3);
 }
@@ -165,15 +165,15 @@ TEST_F(VersionTest, ToUint32tConsistentResults) {
  */
 TEST_F(VersionTest, VersionFieldsCanBeModified) {
   evan::Version version(1, 2, 3);
-  
+
   version._major = 4;
   version._minor = 5;
   version._patch = 6;
-  
+
   EXPECT_EQ(version._major, 4);
   EXPECT_EQ(version._minor, 5);
   EXPECT_EQ(version._patch, 6);
-  
+
   uint32_t expected = VK_MAKE_VERSION(4, 5, 6);
   EXPECT_EQ(version.to_uint32_t(), expected);
 }

@@ -29,15 +29,15 @@
  */
 #define LOG(level, message)                                                    \
   do {                                                                         \
-    if (level == evan::ALogger::ERROR) {                                    \
+    if (level == evan::ALogger::ERROR) {                                       \
       logger->error(message, __PRETTY_FUNCTION__);                             \
-    } else if (level == evan::ALogger::WARNING) {                           \
+    } else if (level == evan::ALogger::WARNING) {                              \
       logger->warning(message, __PRETTY_FUNCTION__);                           \
-    } else if (level == evan::ALogger::INFO) {                              \
+    } else if (level == evan::ALogger::INFO) {                                 \
       logger->info(message, __PRETTY_FUNCTION__);                              \
-    } else if (level == evan::ALogger::DEBUG) {                             \
+    } else if (level == evan::ALogger::DEBUG) {                                \
       logger->debug(message, __PRETTY_FUNCTION__);                             \
-    } else if (level == evan::ALogger::FATAL) {                             \
+    } else if (level == evan::ALogger::FATAL) {                                \
       logger->fatal(message, __PRETTY_FUNCTION__);                             \
     } else {                                                                   \
       std::cerr << "Unknown log level: " << level                              \

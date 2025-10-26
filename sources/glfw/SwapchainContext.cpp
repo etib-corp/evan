@@ -191,9 +191,9 @@ void evan::glfw::SwapchainContext::createDescriptorSets(
 }
 
 void evan::glfw::SwapchainContext::init(VkSurfaceKHR surface,
-                                         VkPhysicalDevice physicalDevice,
-                                         VkDevice logicalDevice,
-                                         GLFWwindow *window) {
+                                        VkPhysicalDevice physicalDevice,
+                                        VkDevice logicalDevice,
+                                        GLFWwindow *window) {
   Utils::SwapChainSupportDetails swapChainSupport =
       Utils::querySwapChainSupport(physicalDevice, surface);
 
@@ -268,8 +268,8 @@ void evan::glfw::SwapchainContext::createImageViews(VkDevice logicalDevice) {
   }
 }
 
-void evan::glfw::SwapchainContext::createFramebuffers(
-    VkDevice logicalDevice, VkRenderPass renderPass) {
+void evan::glfw::SwapchainContext::createFramebuffers(VkDevice logicalDevice,
+                                                      VkRenderPass renderPass) {
   _swapchainFramebuffers.resize(_imageViews.size());
 
   for (size_t i = 0; i < _imageViews.size(); i++) {

@@ -94,6 +94,6 @@ public:
 protected:
   std::map<std::string, std::shared_ptr<evan::FileAsset>>
       _assets; ///> The map of assets, where the key is the path and the value
-               ///is a shared pointer to the FileAsset object.
+               /// is a shared pointer to the FileAsset object.
 };
 } // namespace evan
