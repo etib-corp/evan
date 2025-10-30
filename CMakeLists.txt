@@ -111,7 +111,7 @@ if(BUILD_FOR_OPENXR)
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link OpenXR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader JNI::JNI)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR-SDK::openxr_loader ${JNI_LIBRARIES})
 endif()
 
 # Configure for GLFW
