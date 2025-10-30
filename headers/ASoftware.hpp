@@ -8,7 +8,7 @@
 #pragma once
 
 #include "AGraphicalContext.hpp"
-#include "Evan.hpp"
+#include "EvanPlatform.hpp"
 #include <iostream>
 
 #include "Version.hpp"
