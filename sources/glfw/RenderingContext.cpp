@@ -8,38 +8,6 @@
 #include "glfw/RenderingContext.hpp"
 
 ////////////////////
-// Static methods //
-////////////////////
-
-/**
- * @brief Default debug callback function for Vulkan validation layers.
- *
- * This function is called whenever a validation layer generates a debug
- * message. It outputs the message to the standard error stream.
- *
- * @param messageSeverity Specifies the severity of the message (e.g., verbose,
- * info, warning, or error).
- * @param messageType Specifies the type of the message (e.g., general,
- * validation, or performance).
- * @param pCallbackData Pointer to a structure containing details about the
- * debug message.
- * @param pUserData Pointer to user-defined data passed during the creation of
- * the debug messenger.
- *
- * @return Always returns VK_FALSE, indicating that the Vulkan call that
- * triggered the callback should not be aborted.
- */
-static VKAPI_ATTR VkBool32 VKAPI_CALL
-defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                     VkDebugUtilsMessageTypeFlagsEXT messageType,
-                     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-                     void *pUserData) {
-  std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
-
-  return VK_FALSE;
-}
-
-////////////////////
 // Public methods //
 ////////////////////
 
@@ -218,6 +186,8 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
       ._physicalDevice = _physicalDevice,
       ._size = bufferSize,
       ._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      ._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
 
@@ -234,6 +204,7 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
       ._size = bufferSize,
       ._usage =
           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._buffer = _vertexBuffer,
       ._bufferMemory = _vertexBufferMemory};
   Utils::createBuffer(vertexBufferProperties);
@@ -261,6 +232,8 @@ void evan::glfw::RenderingContext::createIndexBuffer() {
       ._physicalDevice = _physicalDevice,
       ._size = bufferSize,
       ._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      ._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
 
@@ -277,6 +250,7 @@ void evan::glfw::RenderingContext::createIndexBuffer() {
       ._size = bufferSize,
       ._usage =
           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._buffer = _indexBuffer,
       ._bufferMemory = _indexBufferMemory};
   Utils::createBuffer(indexBufferProperties);
