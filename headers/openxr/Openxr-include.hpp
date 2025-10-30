@@ -13,6 +13,7 @@
 
 #include "Evan.hpp"
 
+#include <jni.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <vulkan/vulkan.h>

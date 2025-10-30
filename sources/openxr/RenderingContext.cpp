@@ -19,7 +19,7 @@ evan::openxr::RenderingContext::RenderingContext(
   _vulkanContext = std::make_shared<VulkanContext>(
       _logicalDevice, _physicalDevice, _graphicsQueue, _commandPool,
       Utils::findQueueFamilies(_physicalDevice).graphicsFamily.value(),
-      _msaaSamples);
+      _msaaSamples); // ! builds only without this even though it's needed
 }
 
 evan::openxr::RenderingContext::~RenderingContext() {}
