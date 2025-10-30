@@ -7,14 +7,17 @@
 
 #pragma once
 
-#include "openxr/Openxr-include.hpp"
+#include "EvanPlatform.hpp"
 #include <memory>
 
+// Platform data structure - defined for all platforms but only populated on
+// Android
 struct PlatformData {
   void *applicationVM;
   void *applicationActivity;
 };
 
+#ifdef __ANDROID__
 namespace evan {
 namespace openxr {
 /**
@@ -70,3 +73,4 @@ private:
 
 } // namespace openxr
 } // namespace evan
+#endif // __ANDROID__

@@ -13,24 +13,57 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # GLFW builds
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
             build_type: Release
+            build_backend: GLFW
+            cmake_flags: -DBUILD_FOR_GLFW=ON
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
             build_type: Release
+            build_backend: GLFW
+            cmake_flags: -DBUILD_FOR_GLFW=ON
           - os: macos-latest
             c_compiler: clang
             cpp_compiler: clang++
             build_type: Release
+            build_backend: GLFW
+            cmake_flags: -DBUILD_FOR_GLFW=ON
+          # OpenXR builds
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+            build_type: Release
+            build_backend: OpenXR
+            cmake_flags: -DBUILD_FOR_OPENXR=ON
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            build_type: Release
+            build_backend: OpenXR
+            cmake_flags: -DBUILD_FOR_OPENXR=ON
+          - os: macos-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            build_type: Release
+            build_backend: OpenXR
+            cmake_flags: -DBUILD_FOR_OPENXR=ON
     steps:
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
             sudo apt-get update
             sudo apt-get install -y build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev libxinerama-dev
+
+      - name: Setup JAVA for OpenXR
+        if: matrix.build_backend == 'OpenXR'
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Checkout
         uses: actions/checkout@v5.0.0
@@ -49,7 +82,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_TESTS=ON
-          -DBUILD_FOR_GLFW=ON
+          ${{ matrix.cmake_flags }}
           -S ${{ github.workspace }}
 
       - name: Build
