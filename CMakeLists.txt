@@ -92,7 +92,7 @@ if(BUILD_FOR_OPENXR)
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
         GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-        GIT_TAG release-1.1.53  
+        GIT_TAG release-1.1.53
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
@@ -111,7 +111,7 @@ if(BUILD_FOR_OPENXR)
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link OpenXR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR-SDK::openxr_loader ${JNI_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader JNI::JNI)
 endif()
 
 # Configure for GLFW
