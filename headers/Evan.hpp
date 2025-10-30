@@ -16,12 +16,16 @@
 
 #ifdef __GLFW__
 
-#include <vulkan/vulkan.hpp>
-
 #ifdef _WIN32
+// Prevent Windows.h min/max macros from interfering with std::min/std::max
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
+
+#include <vulkan/vulkan.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
