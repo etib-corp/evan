@@ -15,6 +15,12 @@
 // macOS doesn't have a specific OpenXR platform define
 // We'll use headless or rely on the loader to detect the platform
 #elif defined(_WIN32)
+// On Windows, we need to include windows.h before OpenXR headers
+// Define NOMINMAX first to prevent min/max macro conflicts
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #define XR_USE_PLATFORM_WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif defined(__linux__)
