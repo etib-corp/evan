@@ -89,6 +89,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
 if(BUILD_FOR_OPENXR)
     message(STATUS "Building with OpenXR support")
 
+    # Disable OpenXR tests and other unnecessary components
+    set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_CONFORMANCE_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
         GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
@@ -98,20 +103,31 @@ if(BUILD_FOR_OPENXR)
     )
     FetchContent_MakeAvailable(OpenXR-SDK)
 
-    # Find JNI
-    find_package(JNI REQUIRED)
+    # Find JNI only if building for Android
+    if(ANDROID)
+        find_package(JNI REQUIRED)
+    endif()
 
     # Add OpenXR compile definition
     add_compile_definitions(__OPENXR__)
 
     # Collect OpenXR-specific source files
     file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/openxr/*.cpp")
+    
+    # Exclude Android-specific files on non-Android platforms
+    if(NOT ANDROID)
+        list(FILTER SOURCES_XR EXCLUDE REGEX ".*AndroidPlatform\\.cpp$")
+    endif()
 
     # Create library with OpenXR support
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link OpenXR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader JNI::JNI)
+    if(ANDROID)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader JNI::JNI)
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader)
+    endif()
 endif()
 
 # Configure for GLFW
