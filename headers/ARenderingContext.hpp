@@ -11,6 +11,7 @@
 #include <array>
 #include <memory>
 
+#include "Error.hpp"
 #include "Utils.hpp"
 
 /**
@@ -63,6 +64,12 @@ struct VulkanContext {
 #endif
 
 namespace evan {
+
+class ARenderingContextError : public evan::Error {
+public:
+  ARenderingContextError(const std::string &message) : evan::Error(message) {}
+};
+
 class ARenderingContext {
 public:
   virtual ~ARenderingContext() = default;
