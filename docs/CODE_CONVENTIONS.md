@@ -17,7 +17,7 @@ This document outlines the coding standards and conventions followed in this pro
 
 ### C++
 
-- Use `CamelCase` for class names and `PascalCase` for variable and function names.
+- Use `PascalCase` for class names and `CamelCase` for variable and function names.
 - For member variables, use a leading underscore (e.g., `_memberVariable`).
 - Use `nullptr` instead of `NULL` or `0` for pointer initialization.
 - Prefer `std::unique_ptr` and `std::shared_ptr` for dynamic memory management.
