@@ -8,7 +8,7 @@
 #pragma once
 
 #include "ASoftware.hpp"
-#include "openxr/AndroidPlatform.hpp"
+#include "openxr/AndroidPlatform.hpp" // Always include for PlatformData definition
 #include "openxr/GraphicalContext.hpp"
 #include "openxr/Openxr-include.hpp"
 
@@ -84,8 +84,10 @@ protected:
 
   XrInstance _XRinstance = XR_NULL_HANDLE;    // OpenXR instance handle
   XrSystemId _XRsystemID = XR_NULL_SYSTEM_ID; // OpenXR system ID
+#ifdef __ANDROID__
   std::shared_ptr<AndroidPlatform>
       _platform; // Platform-specific implementation (e.g., Android)
+#endif
 private:
 };
 
