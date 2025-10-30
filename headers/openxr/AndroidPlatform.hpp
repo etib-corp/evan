@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "openxr/Openxr-include.hpp"
+#include "EvanPlatform.hpp"
 #include <memory>
 
 // Platform data structure - defined for all platforms but only populated on

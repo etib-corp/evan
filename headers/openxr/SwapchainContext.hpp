@@ -13,9 +13,8 @@
 #include <string>
 
 #include "ASwapchainContext.hpp"
-#include "Evan.hpp"
+#include "EvanPlatform.hpp"
 #include "Utils.hpp"
-#include "openxr/Openxr-include.hpp"
 
 namespace evan {
 namespace openxr {

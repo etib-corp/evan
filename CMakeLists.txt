@@ -10,15 +10,6 @@ project(evan
 # Include common functions
 include(cmake/CommonFunctions.cmake)
 
-# Platform-specific configuration
-if(WIN32)
-    include(cmake/ConfigWindows.cmake)
-elseif(APPLE)
-    include(cmake/ConfigMacOS.cmake)
-elseif(UNIX)
-    include(cmake/ConfigLinux.cmake)
-endif()
-
 # Set global C++ standard and properties
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +26,20 @@ endif()
 option(BUILD_FOR_OPENXR "Build with OpenXR support" OFF)
 option(BUILD_FOR_GLFW "Build with GLFW support" OFF)
 option(BUILD_SHARED_LIBS "Build as shared library" OFF)
+
+# Platform-specific configuration (must come after feature options)
+if(WIN32)
+    include(cmake/ConfigWindows.cmake)
+elseif(APPLE)
+    include(cmake/ConfigMacOS.cmake)
+elseif(UNIX)
+    include(cmake/ConfigLinux.cmake)
+endif()
+
+# Global GLM defines
+add_compile_definitions(GLM_FORCE_RADIANS)
+add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
+add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
 # Check that at least one build mode is selected
 if(NOT BUILD_FOR_OPENXR AND NOT BUILD_FOR_GLFW)
@@ -88,6 +93,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
     message(STATUS "Building with OpenXR support")
+
+    # Add OpenXR platform defines
+    add_compile_definitions(XR_USE_GRAPHICS_API_VULKAN)
+    
+    # Android-specific defines
+    if(ANDROID)
+        add_compile_definitions(XR_USE_PLATFORM_ANDROID)
+        add_compile_definitions(VK_USE_PLATFORM_ANDROID_KHR)
+    endif()
 
     # Disable OpenXR tests and other unnecessary components
     set(BUILD_TESTS OFF CACHE BOOL "" FORCE)

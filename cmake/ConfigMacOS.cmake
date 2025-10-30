@@ -1,5 +1,9 @@
 message(STATUS "macOS configuration loaded")
 
+# macOS platform defines
+# Note: macOS doesn't have specific OpenXR platform defines
+# The loader will detect the platform automatically
+
 # Set macOS-specific compiler flags
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS deployment target")
 

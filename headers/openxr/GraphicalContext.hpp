@@ -8,7 +8,7 @@
 #pragma once
 
 #include "AGraphicalContext.hpp"
-#include "openxr/Openxr-include.hpp"
+#include "EvanPlatform.hpp"
 #include "openxr/RenderingContext.hpp"
 #include "openxr/SwapchainContext.hpp"
 
