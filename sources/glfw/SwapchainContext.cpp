@@ -43,6 +43,9 @@ defaultDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                      VkDebugUtilsMessageTypeFlagsEXT messageType,
                      const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                      void *pUserData) {
+  (void)messageSeverity;
+  (void)messageType;
+  (void)pUserData;
   std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
 
   return VK_FALSE;
@@ -329,6 +332,8 @@ void evan::glfw::SwapchainContext::createTextureImage(
       ._physicalDevice = properties._physicalDevice,
       ._size = imageSize,
       ._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      ._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
 
@@ -348,10 +353,12 @@ void evan::glfw::SwapchainContext::createTextureImage(
       ._width = (uint32_t)texWidth,
       ._height = (uint32_t)texHeight,
       ._mipLevels = _mipLevels,
+      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
       ._format = VK_FORMAT_R8G8B8A8_SRGB,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._image = _textureImage[texturePath],
       ._imageMemory = _textureImageMemory};
   Utils::createImage(imageProperties);
@@ -383,10 +390,10 @@ void evan::glfw::SwapchainContext::createTextureImage(
       ._commandPool = properties._commandPool,
       ._graphicsQueue = properties._graphicsQueue,
       ._image = _textureImage[texturePath],
-      ._mipLevels = _mipLevels,
+      ._imageFormat = VK_FORMAT_R8G8B8A8_SRGB,
       ._texWidth = (uint32_t)texWidth,
       ._texHeight = (uint32_t)texHeight,
-      ._imageFormat = VK_FORMAT_R8G8B8A8_SRGB};
+      ._mipLevels = _mipLevels};
   Utils::generateMipmaps(propertiesMipmap);
 
   vkDestroyBuffer(properties._logicalDevice, stagingBuffer, nullptr);
@@ -705,6 +712,7 @@ VkExtent2D evan::glfw::SwapchainContext::chooseSwapExtent(
 void evan::glfw::SwapchainContext::createColorResources(
     VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
     VkSampleCountFlagBits msaaSamples) {
+  (void)msaaSamples;
   VkFormat colorFormat = _swapchainColorFormat;
   Utils::CreateImageProperties imageProperties = {
       ._logicalDevice = logicalDevice,
@@ -712,10 +720,12 @@ void evan::glfw::SwapchainContext::createColorResources(
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1, // No mipmaps for color attachment
+      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
       ._format = colorFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._image = _colorImage,
       ._imageMemory = _colorImageMemory};
 
@@ -734,9 +744,11 @@ void evan::glfw::SwapchainContext::createDepthResources(
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1, // No mipmaps for depth attachment
+      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
       ._format = depthFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._image = _depthImage,
       ._imageMemory = _depthImageMemory};
 
@@ -846,6 +858,8 @@ void evan::glfw::SwapchainContext::createUniformBuffers(
         ._physicalDevice = physicalDevice,
         ._size = bufferSize,
         ._usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        ._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         ._buffer = _uniformBuffers[i],
         ._bufferMemory = _uniformBuffersMemory[i]};
 
