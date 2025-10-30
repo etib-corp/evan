@@ -8,6 +8,7 @@
 #ifndef SWAPCHAINCONTEXT_HPP_
 #define SWAPCHAINCONTEXT_HPP_
 
+#include <algorithm>
 #include <array>
 #include <string>
 
