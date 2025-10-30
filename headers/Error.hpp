@@ -34,7 +34,8 @@ namespace evan {
             const char *what() const noexcept override;
 
         protected:
-        private:
             std::string _message; // Error message
+
+        private:
     };
 } // namespace evan
