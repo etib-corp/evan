@@ -36,8 +36,8 @@ VkSampleCountFlagBits evan::ARenderingContext::getMaxUsableSampleCount() const {
 
 void evan::ARenderingContext::createCommandPool() {
   if (_logicalDevice == VK_NULL_HANDLE) {
-    std::cerr << "Logical device is not initialized" << std::endl;
-    return;
+    throw ARenderingContextError(
+        "[ARenderingContext] Cannot create command pool: Logical device is not initialized.");
   }
 
   if (_commandPool != VK_NULL_HANDLE) {
@@ -55,7 +55,7 @@ void evan::ARenderingContext::createCommandPool() {
 
   if (vkCreateCommandPool(_logicalDevice, &commandPoolCreateInfo, nullptr,
                           &_commandPool) != VK_SUCCESS) {
-    std::cerr << "Failed to create Vulkan command pool" << std::endl;
-    return;
+    throw ARenderingContextError(
+        "[ARenderingContext] Failed to create command pool.");
   }
 }
