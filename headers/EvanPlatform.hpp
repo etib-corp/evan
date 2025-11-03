@@ -26,10 +26,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
+// Vulkan headers - needed for both GLFW and OpenXR
+#if defined(__GLFW__) || defined(__OPENXR__)
+#include <vulkan/vulkan.h>
+#endif
+
 #ifdef __GLFW__
+#include <vulkan/vulkan.hpp>
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include <vulkan/vulkan.hpp>
 #endif
 
 #ifdef __OPENXR__
@@ -41,5 +47,4 @@
 #include <jni.h>
 #endif
 #include <openxr/openxr_platform.h>
-#include <vulkan/vulkan.h>
 #endif

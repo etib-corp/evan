@@ -69,6 +69,10 @@ FetchContent_Declare(Vulkan-Headers
 )
 FetchContent_MakeAvailable(Vulkan-Headers)
 
+# Make Vulkan headers available globally (needed for OpenXR SDK)
+FetchContent_GetProperties(Vulkan-Headers SOURCE_DIR VULKAN_HEADERS_SOURCE_DIR)
+include_directories(${VULKAN_HEADERS_SOURCE_DIR}/include)
+
 set(GLM_BUILD_TESTS OFF)
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git

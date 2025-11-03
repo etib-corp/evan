@@ -14,7 +14,7 @@
 #include <set>
 #include <vector>
 
-#include <vulkan/vulkan.h>
+#include "EvanPlatform.hpp"
 
 namespace evan {
 class Utils {
