@@ -120,6 +120,7 @@ void evan::openxr::GraphicalContext::createInstance() {
 
   VkApplicationInfo appInfo = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+      .pNext = nullptr,
       .pApplicationName = "test",
       .applicationVersion = 0u,
       .pEngineName = "evan",
