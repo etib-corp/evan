@@ -32,5 +32,8 @@ namespace evan {
         protected:
             VkShaderModule _vertexShaderModule;
             VkShaderModule _fragmentShaderModule;
+
+            std::vector<uint32_t> _vertexCode;
+            std::vector<uint32_t> _fragmentCode;
     };
 } // namespace evan
