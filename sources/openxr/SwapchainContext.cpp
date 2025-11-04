@@ -178,7 +178,7 @@ void evan::openxr::SwapChainImage::createColorResources() {
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
       ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._image = _colorImage,
-      ._imageMemory = _depthImageMemory,
+      ._imageMemory = _colorImageMemory,
   };
   Utils::createImage(properties);
 
