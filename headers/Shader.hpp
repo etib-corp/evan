@@ -26,9 +26,11 @@ namespace evan {
                 VkDevice device);
             ~Shader();
 
+            VkShaderModule getVertexShaderModule() const;
+            VkShaderModule getFragmentShaderModule() const;
+
         protected:
             VkShaderModule _vertexShaderModule;
             VkShaderModule _fragmentShaderModule;
-        private:
     };
 } // namespace evan
