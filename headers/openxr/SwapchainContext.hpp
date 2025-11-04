@@ -8,13 +8,14 @@
 #ifndef SWAPCHAINCONTEXT_HPP_
 #define SWAPCHAINCONTEXT_HPP_
 
+#include <algorithm>
 #include <array>
+#include <map>
 #include <string>
 
 #include "ASwapchainContext.hpp"
-#include "Evan.hpp"
+#include "EvanPlatform.hpp"
 #include "Utils.hpp"
-#include "openxr/Openxr-include.hpp"
 
 namespace evan {
 namespace openxr {

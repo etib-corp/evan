@@ -66,11 +66,11 @@ void evan::openxr::SwapchainContext::init() {
               << std::endl;
     return;
   }
-  _viewsConfigurations.resize(viewCount, {XR_TYPE_VIEW_CONFIGURATION_VIEW});
+  _viewsConfigurations.resize(viewCount, {XR_TYPE_VIEW_CONFIGURATION_VIEW, nullptr, 0, 0, 0, 0, 0, 0});
   xrEnumerateViewConfigurationViews(
       _instance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
       viewCount, &viewCount, _viewsConfigurations.data());
-  _views.resize(viewCount, {XR_TYPE_VIEW});
+  _views.resize(viewCount, {XR_TYPE_VIEW, nullptr, {}, {}});
 
   _swapchainColorFormat = selectSwapchainFormat(swapchainFormats);
 
@@ -171,12 +171,14 @@ void evan::openxr::SwapChainImage::createColorResources() {
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1,
+      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
       ._format = _swapchainImageFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+      ._properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       ._image = _colorImage,
-      ._imageMemory = _depthImageMemory,
+      ._imageMemory = _colorImageMemory,
   };
   Utils::createImage(properties);
 
@@ -212,6 +214,7 @@ void evan::openxr::SwapChainImage::createDepthResources() {
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1,
+      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
       ._format = depthFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

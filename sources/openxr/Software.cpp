@@ -9,7 +9,12 @@
 
 evan::openxr::Software::Software(
     const std::shared_ptr<PlatformData> &platformData) {
+#ifdef __ANDROID__
   _platform = std::make_shared<AndroidPlatform>(platformData);
+#else
+  // On non-Android platforms, platformData is not used
+  (void)platformData; // Suppress unused parameter warning
+#endif
   _graphicalContext = nullptr;
 
   createInstance();
@@ -26,8 +31,12 @@ evan::openxr::Software::~Software() {}
 void evan::openxr::Software::createInstance() {
   if (_XRinstance != XR_NULL_HANDLE)
     return;
-  std::vector<const char *> extensions{
-      XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME};
+
+  std::vector<const char *> extensions;
+
+#ifdef __ANDROID__
+  extensions.push_back(XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME);
+#endif
 
   const std::vector<std::string> graphicsExtensions = {
       XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
@@ -37,7 +46,11 @@ void evan::openxr::Software::createInstance() {
 
   XrInstanceCreateInfo createInfo{};
   createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
+#ifdef __ANDROID__
   createInfo.next = _platform->getInstanceCreateInfoAndroid();
+#else
+  createInfo.next = nullptr;
+#endif
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   createInfo.enabledExtensionNames = extensions.data();
   createInfo.enabledApiLayerCount = 0;

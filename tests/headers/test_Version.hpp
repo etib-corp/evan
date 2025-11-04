@@ -23,4 +23,14 @@
 #pragma once
 
 #include "Version.hpp"
+
+// Undefine X11 macros that conflict with Google Test
+// X11 defines these macros which conflict with gtest internals
+#ifdef None
+#undef None
+#endif
+#ifdef Bool
+#undef Bool
+#endif
+
 #include <gtest/gtest.h>
