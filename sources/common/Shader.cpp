@@ -31,3 +31,13 @@ evan::Shader::Shader(const std::vector<uint32_t> &vertexCode, const std::vector<
 evan::Shader::~Shader()
 {
 }
+
+VkShaderModule evan::Shader::getVertexShaderModule() const
+{
+    return _vertexShaderModule;
+}
+
+VkShaderModule evan::Shader::getFragmentShaderModule() const
+{
+    return _fragmentShaderModule;
+}
