@@ -41,7 +41,8 @@ void evan::ARenderingContext::createCommandPool() {
   }
 
   if (_commandPool != VK_NULL_HANDLE) {
-    return;
+    throw ARenderingContextError(
+        "[ARenderingContext] Command pool already created.");
   }
 
   Utils::QueueFamilyIndices queueCreateInfo =
