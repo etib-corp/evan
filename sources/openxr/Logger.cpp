@@ -6,6 +6,7 @@
 */
 
 #include "openxr/Logger.hpp"
+#include <android/log.h>
 
 evan::openxr::Logger::Logger(const std::string &programName,
                               const evan::ALogger::Environment &env)
@@ -30,7 +31,7 @@ void evan::openxr::Logger::log(const std::string &message,
   out += caller + "    ";
   // out += std::to_string(_errorCode);
   out += message + "    ";
-  // __android_log_print(ANDROID_LOG_INFO, "evan_openxr", "%s\n", out.c_str());
+  __android_log_print(ANDROID_LOG_INFO, "evan_openxr", "%s\n", out.c_str());
 }
 
 evan::ALogger::LogLevel evan::openxr::Logger::getLogLevelFromString(const std::string &logLevel) const

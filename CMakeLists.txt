@@ -101,6 +101,12 @@ if(BUILD_FOR_OPENXR)
     # Find JNI
     find_package(JNI REQUIRED)
 
+    # Android logging library
+    # should be this
+    # if(ANDROID)
+    #     find_library(log-lib log)
+    #     target_link_libraries(${PROJECT_NAME} PRIVATE ${log-lib})
+
     # Add OpenXR compile definition
     add_compile_definitions(__OPENXR__)
 
