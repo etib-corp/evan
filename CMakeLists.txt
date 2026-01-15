@@ -92,7 +92,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan-Headers glm)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
@@ -171,7 +171,7 @@ if(BUILD_FOR_GLFW)
     target_sources(${PROJECT_NAME} PRIVATE ${GLFW_SOURCES})
 
     # Link Vulkan dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 endif()
 
 # Set common target properties
