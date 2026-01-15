@@ -7,6 +7,8 @@ project(evan
     LANGUAGES CXX
 )
 
+find_package(Vulkan REQUIRED)
+
 # Include common functions
 include(cmake/CommonFunctions.cmake)
 
@@ -60,18 +62,18 @@ include_directories(${HEADERS_DIR})
 # FetchContent module
 include(FetchContent)
 
-# Fetch Vulkan-Headers
-FetchContent_Declare(Vulkan-Headers
-    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.4.329
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
-)
-FetchContent_MakeAvailable(Vulkan-Headers)
+# # Fetch Vulkan-Headers
+# FetchContent_Declare(Vulkan-Headers
+#     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+#     GIT_TAG v1.4.329
+#     GIT_SHALLOW TRUE
+#     GIT_PROGRESS TRUE
+# )
+# FetchContent_MakeAvailable(Vulkan-Headers)
 
 # Make Vulkan headers available globally (needed for OpenXR SDK)
-FetchContent_GetProperties(Vulkan-Headers SOURCE_DIR VULKAN_HEADERS_SOURCE_DIR)
-include_directories(${VULKAN_HEADERS_SOURCE_DIR}/include)
+# FetchContent_GetProperties(Vulkan-Headers SOURCE_DIR VULKAN_HEADERS_SOURCE_DIR)
+# include_directories(${VULKAN_HEADERS_SOURCE_DIR}/include)
 
 set(GLM_BUILD_TESTS OFF)
 FetchContent_Declare(glm
@@ -92,7 +94,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan-Headers glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
@@ -185,7 +187,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 # Optional components
-option(BUILD_TESTING "Build the tests" ON)
+option(BUILD_TESTING "Build the tests" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_EXAMPLES "Build the examples" OFF)
 
