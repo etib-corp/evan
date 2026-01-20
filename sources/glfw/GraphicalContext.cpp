@@ -36,17 +36,16 @@ evan::glfw::GraphicalContext::GraphicalContext() {
 
   this->createInstance();
 
-  evan::glfw::RenderingContext::WindowProperties windowProperties = {
-      .width = 800, .height = 600, .title = _appName};
-  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(
-      windowProperties, _instance);
+  this->initWindow(800, 600);
+
+  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(_instance, _window);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
   evan::glfw::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
-                             ._window = vulkanContext->window,
+                             ._window = _window,
                              ._msaaSamples = vulkanContext->msaaSamples,
                              ._commandPool = vulkanContext->commandPool,
                              ._graphicsQueue = vulkanContext->graphicsQueue,
@@ -67,19 +66,18 @@ evan::glfw::GraphicalContext::GraphicalContext(const std::string &appName,
   _engineName = engineName;
   _engineVersion = new Version(engineVersion);
 
+  this->initWindow(windowWidth, windowHeight);
+
   this->createInstance();
 
-  evan::glfw::RenderingContext::WindowProperties windowProperties = {
-      .width = windowWidth, .height = windowHeight, .title = _appName};
-  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(
-      windowProperties, _instance);
+  _renderingContext = std::make_shared<evan::glfw::RenderingContext>(_instance, _window);
 
   auto vulkanContext = _renderingContext->getVulkanContext();
   evan::glfw::SwapchainContext::SwapchainContextCreationProperties
       swapchainProperties = {._surface = vulkanContext->surface,
                              ._physicalDevice = vulkanContext->physicalDevice,
                              ._logicalDevice = vulkanContext->logicalDevice,
-                             ._window = vulkanContext->window,
+                             ._window = _window,
                              ._msaaSamples = vulkanContext->msaaSamples,
                              ._commandPool = vulkanContext->commandPool,
                              ._graphicsQueue = vulkanContext->graphicsQueue,
@@ -180,6 +178,22 @@ void evan::glfw::GraphicalContext::createInstance() {
     throw std::runtime_error("Failed to create instance !");
   }
 }
+
+void evan::glfw::GraphicalContext::initWindow(int width, int height)
+{
+  if (!glfwInit()) {
+    throw std::runtime_error("Failed to initialize GLFW");
+  }
+
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+  _window = glfwCreateWindow(width, height, _appName.c_str(), nullptr, nullptr);
+  if (!_window) {
+    throw std::runtime_error("Failed to create GLFW window");
+  }
+}
+
 
 std::vector<std::string> evan::glfw::GraphicalContext::getInstanceExtensions() {
   uint32_t glfwExtensionCount = 0;

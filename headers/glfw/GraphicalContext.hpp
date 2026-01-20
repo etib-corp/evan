@@ -174,6 +174,19 @@ private:
   Version *_appVersion;    // Application version (major, minor, patch)
   std::string _engineName; // Engine name
   Version *_engineVersion; // Engine version (major, minor, patch)
+  GLFWwindow *_window;   // Pointer to the GLFW window
+
+  /*
+  ** @brief Initializes the GLFW window with the specified dimensions.
+  **
+  ** This function sets up the GLFW window with the given width and height.
+  ** It configures the necessary GLFW hints for Vulkan compatibility and
+  ** creates the window instance.
+  ** @param width The width of the window.
+  ** @param height The height of the window.
+  ** @throws std::runtime_error If window initialization fails.
+  */
+  void initWindow(int width, int height);
 
   /**
    * @brief Checks if the requested validation layers are supported.
