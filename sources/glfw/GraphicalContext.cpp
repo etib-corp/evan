@@ -34,9 +34,9 @@ evan::glfw::GraphicalContext::GraphicalContext() {
   _engineName = "Evan";
   _engineVersion = new Version(1, 0, 0);
 
-  this->createInstance();
-
   this->initWindow(800, 600);
+
+  this->createInstance();
 
   _renderingContext = std::make_shared<evan::glfw::RenderingContext>(_instance, _window);
 
@@ -148,6 +148,7 @@ void evan::glfw::GraphicalContext::createInstance() {
     extensionsWrapped.emplace_back(
         VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     extensionsWrapped.emplace_back("VK_KHR_portability_enumeration");
+    extensionsWrapped.emplace_back("VK_EXT_debug_utils");
 
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 
