@@ -162,6 +162,10 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
 
+  if (bufferSize == 0) {
+    return;
+  }
+
   Utils::CreateBufferProperties stagingBufferProperties = {
       ._logicalDevice = _logicalDevice,
       ._physicalDevice = _physicalDevice,
@@ -171,8 +175,6 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
-
-  Utils::createBuffer(stagingBufferProperties);
 
   void *data;
   vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
@@ -206,6 +208,10 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
 void evan::glfw::RenderingContext::createIndexBuffer() {
   VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
 
+  if (bufferSize == 0) {
+    return;
+  }
+
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
   Utils::CreateBufferProperties stagingBufferProperties = {
@@ -217,7 +223,6 @@ void evan::glfw::RenderingContext::createIndexBuffer() {
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
-
   Utils::createBuffer(stagingBufferProperties);
 
   void *data;
