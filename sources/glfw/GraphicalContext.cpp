@@ -130,13 +130,15 @@ void evan::glfw::GraphicalContext::createInstance() {
       static_cast<uint32_t>(extensionsWrapped.size());
   createInfo.ppEnabledExtensionNames = extensionsWrapped.data();
 
-  VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-
   createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
   createInfo.ppEnabledLayerNames = validationLayers.data();
 
-  this->populateDebugMessengerCreateInfo(debugCreateInfo, defaultDebugCallback);
-  createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+  if (enableValidationLayers == true) {
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+
+    this->populateDebugMessengerCreateInfo(debugCreateInfo, defaultDebugCallback);
+    createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+  }
 
   VkResult result = vkCreateInstance(&createInfo, nullptr, &_instance);
 
@@ -144,11 +146,6 @@ void evan::glfw::GraphicalContext::createInstance() {
     std::cout << "Failed to create instance due to incompatible driver ! "
                  "Trying with MacOS settings..."
               << std::endl;
-
-    extensionsWrapped.emplace_back(
-        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    extensionsWrapped.emplace_back("VK_KHR_portability_enumeration");
-    extensionsWrapped.emplace_back("VK_EXT_debug_utils");
 
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 
@@ -196,15 +193,16 @@ void evan::glfw::GraphicalContext::initWindow(int width, int height)
 }
 
 
-std::vector<std::string> evan::glfw::GraphicalContext::getInstanceExtensions() {
+std::vector<std::string> evan::glfw::GraphicalContext::getInstanceExtensions()
+{
   uint32_t glfwExtensionCount = 0;
   const char **glfwExtensions =
       glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
   std::vector<const char *> extensions(glfwExtensions,
                                        glfwExtensions + glfwExtensionCount);
 
-  extensions.push_back("VK_KHR_portability_enumeration");
-  if (enableValidationLayers) {
+  extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+  if (enableValidationLayers == true) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
   return std::vector<std::string>(extensions.begin(), extensions.end());
