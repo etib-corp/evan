@@ -55,7 +55,7 @@ protected:
   std::vector<VkFramebuffer>
       _swapchainFramebuffers; // Framebuffers for the swapchain images
 
-  uint32_t _mipLevels; // Number of mipmap levels for textures
+  uint32_t _mipLevels = 1; // Number of mipmap levels for textures
 
   VkFormat _swapchainColorFormat =
       VK_FORMAT_UNDEFINED; // Format of the swapchain images
