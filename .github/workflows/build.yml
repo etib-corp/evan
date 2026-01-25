@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  LUNARG_VULKAN_SDK_BASE_URL: https://sdk.lunarg.com/sdk/download/
+  LUNARG_VULKAN_SDK_VERSION: 1.4.335.0
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -56,18 +60,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
             sudo apt-get update
-            sudo apt-get install -y build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev libxinerama-dev vulkan vulkan-loader vulkan-memory-allocator vulkan-tools vulkan-utility-libraries vulkan-validationlayers vulkan-volk
-
-      - name: Install Windows dependencies
-        if: matrix.os == 'windows-latest'
-        run: |
-            choco install -y  vulkan-sdk
-
-      - name: Install macOS dependencies
-        if: matrix.os == 'macos-latest'
-        run: |
-            brew update
-            brew install vulkan-extensionlayer vulkan-loader vulkan-tools vulkan-validationlayers vulkan-headers vulkan-profiles vulkan-utility-libraries vulkan-volk
+            sudo apt-get install -y build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev libxinerama-dev
 
       - name: Setup JAVA for OpenXR
         if: matrix.build_backend == 'OpenXR'
@@ -75,6 +68,44 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      - name: Install Vulkan SDK for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          $vulkanSdkUrl = "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}windows/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-setup.exe"
+          Invoke-WebRequest -Uri $vulkanSdkUrl -OutFile vulkan-sdk-setup.exe
+          Start-Process -FilePath vulkan-sdk-setup.exe -ArgumentList "/S" -NoNewWindow -Wait
+          $env:VULKAN_SDK = "C:\VulkanSDK\${{ env.LUNARG_VULKAN_SDK_VERSION }}\"
+          [System.Environment]
+          ::SetEnvironmentVariable('VULKAN_SDK', $env:VULKAN_SDK, [System.EnvironmentVariableTarget]::Machine)
+          $env:Path += ";$env:VULKAN_SDK\Bin;$env:VULKAN_SDK\Lib"
+
+      - name: Install Vulkan SDK for macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}mac/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.dmg"
+          curl -L $vulkanSdkUrl -o vulkan-sdk.dmg
+          hdiutil attach vulkan-sdk.dmg
+          sudo installer -pkg /Volumes/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.pkg -target /
+          export VULKAN_SDK=/usr/local/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}/macos
+          echo "export VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+          echo "export PATH=$VULKAN_SDK/bin:$PATH" >> $GITHUB_ENV
+          echo "export DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "export VK_ICD_FILENAMES=$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV
+
+      - name: Install Vulkan SDK for Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}linux/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-x86_64.tar.gz"
+          wget $vulkanSdkUrl -O vulkan-sdk.tar.gz
+          tar -xzf vulkan-sdk.tar.gz
+          export VULKAN_SDK=${{ github.workspace }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}/x86_64
+          echo "export VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+          echo "export PATH=$VULKAN_SDK/bin:$PATH" >> $GITHUB_ENV
+          echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "export VK_ICD_FILENAMES=$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV
 
       - name: Checkout
         uses: actions/checkout@v5.0.0
