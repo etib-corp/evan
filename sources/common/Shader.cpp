@@ -19,14 +19,16 @@ evan::Shader::Shader(const std::vector<uint32_t> &vertexCode, const std::vector<
     _fragmentCode = fragmentCode;
 
     if (vkCreateShaderModule(device, &createInfo, nullptr, &_vertexShaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex shader module!");
+        // throw an error if the shader module creation fails
+        return;
     }
 
     createInfo.codeSize = fragmentCode.size() * sizeof(uint32_t);
     createInfo.pCode = fragmentCode.data();
 
     if (vkCreateShaderModule(device, &createInfo, nullptr, &_fragmentShaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create fragment shader module!");
+        // throw an error if the shader module creation fails
+        return;
     }
 }
 
