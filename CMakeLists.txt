@@ -7,8 +7,6 @@ project(evan
     LANGUAGES CXX
 )
 
-find_package(Vulkan REQUIRED)
-
 # Include common functions
 include(cmake/CommonFunctions.cmake)
 
@@ -70,6 +68,8 @@ FetchContent_Declare(glm
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(glm)
+
+find_package(Vulkan REQUIRED)
 
 # Collect common source files
 file(GLOB SOURCES_COMMON "${SOURCES_DIR}/common/*.cpp" "${SOURCES_DIR}/*.cpp")
