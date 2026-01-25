@@ -114,8 +114,8 @@ if(BUILD_FOR_OPENXR)
 
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
-        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-        GIT_TAG release-1.1.53
+        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK-Source.git
+        GIT_TAG release-1.1.54
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
