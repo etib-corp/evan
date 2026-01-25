@@ -72,7 +72,7 @@ jobs:
       - name: Install Vulkan SDK for Windows
         if: matrix.os == 'windows-latest'
         run: |
-          $vulkanSdkUrl = "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}windows/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-setup.exe"
+          $vulkanSdkUrl = "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/windows/VulkanSDK-${{ env.LUNARG_VULKAN_SDK_VERSION }}-Installer.exe?Human=true"
           Invoke-WebRequest -Uri $vulkanSdkUrl -OutFile vulkan-sdk-setup.exe
           Start-Process -FilePath vulkan-sdk-setup.exe -ArgumentList "/S" -NoNewWindow -Wait
           $env:VULKAN_SDK = "C:\VulkanSDK\${{ env.LUNARG_VULKAN_SDK_VERSION }}\"
@@ -83,8 +83,8 @@ jobs:
       - name: Install Vulkan SDK for macOS
         if: matrix.os == 'macos-latest'
         run: |
-          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}mac/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.dmg"
-          curl -L $vulkanSdkUrl -o vulkan-sdk.dmg
+          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/mac/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.dmg?Human=true"
+          curl -L "$vulkanSdkUrl" -o vulkan-sdk.dmg
           hdiutil attach vulkan-sdk.dmg
           sudo installer -pkg /Volumes/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.pkg -target /
           export VULKAN_SDK=/usr/local/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}/macos
@@ -97,10 +97,10 @@ jobs:
       - name: Install Vulkan SDK for Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}linux/${{ env.LUNARG_VULKAN_SDK_VERSION }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-x86_64.tar.gz"
-          wget $vulkanSdkUrl -O vulkan-sdk.tar.gz
-          tar -xzf vulkan-sdk.tar.gz
-          export VULKAN_SDK=${{ github.workspace }}/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}/x86_64
+          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/linux/vulkansdk-linux-x86_64-${{ env.LUNARG_VULKAN_SDK_VERSION }}.tar.xz?Human=true"
+          wget "$vulkanSdkUrl" -O vulkan-sdk.tar.xz
+          tar -xf vulkan-sdk.tar.xz
+          export VULKAN_SDK=${{ github.workspace }}/${{ env.LUNARG_VULKAN_SDK_VERSION }}/x86_64
           echo "export VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
           echo "export PATH=$VULKAN_SDK/bin:$PATH" >> $GITHUB_ENV
           echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
