@@ -93,39 +93,23 @@ namespace glfw {
 class RenderingContext : public ARenderingContext {
 public:
   /**
-   * @brief Window properties structure.
-   *
-   * This structure holds the properties of the window, including its width,
-   * height, and title. It is used to initialize the window and set its
-   * properties during the creation of the rendering context.
-   *
-   */
-  struct WindowProperties {
-    unsigned int width;  // Width of the window
-    unsigned int height; // Height of the window
-    std::string title;   // Title of the window
-  };
-
-  /**
    * @brief Constructs a RenderingContext with the specified window properties
    * and Vulkan instance.
    *
    * Initializes the rendering context using the provided window properties and
    * Vulkan instance handle.
    *
-   * @param windowProperties The properties of the window to be used for
+   * @param window The GLFW window to be used for rendering.
    * rendering.
    * @param instance The Vulkan instance to associate with this rendering
    * context.
    */
-  RenderingContext(const WindowProperties &windowProperties,
-                   VkInstance instance);
+  RenderingContext(VkInstance instance, GLFWwindow *window);
 
   // Destructor
   ~RenderingContext();
 
 protected:
-  GLFWwindow *_window;   // Pointer to the GLFW window
   VkSurfaceKHR _surface; // Vulkan surface for rendering
   VkQueue _presentQueue; // Vulkan queue for presentation
 
@@ -208,21 +192,6 @@ protected:
   void createSyncObjects();
 
   /**
-   * @brief Initializes the application window with the specified dimensions and
-   * title.
-   *
-   * This function sets up a window for rendering, using the provided width,
-   * height, and title. It should be called before any rendering operations are
-   * performed.
-   *
-   * @param width The width of the window in pixels.
-   * @param height The height of the window in pixels.
-   * @param title The title of the window.
-   */
-  void initWindow(unsigned int width, unsigned int height,
-                  const std::string &title);
-
-  /**
    * @brief Creates a Vulkan surface for rendering.
    *
    * This function initializes the Vulkan surface associated with the given
@@ -236,7 +205,7 @@ protected:
    * elsewhere in the class.
    * @throws std::runtime_error If surface creation fails.
    */
-  void createSurface(VkInstance instance);
+  void createSurface(VkInstance instance, GLFWwindow *window);
 
   /**
    * @brief Selects and assigns a suitable physical device (GPU) for Vulkan

@@ -47,7 +47,6 @@ struct VulkanContext {
   VkCommandPool commandPool;
   uint32_t graphicsQueueFamilyIndex;
   VkSurfaceKHR surface;
-  GLFWwindow *window;
   VkSampleCountFlagBits msaaSamples;
 };
 #elif __OPENXR__

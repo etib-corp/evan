@@ -82,9 +82,13 @@ evan::glfw::SwapchainContext::SwapchainContext(
   this->createUniformBuffers(properties._logicalDevice,
                              properties._physicalDevice);
   this->createDescriptorPool(properties._logicalDevice);
-  this->createDescriptorSets(properties._logicalDevice,
-                             {{this->_textureImageView.begin()->second,
-                               this->_textureSampler.begin()->second}});
+
+  if (!this->_textureImageView.empty() &&
+      !this->_textureSampler.empty()) {
+        this->createDescriptorSets(properties._logicalDevice,
+          {{this->_textureImageView.begin()->second,
+            this->_textureSampler.begin()->second}});
+  }
 
   this->createGraphicsPipeline();
 }
@@ -720,7 +724,7 @@ void evan::glfw::SwapchainContext::createColorResources(
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1, // No mipmaps for color attachment
-      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
+      ._numSamples = msaaSamples,
       ._format = colorFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
@@ -744,7 +748,7 @@ void evan::glfw::SwapchainContext::createDepthResources(
       ._width = _swapchainExtent.width,
       ._height = _swapchainExtent.height,
       ._mipLevels = 1, // No mipmaps for depth attachment
-      ._numSamples = VK_SAMPLE_COUNT_1_BIT,
+      ._numSamples = properties._msaaSamples,
       ._format = depthFormat,
       ._tiling = VK_IMAGE_TILING_OPTIMAL,
       ._usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

@@ -11,11 +11,9 @@
 // Public methods //
 ////////////////////
 
-evan::glfw::RenderingContext::RenderingContext(
-    const WindowProperties &windowProperties, VkInstance instance) {
-  this->initWindow(windowProperties.width, windowProperties.height,
-                   windowProperties.title);
-  this->createSurface(instance);
+evan::glfw::RenderingContext::RenderingContext(VkInstance instance, GLFWwindow *window)
+{
+  this->createSurface(instance, window);
   this->pickPhysicalDevice(instance);
   this->createLogicalDevice();
   this->createCommandPool();
@@ -34,38 +32,21 @@ evan::glfw::RenderingContext::RenderingContext(
       Utils::findQueueFamilies(_physicalDevice, _surface)
           .graphicsFamily.value();
   _vulkanContext->surface = _surface;
-  _vulkanContext->window = _window;
   _vulkanContext->msaaSamples = _msaaSamples;
 }
 
 evan::glfw::RenderingContext::~RenderingContext() {}
 
-void evan::glfw::RenderingContext::initWindow(unsigned int width,
-                                              unsigned int height,
-                                              const std::string &title) {
-  if (!glfwInit()) {
-    throw std::runtime_error("Failed to initialize GLFW");
-  }
-
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-  _window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-  if (!_window) {
-    throw std::runtime_error("Failed to create GLFW window");
-  }
-}
-
 ///////////////////////
 // Protected methods //
 ///////////////////////
 
-void evan::glfw::RenderingContext::createSurface(VkInstance instance) {
+void evan::glfw::RenderingContext::createSurface(VkInstance instance, GLFWwindow *window) {
 #ifdef _WIN32
   VkWin32SurfaceCreateInfoKHR createInfo{};
 
   createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hwnd = glfwGetWin32Window(_window);
+  createInfo.hwnd = glfwGetWin32Window(window);
   createInfo.hinstance = GetModuleHandle(nullptr);
 
   if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &_surface) !=
@@ -76,7 +57,7 @@ void evan::glfw::RenderingContext::createSurface(VkInstance instance) {
   if (instance == VK_NULL_HANDLE) {
     throw std::runtime_error("Vulkan instance is NULL!");
   }
-  if (glfwCreateWindowSurface(instance, _window, nullptr, &_surface) !=
+  if (glfwCreateWindowSurface(instance, window, nullptr, &_surface) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface!");
   }
@@ -181,6 +162,10 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
 
+  if (bufferSize == 0) {
+    return;
+  }
+
   Utils::CreateBufferProperties stagingBufferProperties = {
       ._logicalDevice = _logicalDevice,
       ._physicalDevice = _physicalDevice,
@@ -190,8 +175,6 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
-
-  Utils::createBuffer(stagingBufferProperties);
 
   void *data;
   vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
@@ -225,6 +208,10 @@ void evan::glfw::RenderingContext::createVertexBuffer() {
 void evan::glfw::RenderingContext::createIndexBuffer() {
   VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
 
+  if (bufferSize == 0) {
+    return;
+  }
+
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
   Utils::CreateBufferProperties stagingBufferProperties = {
@@ -236,7 +223,6 @@ void evan::glfw::RenderingContext::createIndexBuffer() {
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       ._buffer = stagingBuffer,
       ._bufferMemory = stagingBufferMemory};
-
   Utils::createBuffer(stagingBufferProperties);
 
   void *data;
