@@ -56,59 +56,31 @@ jobs:
             build_backend: OpenXR
             cmake_flags: -DBUILD_FOR_OPENXR=ON
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-latest'
-        run: |
-            sudo apt-get update
-            sudo apt-get install -y build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev libxinerama-dev
+        run: bash scripts/install_ubuntu_dependencies.sh
 
       - name: Setup JAVA for OpenXR
         if: matrix.build_backend == 'OpenXR'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.2.0
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       - name: Install Vulkan SDK for Windows
         if: matrix.os == 'windows-latest'
-        run: |
-          $vulkanSdkUrl = "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/windows/VulkanSDK-${{ env.LUNARG_VULKAN_SDK_VERSION }}-Installer.exe?Human=true"
-          Invoke-WebRequest -Uri $vulkanSdkUrl -OutFile vulkan-sdk-setup.exe
-          Start-Process -FilePath vulkan-sdk-setup.exe -ArgumentList "/S" -NoNewWindow -Wait
-          $env:VULKAN_SDK = "C:\VulkanSDK\${{ env.LUNARG_VULKAN_SDK_VERSION }}\"
-          [System.Environment]
-          ::SetEnvironmentVariable('VULKAN_SDK', $env:VULKAN_SDK, [System.EnvironmentVariableTarget]::Machine)
-          $env:Path += ";$env:VULKAN_SDK\Bin;$env:VULKAN_SDK\Lib"
+        run: pwsh scripts/install_vulkan_windows.ps1 -BaseUrl "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" -Version "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
 
       - name: Install Vulkan SDK for macOS
         if: matrix.os == 'macos-latest'
-        run: |
-          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/mac/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.dmg?Human=true"
-          curl -L "$vulkanSdkUrl" -o vulkan-sdk.dmg
-          hdiutil attach vulkan-sdk.dmg
-          sudo installer -pkg /Volumes/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}-mac.pkg -target /
-          export VULKAN_SDK=/usr/local/vulkan-sdk-${{ env.LUNARG_VULKAN_SDK_VERSION }}/macos
-          echo "export VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
-          echo "export PATH=$VULKAN_SDK/bin:$PATH" >> $GITHUB_ENV
-          echo "export DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "export VK_ICD_FILENAMES=$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
-          echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV
+        run: bash scripts/install_vulkan_macos.sh "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
 
       - name: Install Vulkan SDK for Ubuntu
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          vulkanSdkUrl="${{ env.LUNARG_VULKAN_SDK_BASE_URL }}${{ env.LUNARG_VULKAN_SDK_VERSION }}/linux/vulkansdk-linux-x86_64-${{ env.LUNARG_VULKAN_SDK_VERSION }}.tar.xz?Human=true"
-          wget "$vulkanSdkUrl" -O vulkan-sdk.tar.xz
-          tar -xf vulkan-sdk.tar.xz
-          export VULKAN_SDK=${{ github.workspace }}/${{ env.LUNARG_VULKAN_SDK_VERSION }}/x86_64
-          echo "export VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
-          echo "export PATH=$VULKAN_SDK/bin:$PATH" >> $GITHUB_ENV
-          echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "export VK_ICD_FILENAMES=$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
-          echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV
-
-      - name: Checkout
-        uses: actions/checkout@v5.0.0
+        run: bash scripts/install_vulkan_linux.sh "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
 
       - name: Set reusable strings
         id: strings
