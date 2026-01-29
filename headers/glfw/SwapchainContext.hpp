@@ -277,6 +277,9 @@ protected:
    */
   void createFramebuffers(VkDevice logicalDevice, VkRenderPass renderPass);
 
+  void updateUniformBuffer(uint32_t currentImage); // TODO: add parameters (fov, etc...)
+
+
   VkPipelineLayout _pipelineLayout; // Vulkan pipeline layout
   VkPipeline _graphicsPipeline;     // Vulkan graphics pipeline
 

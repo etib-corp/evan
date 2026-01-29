@@ -166,6 +166,8 @@ public:
    */
   void createInstance() override;
 
+  void drawFrame();
+
 private:
   //////////////////
   /// Properties ///

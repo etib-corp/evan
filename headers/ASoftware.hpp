@@ -37,6 +37,16 @@ public:
    */
   std::shared_ptr<AGraphicalContext> getGraphicalContext();
 
+  std::vector<Vertex> render(std::vector<Primitive> objects);
+
+  virtual void drawFrame(std::vector<Vertex> vertices) = 0;
+
+  void run();
+
+  virtual void pollEvents() = 0;
+
+  virtual bool shouldClose() = 0;
+
 protected:
   std::string _appName;    // Application name (defined by user)
   Version *_appVersion;    // Application version (major, minor, patch)
