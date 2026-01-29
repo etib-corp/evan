@@ -52,12 +52,6 @@ protected:
 
   virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-  virtual void createCommandBuffers() = 0;
-
-  virtual void createCommandPool() = 0;
-
-  virtual void createFramebuffers(VkDevice logicalDevice) = 0;
-
   std::vector<VkImageView> _imageViews; // Image views for the swapchain images
   VkExtent2D _swapchainExtent;          // Dimensions of the swapchain images
   std::vector<VkFramebuffer>

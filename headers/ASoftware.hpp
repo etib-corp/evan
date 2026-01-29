@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "Version.hpp"
+#include "Primitive.hpp"
 
 namespace evan {
 /**

@@ -100,7 +100,7 @@ struct SwapChainImage {
       VK_NULL_HANDLE; // Image view for the depth image
 
   std::vector<VkCommandBuffer>
-      _graphicsCommandBuffers; // Command buffers for rendering commands
+      _commandBuffers; // Command buffers for rendering commands
   const uint32_t _maxFramesInFlight =
       2; // Maximum number of frames that can be processed concurrently
 
@@ -149,7 +149,23 @@ struct SwapChainImage {
    */
   void createFrameBuffers();
 
-  // void createCommandBuffers();
+
+    /**
+     * @brief Creates the command buffers for rendering commands.
+     *
+     * @note This function must be called after creating the framebuffers.
+     */
+  void createCommandBuffers();
+
+
+
+    /**
+     * @brief Creates synchronization objects for rendering operations.
+     *
+     * @note This function must be called after creating the command buffers.
+     */
+    void createSyncObjects();
+
 
   /**
    * @brief Initializes the swapchain image with the given properties.

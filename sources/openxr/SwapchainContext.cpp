@@ -162,6 +162,12 @@ void evan::openxr::SwapChainImage::init(
   for (auto &image : _swapchainImages) {
     image.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR;
   }
+
+  createColorResources();
+  createDepthResources();
+  createFrameBuffers();
+  createCommandBuffers();
+  createSyncObjects();
 }
 
 void evan::openxr::SwapChainImage::createColorResources() {
@@ -276,6 +282,36 @@ void evan::openxr::SwapChainImage::createFrameBuffers() {
       ._newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       ._mipLevels = 1};
   Utils::transitionImageLayout(transitionProperties);
+}
+
+void evan::openxr::SwapChainImage::createCommandBuffers() {
+  _commandBuffers.resize(_swapchainFrameBuffers.size());
+
+  VkCommandBufferAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = _commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = (uint32_t)_commandBuffers.size();
+
+  if (vkAllocateCommandBuffers(_device, &allocInfo, _commandBuffers.data()) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate command buffers");
+  }
+}
+
+void evan::openxr::SwapChainImage::createSyncObjects() {
+  _inFlightFences.resize(_maxFramesInFlight);
+  _imagesInFlight.resize(_swapchainImages.size(), VK_NULL_HANDLE);
+  VkFenceCreateInfo fenceInfo{};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  for (size_t i = 0; i < _maxFramesInFlight; i++) {
+    if (vkCreateFence(_device, &fenceInfo, nullptr, &_inFlightFences[i]) !=
+        VK_SUCCESS) {
+          // TODO: throw error
+          return;
+    }
+  }
 }
 
 XrSwapchainImageBaseHeader *
