@@ -12,126 +12,138 @@
 #include "openxr/RenderingContext.hpp"
 #include "openxr/SwapchainContext.hpp"
 
-namespace evan {
-namespace openxr {
+namespace evan
+{
+	namespace openxr
+	{
 
-/**
- * @struct GraphicalContextProperties
- * @brief Represents the properties required for initializing a graphical
- * context in an OpenXR environment.
- *
- * This structure contains essential information for setting up and managing a
- * graphical context, including the OpenXR instance, OpenXR system ID, and a
- * shared rendering context.
- */
-struct GraphicalContextPropertiesXR {
-  XrInstance _XRinstance; // The OpenXR instance used for rendering
-  XrSystemId _XRsystemID; // The OpenXR system ID
-};
+		/**
+		 * @struct GraphicalContextProperties
+		 * @brief Represents the properties required for initializing a
+		 * graphical context in an OpenXR environment.
+		 *
+		 * This structure contains essential information for setting up and
+		 * managing a graphical context, including the OpenXR instance, OpenXR
+		 * system ID, and a shared rendering context.
+		 */
+		struct GraphicalContextPropertiesXR {
+			XrInstance _XRinstance;	   // The OpenXR instance used for rendering
+			XrSystemId _XRsystemID;	   // The OpenXR system ID
+		};
 
-/**
- * @class GraphicalContext
- * @brief A class to manage the graphical context for OpenXR rendering.
- *
- * This class is responsible for creating and managing the graphical context
- * required for rendering in an OpenXR environment. It handles the creation of
- * the Vulkan instance, initialization of the OpenXR session, and management of
- * visualized reference spaces.
- */
-class GraphicalContext : public evan::AGraphicalContext {
-public:
-  /**
-   * @brief Constructs a GraphicalContext object for OpenXR rendering.
-   *
-   * Initializes the graphical context using the provided OpenXR instance and
-   * system ID. This constructor creates the necessary OpenXR and Vulkan
-   * instances, sets up the rendering context, initializes the OpenXR session,
-   * and prepares the swapchain context for rendering.
-   *
-   * @param properties The properties required to initialize the OpenXR
-   * graphical context, including OpenXR instance and system ID.
-   *
-   * @note This constructor will allocate and initialize internal resources
-   * required for OpenXR rendering. It is expected that the provided properties
-   * are valid and compatible with the underlying OpenXR runtime.
-   */
-  GraphicalContext(const GraphicalContextPropertiesXR &properties);
+		/**
+		 * @class GraphicalContext
+		 * @brief A class to manage the graphical context for OpenXR rendering.
+		 *
+		 * This class is responsible for creating and managing the graphical
+		 * context required for rendering in an OpenXR environment. It handles
+		 * the creation of the Vulkan instance, initialization of the OpenXR
+		 * session, and management of visualized reference spaces.
+		 */
+		class GraphicalContext: public evan::AGraphicalContext
+		{
+			public:
+			/**
+			 * @brief Constructs a GraphicalContext object for OpenXR rendering.
+			 *
+			 * Initializes the graphical context using the provided OpenXR
+			 * instance and system ID. This constructor creates the necessary
+			 * OpenXR and Vulkan instances, sets up the rendering context,
+			 * initializes the OpenXR session, and prepares the swapchain
+			 * context for rendering.
+			 *
+			 * @param properties The properties required to initialize the
+			 * OpenXR graphical context, including OpenXR instance and system
+			 * ID.
+			 *
+			 * @note This constructor will allocate and initialize internal
+			 * resources required for OpenXR rendering. It is expected that the
+			 * provided properties are valid and compatible with the underlying
+			 * OpenXR runtime.
+			 */
+			GraphicalContext(const GraphicalContextPropertiesXR &properties);
 
-  // Destructor
-  ~GraphicalContext();
+			// Destructor
+			~GraphicalContext();
 
-  /**
-   * @brief Retrieves the list of required OpenXR instance extension names for
-   * this graphical context.
-   *
-   * This function returns a vector containing the names of OpenXR instance
-   * extensions that are necessary for enabling Vulkan support in the OpenXR
-   * runtime.
-   *
-   * @return std::vector<std::string> A vector of required OpenXR instance
-   * extension names.
-   *
-   * @note Overrides the pure virtual function from AGraphicalContext.
-   */
-  std::vector<std::string> getInstanceExtensions() override;
+			/**
+			 * @brief Retrieves the list of required OpenXR instance extension
+			 * names for this graphical context.
+			 *
+			 * This function returns a vector containing the names of OpenXR
+			 * instance extensions that are necessary for enabling Vulkan
+			 * support in the OpenXR runtime.
+			 *
+			 * @return std::vector<std::string> A vector of required OpenXR
+			 * instance extension names.
+			 *
+			 * @note Overrides the pure virtual function from AGraphicalContext.
+			 */
+			std::vector<std::string> getInstanceExtensions() override;
 
-protected:
-  /**
-   * @brief Creates a Vulkan instance compatible with the current OpenXR
-   * runtime.
-   *
-   * This function queries the OpenXR runtime for the required Vulkan graphics
-   * requirements and retrieves the necessary Vulkan-related function pointers.
-   * It then prepares the Vulkan application and instance creation structures,
-   * and uses the OpenXR extension function xrCreateVulkanInstanceKHR to create
-   * a Vulkan instance suitable for use with the OpenXR system.
-   *
-   *
-   * @note This function assumes that _XRinstance and _XRsystemID are valid and
-   * initialized.
-   * @note The created Vulkan instance is stored in the member variable
-   * _instance.
-   * @note Overrides the pure virtual function from AGraphicalContext.
-   */
-  void createInstance() override;
+			protected:
+			/**
+			 * @brief Creates a Vulkan instance compatible with the current
+			 * OpenXR runtime.
+			 *
+			 * This function queries the OpenXR runtime for the required Vulkan
+			 * graphics requirements and retrieves the necessary Vulkan-related
+			 * function pointers. It then prepares the Vulkan application and
+			 * instance creation structures, and uses the OpenXR extension
+			 * function xrCreateVulkanInstanceKHR to create a Vulkan instance
+			 * suitable for use with the OpenXR system.
+			 *
+			 *
+			 * @note This function assumes that _XRinstance and _XRsystemID are
+			 * valid and initialized.
+			 * @note The created Vulkan instance is stored in the member
+			 * variable _instance.
+			 * @note Overrides the pure virtual function from AGraphicalContext.
+			 */
+			void createInstance() override;
 
-  /**
-   * @brief Initializes the OpenXR session for the graphical context.
-   *
-   * This function sets up the OpenXR session using Vulkan as the graphics API.
-   * It first checks if a session already exists, and if not, retrieves the
-   * Vulkan context from the rendering context. It then prepares the necessary
-   * graphics binding structure and session creation info, and attempts to
-   * create the OpenXR session.
-   *
-   *
-   * @note This function assumes that _XRinstance and _XRsystemID are valid and
-   * initialized.
-   */
-  void initializeSession();
+			/**
+			 * @brief Initializes the OpenXR session for the graphical context.
+			 *
+			 * This function sets up the OpenXR session using Vulkan as the
+			 * graphics API. It first checks if a session already exists, and if
+			 * not, retrieves the Vulkan context from the rendering context. It
+			 * then prepares the necessary graphics binding structure and
+			 * session creation info, and attempts to create the OpenXR session.
+			 *
+			 *
+			 * @note This function assumes that _XRinstance and _XRsystemID are
+			 * valid and initialized.
+			 */
+			void initializeSession();
 
-  /**
-   * @brief Creates a new visualized reference space for OpenXR rendering.
-   *
-   * This function initializes an XrReferenceSpaceCreateInfo structure with the
-   * type set to XR_REFERENCE_SPACE_TYPE_STAGE and a default pose. It then
-   * attempts to create a new reference space using xrCreateReferenceSpace. If
-   * successful, the created space is added to the _XRvisualizedSpaces
-   * container. If the creation fails, an error message is printed to stderr.
-   *
-   * @note The function assumes that _XRsession is a valid OpenXR session
-   * handle.
-   */
-  void createVisualizedSpace();
+			/**
+			 * @brief Creates a new visualized reference space for OpenXR
+			 * rendering.
+			 *
+			 * This function initializes an XrReferenceSpaceCreateInfo structure
+			 * with the type set to XR_REFERENCE_SPACE_TYPE_STAGE and a default
+			 * pose. It then attempts to create a new reference space using
+			 * xrCreateReferenceSpace. If successful, the created space is added
+			 * to the _XRvisualizedSpaces container. If the creation fails, an
+			 * error message is printed to stderr.
+			 *
+			 * @note The function assumes that _XRsession is a valid OpenXR
+			 * session handle.
+			 */
+			void createVisualizedSpace();
 
-private:
-  XrInstance _XRinstance =
-      XR_NULL_HANDLE; // The OpenXR instance used for rendering
-  XrSystemId _XRsystemID = XR_NULL_SYSTEM_ID; // The OpenXR system ID
-  XrSession _XRsession = XR_NULL_HANDLE;      // The OpenXR session handle
+			private:
+			XrInstance _XRinstance =
+				XR_NULL_HANDLE;	   // The OpenXR instance used for rendering
+			XrSystemId _XRsystemID =
+				XR_NULL_SYSTEM_ID;	  // The OpenXR system ID
+			XrSession _XRsession =
+				XR_NULL_HANDLE;	   // The OpenXR session handle
 
-  std::vector<XrSpace>
-      _XRvisualizedSpaces; // Container for visualized reference spaces
-};
-} // namespace openxr
-} // namespace evan
+			std::vector<XrSpace>
+				_XRvisualizedSpaces;	// Container for visualized reference
+										// spaces
+		};
+	}	 // namespace openxr
+}	 // namespace evan
