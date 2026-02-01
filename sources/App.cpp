@@ -26,3 +26,11 @@ void evan::App::drawFrame(float frameRate)
     for (const auto &primitive : _primitives) {
     }
 }
+
+void evan::App::run()
+{
+    // while(shouldClose()) {
+    //     _software->pollEvent();
+    //     drawFrame(60.0f)
+    // }
+}

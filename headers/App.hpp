@@ -24,10 +24,13 @@ namespace evan {
             App(const AppProperties &properties);
             ~App();
 
-
             virtual std::shared_ptr<Primitive> &display(std::shared_ptr<Primitive> primitive);
 
             virtual void drawFrame(float frameRate);
+
+            void run();
+
+            // virtual bool shouldClose() = 0;
 
         protected:
         private:
