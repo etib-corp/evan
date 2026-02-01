@@ -3,7 +3,7 @@
 
 int main(void)
 {
-    evan::glfw::Software mySoftware;
-    std::cout << "GLFW Software initialized successfully!" << std::endl;
-    return 0;
+	evan::glfw::Software mySoftware;
+	std::cout << "GLFW Software initialized successfully!" << std::endl;
+	return 0;
 }

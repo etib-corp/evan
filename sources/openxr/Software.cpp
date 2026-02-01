@@ -8,71 +8,78 @@
 #include "openxr/Software.hpp"
 
 evan::openxr::Software::Software(
-    const std::shared_ptr<PlatformData> &platformData) {
+	const std::shared_ptr<PlatformData> &platformData)
+{
 #ifdef __ANDROID__
-  _platform = std::make_shared<AndroidPlatform>(platformData);
+	_platform = std::make_shared<AndroidPlatform>(platformData);
 #else
-  // On non-Android platforms, platformData is not used
-  (void)platformData; // Suppress unused parameter warning
+	// On non-Android platforms, platformData is not used
+	(void)platformData;	   // Suppress unused parameter warning
 #endif
-  _graphicalContext = nullptr;
+	_graphicalContext = nullptr;
 
-  createInstance();
-  initializeSystem();
-  GraphicalContextPropertiesXR properties;
-  properties._XRinstance = _XRinstance;
-  properties._XRsystemID = _XRsystemID;
-  _graphicalContext =
-      std::make_shared<evan::openxr::GraphicalContext>(properties);
+	createInstance();
+	initializeSystem();
+	GraphicalContextPropertiesXR properties;
+	properties._XRinstance = _XRinstance;
+	properties._XRsystemID = _XRsystemID;
+	_graphicalContext =
+		std::make_shared<evan::openxr::GraphicalContext>(properties);
 }
 
-evan::openxr::Software::~Software() {}
-
-void evan::openxr::Software::createInstance() {
-  if (_XRinstance != XR_NULL_HANDLE)
-    return;
-
-  std::vector<const char *> extensions;
-
-#ifdef __ANDROID__
-  extensions.push_back(XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME);
-#endif
-
-  const std::vector<std::string> graphicsExtensions = {
-      XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
-  std::transform(graphicsExtensions.begin(), graphicsExtensions.end(),
-                 std::back_inserter(extensions),
-                 [](const std::string &ext) { return ext.c_str(); });
-
-  XrInstanceCreateInfo createInfo{};
-  createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
-#ifdef __ANDROID__
-  createInfo.next = _platform->getInstanceCreateInfoAndroid();
-#else
-  createInfo.next = nullptr;
-#endif
-  createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-  createInfo.enabledExtensionNames = extensions.data();
-  createInfo.enabledApiLayerCount = 0;
-  createInfo.enabledApiLayerNames = nullptr;
-  std::strcpy(createInfo.applicationInfo.applicationName, "evan");
-  createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
-
-  if (xrCreateInstance(&createInfo, &_XRinstance) != XR_SUCCESS) {
-    std::cerr << "Failed to create OpenXR instance" << std::endl;
-    return;
-  }
+evan::openxr::Software::~Software()
+{
 }
 
-void evan::openxr::Software::initializeSystem() {
-  if (_XRsystemID != XR_NULL_SYSTEM_ID)
-    return;
+void evan::openxr::Software::createInstance()
+{
+	if (_XRinstance != XR_NULL_HANDLE)
+		return;
 
-  XrSystemGetInfo systemInfo{};
-  systemInfo.type = XR_TYPE_SYSTEM_GET_INFO;
-  systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-  if (xrGetSystem(_XRinstance, &systemInfo, &_XRsystemID) != XR_SUCCESS) {
-    std::cerr << "Failed to get OpenXR system ID" << std::endl;
-    return;
-  }
+	std::vector<const char *> extensions;
+
+#ifdef __ANDROID__
+	extensions.push_back(XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME);
+#endif
+
+	const std::vector<std::string> graphicsExtensions = {
+		XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME
+	};
+	std::transform(graphicsExtensions.begin(), graphicsExtensions.end(),
+				   std::back_inserter(extensions), [](const std::string &ext) {
+					   return ext.c_str();
+				   });
+
+	XrInstanceCreateInfo createInfo {};
+	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
+#ifdef __ANDROID__
+	createInfo.next = _platform->getInstanceCreateInfoAndroid();
+#else
+	createInfo.next = nullptr;
+#endif
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	createInfo.enabledExtensionNames = extensions.data();
+	createInfo.enabledApiLayerCount	 = 0;
+	createInfo.enabledApiLayerNames	 = nullptr;
+	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
+	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
+
+	if (xrCreateInstance(&createInfo, &_XRinstance) != XR_SUCCESS) {
+		std::cerr << "Failed to create OpenXR instance" << std::endl;
+		return;
+	}
+}
+
+void evan::openxr::Software::initializeSystem()
+{
+	if (_XRsystemID != XR_NULL_SYSTEM_ID)
+		return;
+
+	XrSystemGetInfo systemInfo {};
+	systemInfo.type		  = XR_TYPE_SYSTEM_GET_INFO;
+	systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+	if (xrGetSystem(_XRinstance, &systemInfo, &_XRsystemID) != XR_SUCCESS) {
+		std::cerr << "Failed to get OpenXR system ID" << std::endl;
+		return;
+	}
 }

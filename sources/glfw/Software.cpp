@@ -20,12 +20,13 @@
 ** - Engine name `_engineName`: "Evan"
 ** - Engine version `_engine`: 1.0.0
 */
-evan::glfw::Software::Software() {
-  this->_appName = "Hello, World !";
-  this->_appVersion = new Version(1, 0, 0);
-  this->_engineName = "Evan";
-  this->_engineVersion = new Version(1, 0, 0);
-  this->_graphicalContext = std::make_shared<evan::glfw::GraphicalContext>();
+evan::glfw::Software::Software()
+{
+	this->_appName			= "Hello, World !";
+	this->_appVersion		= new Version(1, 0, 0);
+	this->_engineName		= "Evan";
+	this->_engineVersion	= new Version(1, 0, 0);
+	this->_graphicalContext = std::make_shared<evan::glfw::GraphicalContext>();
 }
 
 /*
@@ -42,15 +43,18 @@ evan::glfw::Software::Software() {
 **
 */
 evan::glfw::Software::Software(const std::string &appName,
-                               const Version &appVersion,
-                               const std::string &engineName,
-                               const Version &engineVersion) {
-  this->_appName = appName;
-  this->_appVersion = new Version(appVersion);
-  this->_engineName = engineName;
-  this->_engineVersion = new Version(engineVersion);
-  this->_graphicalContext = std::make_shared<evan::glfw::GraphicalContext>(
-      appName, appVersion, engineName, engineVersion);
+							   const Version &appVersion,
+							   const std::string &engineName,
+							   const Version &engineVersion)
+{
+	this->_appName			= appName;
+	this->_appVersion		= new Version(appVersion);
+	this->_engineName		= engineName;
+	this->_engineVersion	= new Version(engineVersion);
+	this->_graphicalContext = std::make_shared<evan::glfw::GraphicalContext>(
+		appName, appVersion, engineName, engineVersion);
 }
 
-evan::glfw::Software::~Software() {}
+evan::glfw::Software::~Software()
+{
+}
