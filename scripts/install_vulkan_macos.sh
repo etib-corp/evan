@@ -10,4 +10,4 @@ curl -L "$vulkan_sdk_url" -o vulkansdk-macos-${version}.zip
 
 unzip vulkansdk-macos-${version}.zip -d vulkansdk-macos-${version}
 
-""./vulkansdk-macos-${version}/Contents/MacOS/vulkansdk-macOS-${version}" install
+"./vulkansdk-macos-${version}/Contents/MacOS/vulkansdk-macOS-${version} install"
