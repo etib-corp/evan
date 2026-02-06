@@ -70,17 +70,12 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Install Vulkan SDK for Windows
-        if: matrix.os == 'windows-latest'
-        run: pwsh scripts/install_vulkan_windows.ps1 -BaseUrl "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" -Version "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
-
-      - name: Install Vulkan SDK for macOS
-        if: matrix.os == 'macos-latest'
-        run: bash scripts/install_vulkan_macos.sh "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
-
-      - name: Install Vulkan SDK for Ubuntu
-        if: matrix.os == 'ubuntu-latest'
-        run: bash scripts/install_vulkan_linux.sh "${{ env.LUNARG_VULKAN_SDK_BASE_URL }}" "${{ env.LUNARG_VULKAN_SDK_VERSION }}"
+      - name: Setup Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.341.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
 
       - name: Set reusable strings
         id: strings
