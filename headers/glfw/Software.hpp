@@ -14,17 +14,21 @@
 #include <cstring>
 #include <iostream>
 
-namespace evan {
-namespace glfw {
-class Software : public ASoftware {
-public:
-  // Constructors
-  Software();
-  Software(const std::string &appName, const Version &appVersion,
-           const std::string &engineName, const Version &engineVersion);
+namespace evan
+{
+	namespace glfw
+	{
+		class Software: public ASoftware
+		{
+			public:
+			// Constructors
+			Software();
+			Software(const std::string &appName, const Version &appVersion,
+					 const std::string &engineName,
+					 const Version &engineVersion);
 
-  // Destructor
-  ~Software();
-};
-} // namespace glfw
-} // namespace evan
+			// Destructor
+			~Software();
+		};
+	}	 // namespace glfw
+}	 // namespace evan

@@ -18,20 +18,21 @@
  *
  * @throws std::runtime_error If the file cannot be opened.
  */
-std::vector<char> evan::Utils::readFile(const std::string &filename) {
-  std::ifstream file(filename, std::ios::ate | std::ios::binary);
+std::vector<char> evan::Utils::readFile(const std::string &filename)
+{
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file: " + filename);
-  }
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open file: " + filename);
+	}
 
-  size_t fileSize = (size_t)file.tellg();
-  std::vector<char> buffer(fileSize);
+	size_t fileSize = (size_t)file.tellg();
+	std::vector<char> buffer(fileSize);
 
-  file.seekg(0);
-  file.read(buffer.data(), fileSize);
-  file.close();
-  return buffer;
+	file.seekg(0);
+	file.read(buffer.data(), fileSize);
+	file.close();
+	return buffer;
 }
 
 /**
@@ -56,29 +57,31 @@ std::vector<char> evan::Utils::readFile(const std::string &filename) {
  * etc.).
  */
 evan::Utils::SwapChainSupportDetails
-evan::Utils::querySwapChainSupport(VkPhysicalDevice device,
-                                   VkSurfaceKHR surface) {
-  SwapChainSupportDetails details;
-  uint32_t formatCount;
-  uint32_t presentModeCount;
+	evan::Utils::querySwapChainSupport(VkPhysicalDevice device,
+									   VkSurfaceKHR surface)
+{
+	SwapChainSupportDetails details;
+	uint32_t formatCount;
+	uint32_t presentModeCount;
 
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
-                                            &details.capabilities);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-  if (formatCount != 0) {
-    details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-                                         details.formats.data());
-  }
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+											  &details.capabilities);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+										 nullptr);
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 details.formats.data());
+	}
 
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
-                                            nullptr);
-  if (presentModeCount != 0) {
-    details.presentModes.resize(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device, surface, &presentModeCount, details.presentModes.data());
-  }
-  return details;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+											  &presentModeCount, nullptr);
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			device, surface, &presentModeCount, details.presentModes.data());
+	}
+	return details;
 }
 
 /**
@@ -97,37 +100,41 @@ evan::Utils::querySwapChainSupport(VkPhysicalDevice device,
  * indices will remain incomplete.
  */
 evan::Utils::QueueFamilyIndices
-evan::Utils::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  QueueFamilyIndices indices;
+	evan::Utils::findQueueFamilies(VkPhysicalDevice device,
+								   VkSurfaceKHR surface)
+{
+	QueueFamilyIndices indices;
 
-  uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+											 nullptr);
 
-  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-                                           queueFamilies.data());
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+											 queueFamilies.data());
 
-  int i = 0;
-  for (const auto &queueFamily : queueFamilies) {
-    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphicsFamily = i;
-    }
+	int i = 0;
+	for (const auto &queueFamily: queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
 
-    VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface,
+											 &presentSupport);
 
-    if (presentSupport) {
-      indices.presentFamily = i;
-    }
+		if (presentSupport) {
+			indices.presentFamily = i;
+		}
 
-    if (indices.isComplete()) {
-      break;
-    }
+		if (indices.isComplete()) {
+			break;
+		}
 
-    i++;
-  }
+		i++;
+	}
 
-  return indices;
+	return indices;
 }
 
 /**
@@ -144,26 +151,28 @@ evan::Utils::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
  * found, the indices will remain unset.
  */
 evan::Utils::QueueFamilyIndices
-evan::Utils::findQueueFamilies(VkPhysicalDevice device) {
-  QueueFamilyIndices indices;
+	evan::Utils::findQueueFamilies(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices;
 
-  uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+											 nullptr);
 
-  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-                                           queueFamilies.data());
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+											 queueFamilies.data());
 
-  int i = 0;
-  for (const auto &queueFamily : queueFamilies) {
-    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphicsFamily = i;
-      break;
-    }
-    i++;
-  }
+	int i = 0;
+	for (const auto &queueFamily: queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+			break;
+		}
+		i++;
+	}
 
-  return indices;
+	return indices;
 }
 
 /**
@@ -185,19 +194,21 @@ evan::Utils::findQueueFamilies(VkPhysicalDevice device) {
  * @throws std::runtime_error If no suitable memory type is found.
  */
 uint32_t evan::Utils::findMemoryType(VkPhysicalDevice physicalDevice,
-                                     uint32_t typeFilter,
-                                     VkMemoryPropertyFlags properties) {
-  VkPhysicalDeviceMemoryProperties memProperties;
+									 uint32_t typeFilter,
+									 VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
 
-  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
-                                    properties) == properties) {
-      return i;
-    }
-  }
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i))
+			&& (memProperties.memoryTypes[i].propertyFlags & properties)
+				== properties) {
+			return i;
+		}
+	}
 
-  throw std::runtime_error("Failed to find suitable memory type!");
+	throw std::runtime_error("Failed to find suitable memory type!");
 }
 
 /**
@@ -221,12 +232,14 @@ uint32_t evan::Utils::findMemoryType(VkPhysicalDevice physicalDevice,
  * - VK_IMAGE_TILING_OPTIMAL
  * - VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
  */
-VkFormat evan::Utils::findDepthFormat(VkPhysicalDevice physicalDevice) {
-  return findSupportedFormat(
-      physicalDevice,
-      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
-       VK_FORMAT_D24_UNORM_S8_UINT},
-      VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+VkFormat evan::Utils::findDepthFormat(VkPhysicalDevice physicalDevice)
+{
+	return findSupportedFormat(physicalDevice,
+							   { VK_FORMAT_D32_SFLOAT,
+								 VK_FORMAT_D32_SFLOAT_S8_UINT,
+								 VK_FORMAT_D24_UNORM_S8_UINT },
+							   VK_IMAGE_TILING_OPTIMAL,
+							   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 /**
@@ -257,46 +270,49 @@ VkFormat evan::Utils::findDepthFormat(VkPhysicalDevice physicalDevice) {
  *
  * @throws std::runtime_error If the image creation or memory allocation fails.
  */
-void evan::Utils::createImage(const CreateImageProperties &properties) {
-  VkImageCreateInfo imageInfo{};
-  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType = VK_IMAGE_TYPE_2D;
-  imageInfo.extent.width = properties._width;
-  imageInfo.extent.height = properties._height;
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
-  imageInfo.arrayLayers = 1;
-  imageInfo.format = properties._format;
-  imageInfo.tiling = properties._tiling;
-  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage = properties._usage;
-  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  imageInfo.mipLevels = properties._mipLevels;
-  imageInfo.samples = properties._numSamples;
+void evan::Utils::createImage(const CreateImageProperties &properties)
+{
+	VkImageCreateInfo imageInfo {};
+	imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType		= VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width	= properties._width;
+	imageInfo.extent.height = properties._height;
+	imageInfo.extent.depth	= 1;
+	imageInfo.mipLevels		= 1;
+	imageInfo.arrayLayers	= 1;
+	imageInfo.format		= properties._format;
+	imageInfo.tiling		= properties._tiling;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageInfo.usage			= properties._usage;
+	imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.mipLevels		= properties._mipLevels;
+	imageInfo.samples		= properties._numSamples;
 
-  if (vkCreateImage(properties._logicalDevice, &imageInfo, nullptr,
-                    &properties._image) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create image!");
-  }
+	if (vkCreateImage(properties._logicalDevice, &imageInfo, nullptr,
+					  &properties._image)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create image!");
+	}
 
-  VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(properties._logicalDevice, properties._image,
-                               &memRequirements);
+	VkMemoryRequirements memRequirements;
+	vkGetImageMemoryRequirements(properties._logicalDevice, properties._image,
+								 &memRequirements);
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = Utils::findMemoryType(
-      properties._physicalDevice, memRequirements.memoryTypeBits,
-      properties._properties);
+	VkMemoryAllocateInfo allocInfo {};
+	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize  = memRequirements.size;
+	allocInfo.memoryTypeIndex = Utils::findMemoryType(
+		properties._physicalDevice, memRequirements.memoryTypeBits,
+		properties._properties);
 
-  if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
-                       &properties._imageMemory) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate image memory!");
-  }
+	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
+						 &properties._imageMemory)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate image memory!");
+	}
 
-  vkBindImageMemory(properties._logicalDevice, properties._image,
-                    properties._imageMemory, 0);
+	vkBindImageMemory(properties._logicalDevice, properties._image,
+					  properties._imageMemory, 0);
 }
 
 /**
@@ -322,72 +338,73 @@ void evan::Utils::createImage(const CreateImageProperties &properties) {
  *       by other operations during the transition.
  */
 void evan::Utils::transitionImageLayout(
-    const TransitionImageLayoutProperties &properties) {
-  VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
-      properties._logicalDevice, properties._commandPool);
+	const TransitionImageLayoutProperties &properties)
+{
+	VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
+		properties._logicalDevice, properties._commandPool);
 
-  VkImageMemoryBarrier barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout = properties._oldLayout;
-  barrier.newLayout = properties._newLayout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = properties._image;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = 1;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
-  barrier.subresourceRange.levelCount = properties._mipLevels;
+	VkImageMemoryBarrier barrier {};
+	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout			= properties._oldLayout;
+	barrier.newLayout			= properties._newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image				= properties._image;
+	barrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel	= 0;
+	barrier.subresourceRange.levelCount		= 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount		= 1;
+	barrier.subresourceRange.levelCount		= properties._mipLevels;
 
-  VkPipelineStageFlags sourceStage;
-  VkPipelineStageFlags destinationStage;
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
 
-  if (properties._oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-      properties._newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	if (properties._oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
+		&& properties._newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (properties._oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-             properties._newLayout ==
-                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		sourceStage		 = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	} else if (properties._oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+			   && properties._newLayout
+				   == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else if (properties._oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-             properties._newLayout ==
-                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-                            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		sourceStage		 = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	} else if (properties._oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
+			   && properties._newLayout
+				   == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
+			| VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  } else {
-    throw std::invalid_argument("unsupported layout transition!");
-  }
+		sourceStage		 = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	} else {
+		throw std::invalid_argument("unsupported layout transition!");
+	}
 
-  if (properties._newLayout ==
-      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	if (properties._newLayout
+		== VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-    if (Utils::hasStencilComponent(properties._format)) {
-      barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-  } else {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  }
+		if (Utils::hasStencilComponent(properties._format)) {
+			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	} else {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
 
-  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
-                       nullptr, 0, nullptr, 1, &barrier);
+	vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
+						 nullptr, 0, nullptr, 1, &barrier);
 
-  Utils::endSingleTimeCommands(properties._logicalDevice,
-                               properties._commandPool,
-                               properties._graphicsQueue, commandBuffer);
+	Utils::endSingleTimeCommands(properties._logicalDevice,
+								 properties._commandPool,
+								 properties._graphicsQueue, commandBuffer);
 }
 
 /**
@@ -411,24 +428,25 @@ void evan::Utils::transitionImageLayout(
  * - Confirms that the device supports anisotropic sampling.
  */
 bool evan::Utils::isDeviceSuitable(VkPhysicalDevice device,
-                                   VkSurfaceKHR surface,
-                                   std::vector<const char *> deviceExtensions) {
-  QueueFamilyIndices indices = Utils::findQueueFamilies(device, surface);
-  bool extensionsSupported =
-      Utils::checkDeviceExtensionSupport(device, deviceExtensions);
-  bool swapChainAdequate = false;
+								   VkSurfaceKHR surface,
+								   std::vector<const char *> deviceExtensions)
+{
+	QueueFamilyIndices indices = Utils::findQueueFamilies(device, surface);
+	bool extensionsSupported =
+		Utils::checkDeviceExtensionSupport(device, deviceExtensions);
+	bool swapChainAdequate = false;
 
-  if (extensionsSupported) {
-    SwapChainSupportDetails swapChainSupport =
-        Utils::querySwapChainSupport(device, surface);
-    swapChainAdequate = !swapChainSupport.formats.empty() &&
-                        !swapChainSupport.presentModes.empty();
-  }
-  VkPhysicalDeviceFeatures supportedFeatures;
-  vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport =
+			Utils::querySwapChainSupport(device, surface);
+		swapChainAdequate = !swapChainSupport.formats.empty()
+			&& !swapChainSupport.presentModes.empty();
+	}
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-  return indices.isComplete() && extensionsSupported && swapChainAdequate &&
-         supportedFeatures.samplerAnisotropy;
+	return indices.isComplete() && extensionsSupported && swapChainAdequate
+		&& supportedFeatures.samplerAnisotropy;
 }
 
 /**
@@ -453,36 +471,39 @@ bool evan::Utils::isDeviceSuitable(VkPhysicalDevice device,
  *
  * @throws std::runtime_error If the buffer creation or memory allocation fails.
  */
-void evan::Utils::createBuffer(const CreateBufferProperties &properties) {
-  VkBufferCreateInfo bufferInfo{};
-  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = properties._size;
-  bufferInfo.usage = properties._usage;
-  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+void evan::Utils::createBuffer(const CreateBufferProperties &properties)
+{
+	VkBufferCreateInfo bufferInfo {};
+	bufferInfo.sType	   = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size		   = properties._size;
+	bufferInfo.usage	   = properties._usage;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  if (vkCreateBuffer(properties._logicalDevice, &bufferInfo, nullptr,
-                     &properties._buffer) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create buffer!");
-  }
+	if (vkCreateBuffer(properties._logicalDevice, &bufferInfo, nullptr,
+					   &properties._buffer)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer!");
+	}
 
-  VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(properties._logicalDevice, properties._buffer,
-                                &memRequirements);
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(properties._logicalDevice, properties._buffer,
+								  &memRequirements);
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = Utils::findMemoryType(
-      properties._physicalDevice, memRequirements.memoryTypeBits,
-      properties._properties);
+	VkMemoryAllocateInfo allocInfo {};
+	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize  = memRequirements.size;
+	allocInfo.memoryTypeIndex = Utils::findMemoryType(
+		properties._physicalDevice, memRequirements.memoryTypeBits,
+		properties._properties);
 
-  if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
-                       &properties._bufferMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate buffer memory!");
-  }
+	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
+						 &properties._bufferMemory)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate buffer memory!");
+	}
 
-  vkBindBufferMemory(properties._logicalDevice, properties._buffer,
-                     properties._bufferMemory, 0);
+	vkBindBufferMemory(properties._logicalDevice, properties._buffer,
+					   properties._bufferMemory, 0);
 }
 
 /**
@@ -501,27 +522,28 @@ void evan::Utils::createBuffer(const CreateBufferProperties &properties) {
  * @param height The height of the image in pixels.
  */
 void evan::Utils::copyBufferToImage(
-    const CopyBufferToImageProperties &properties) {
-  VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
-      properties._logicalDevice, properties._commandPool);
+	const CopyBufferToImageProperties &properties)
+{
+	VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
+		properties._logicalDevice, properties._commandPool);
 
-  VkBufferImageCopy region{};
-  region.bufferOffset = 0;
-  region.bufferRowLength = 0;
-  region.bufferImageHeight = 0;
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageOffset = {0, 0, 0};
-  region.imageExtent = {properties._width, properties._height, 1};
+	VkBufferImageCopy region {};
+	region.bufferOffset					   = 0;
+	region.bufferRowLength				   = 0;
+	region.bufferImageHeight			   = 0;
+	region.imageSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel	   = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount	   = 1;
+	region.imageOffset					   = { 0, 0, 0 };
+	region.imageExtent = { properties._width, properties._height, 1 };
 
-  vkCmdCopyBufferToImage(commandBuffer, properties._buffer, properties._image,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	vkCmdCopyBufferToImage(commandBuffer, properties._buffer, properties._image,
+						   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-  Utils::endSingleTimeCommands(properties._logicalDevice,
-                               properties._commandPool,
-                               properties._graphicsQueue, commandBuffer);
+	Utils::endSingleTimeCommands(properties._logicalDevice,
+								 properties._commandPool,
+								 properties._graphicsQueue, commandBuffer);
 }
 
 /**
@@ -547,92 +569,93 @@ void evan::Utils::copyBufferToImage(
  * @throws std::runtime_error If the image format does not support linear
  * blitting.
  */
-void evan::Utils::generateMipmaps(const GenerateMipmapsProperties &properties) {
-  VkFormatProperties formatProperties;
-  vkGetPhysicalDeviceFormatProperties(
-      properties._physicalDevice, properties._imageFormat, &formatProperties);
+void evan::Utils::generateMipmaps(const GenerateMipmapsProperties &properties)
+{
+	VkFormatProperties formatProperties;
+	vkGetPhysicalDeviceFormatProperties(
+		properties._physicalDevice, properties._imageFormat, &formatProperties);
 
-  if (!(formatProperties.optimalTilingFeatures &
-        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-    throw std::runtime_error(
-        "texture image format does not support linear blitting!");
-  }
+	if (!(formatProperties.optimalTilingFeatures
+		  & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+		throw std::runtime_error(
+			"texture image format does not support linear blitting!");
+	}
 
-  VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
-      properties._logicalDevice, properties._commandPool);
+	VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
+		properties._logicalDevice, properties._commandPool);
 
-  VkImageMemoryBarrier barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.image = properties._image;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
-  barrier.subresourceRange.levelCount = 1;
+	VkImageMemoryBarrier barrier {};
+	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.image				= properties._image;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount		= 1;
+	barrier.subresourceRange.levelCount		= 1;
 
-  int32_t mipWidth = properties._texWidth;
-  int32_t mipHeight = properties._texHeight;
+	int32_t mipWidth  = properties._texWidth;
+	int32_t mipHeight = properties._texHeight;
 
-  for (uint32_t i = 1; i < properties._mipLevels; i++) {
-    barrier.subresourceRange.baseMipLevel = i - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	for (uint32_t i = 1; i < properties._mipLevels; i++) {
+		barrier.subresourceRange.baseMipLevel = i - 1;
+		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
-                         nullptr, 1, &barrier);
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+							 VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
+							 nullptr, 1, &barrier);
 
-    VkImageBlit blit{};
-    blit.srcOffsets[0] = {0, 0, 0};
-    blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.srcSubresource.mipLevel = i - 1;
-    blit.srcSubresource.baseArrayLayer = 0;
-    blit.srcSubresource.layerCount = 1;
-    blit.dstOffsets[0] = {0, 0, 0};
-    blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1,
-                          mipHeight > 1 ? mipHeight / 2 : 1, 1};
-    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.dstSubresource.mipLevel = i;
-    blit.dstSubresource.baseArrayLayer = 0;
-    blit.dstSubresource.layerCount = 1;
+		VkImageBlit blit {};
+		blit.srcOffsets[0]				   = { 0, 0, 0 };
+		blit.srcOffsets[1]				   = { mipWidth, mipHeight, 1 };
+		blit.srcSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.srcSubresource.mipLevel	   = i - 1;
+		blit.srcSubresource.baseArrayLayer = 0;
+		blit.srcSubresource.layerCount	   = 1;
+		blit.dstOffsets[0]				   = { 0, 0, 0 };
+		blit.dstOffsets[1]				   = { mipWidth > 1 ? mipWidth / 2 : 1,
+							   mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+		blit.dstSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.dstSubresource.mipLevel	   = i;
+		blit.dstSubresource.baseArrayLayer = 0;
+		blit.dstSubresource.layerCount	   = 1;
 
-    vkCmdBlitImage(commandBuffer, properties._image,
-                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, properties._image,
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
-                   VK_FILTER_LINEAR);
+		vkCmdBlitImage(commandBuffer, properties._image,
+					   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, properties._image,
+					   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
+					   VK_FILTER_LINEAR);
 
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
-                         0, nullptr, 1, &barrier);
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+							 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+							 nullptr, 0, nullptr, 1, &barrier);
 
-    if (mipWidth > 1)
-      mipWidth /= 2;
-    if (mipHeight > 1)
-      mipHeight /= 2;
-  }
+		if (mipWidth > 1)
+			mipWidth /= 2;
+		if (mipHeight > 1)
+			mipHeight /= 2;
+	}
 
-  barrier.subresourceRange.baseMipLevel = properties._mipLevels - 1;
-  barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	barrier.subresourceRange.baseMipLevel = properties._mipLevels - 1;
+	barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-  vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
-                       nullptr, 1, &barrier);
+	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
+						 0, nullptr, 1, &barrier);
 
-  Utils::endSingleTimeCommands(properties._logicalDevice,
-                               properties._commandPool,
-                               properties._graphicsQueue, commandBuffer);
+	Utils::endSingleTimeCommands(properties._logicalDevice,
+								 properties._commandPool,
+								 properties._graphicsQueue, commandBuffer);
 }
 
 /**
@@ -651,18 +674,19 @@ void evan::Utils::generateMipmaps(const GenerateMipmapsProperties &properties) {
  * @param dstBuffer The destination buffer where the data will be copied to.
  * @param size The size of the data to copy, in bytes.
  */
-void evan::Utils::copyBuffer(const CopyBufferProperties &properties) {
-  VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
-      properties._logicalDevice, properties._commandPool);
+void evan::Utils::copyBuffer(const CopyBufferProperties &properties)
+{
+	VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(
+		properties._logicalDevice, properties._commandPool);
 
-  VkBufferCopy copyRegion{};
-  copyRegion.size = properties._size;
-  vkCmdCopyBuffer(commandBuffer, properties._srcBuffer, properties._dstBuffer,
-                  1, &copyRegion);
+	VkBufferCopy copyRegion {};
+	copyRegion.size = properties._size;
+	vkCmdCopyBuffer(commandBuffer, properties._srcBuffer, properties._dstBuffer,
+					1, &copyRegion);
 
-  Utils::endSingleTimeCommands(properties._logicalDevice,
-                               properties._commandPool,
-                               properties._graphicsQueue, commandBuffer);
+	Utils::endSingleTimeCommands(properties._logicalDevice,
+								 properties._commandPool,
+								 properties._graphicsQueue, commandBuffer);
 }
 
 /**
@@ -680,27 +704,28 @@ void evan::Utils::copyBuffer(const CopyBufferProperties &properties) {
  * color and depth framebuffers.
  */
 VkSampleCountFlagBits
-evan::Utils::getMaxUsableSampleCount(const VkPhysicalDevice &physicalDevice) {
-  VkPhysicalDeviceProperties physicalDeviceProperties;
-  vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
-  VkSampleCountFlags counts =
-      physicalDeviceProperties.limits.framebufferColorSampleCounts &
-      physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	evan::Utils::getMaxUsableSampleCount(const VkPhysicalDevice &physicalDevice)
+{
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+	VkSampleCountFlags counts =
+		physicalDeviceProperties.limits.framebufferColorSampleCounts
+		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 
-  if (counts & VK_SAMPLE_COUNT_64_BIT)
-    return VK_SAMPLE_COUNT_64_BIT;
-  if (counts & VK_SAMPLE_COUNT_32_BIT)
-    return VK_SAMPLE_COUNT_32_BIT;
-  if (counts & VK_SAMPLE_COUNT_16_BIT)
-    return VK_SAMPLE_COUNT_16_BIT;
-  if (counts & VK_SAMPLE_COUNT_8_BIT)
-    return VK_SAMPLE_COUNT_8_BIT;
-  if (counts & VK_SAMPLE_COUNT_4_BIT)
-    return VK_SAMPLE_COUNT_4_BIT;
-  if (counts & VK_SAMPLE_COUNT_2_BIT)
-    return VK_SAMPLE_COUNT_2_BIT;
+	if (counts & VK_SAMPLE_COUNT_64_BIT)
+		return VK_SAMPLE_COUNT_64_BIT;
+	if (counts & VK_SAMPLE_COUNT_32_BIT)
+		return VK_SAMPLE_COUNT_32_BIT;
+	if (counts & VK_SAMPLE_COUNT_16_BIT)
+		return VK_SAMPLE_COUNT_16_BIT;
+	if (counts & VK_SAMPLE_COUNT_8_BIT)
+		return VK_SAMPLE_COUNT_8_BIT;
+	if (counts & VK_SAMPLE_COUNT_4_BIT)
+		return VK_SAMPLE_COUNT_4_BIT;
+	if (counts & VK_SAMPLE_COUNT_2_BIT)
+		return VK_SAMPLE_COUNT_2_BIT;
 
-  return VK_SAMPLE_COUNT_1_BIT;
+	return VK_SAMPLE_COUNT_1_BIT;
 }
 
 /**
@@ -718,19 +743,20 @@ evan::Utils::getMaxUsableSampleCount(const VkPhysicalDevice &physicalDevice) {
  * vector of bytes, which is converted to the required format for Vulkan.
  */
 VkShaderModule evan::Utils::createShaderModule(VkDevice logicalDevice,
-                                               const std::vector<char> &code) {
-  VkShaderModuleCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  createInfo.codeSize = code.size();
-  createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+											   const std::vector<char> &code)
+{
+	VkShaderModuleCreateInfo createInfo {};
+	createInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode	= reinterpret_cast<const uint32_t *>(code.data());
 
-  VkShaderModule shaderModule;
-  if (vkCreateShaderModule(logicalDevice, &createInfo, nullptr,
-                           &shaderModule) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create shader module!");
-  }
+	VkShaderModule shaderModule;
+	if (vkCreateShaderModule(logicalDevice, &createInfo, nullptr, &shaderModule)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create shader module!");
+	}
 
-  return shaderModule;
+	return shaderModule;
 }
 
 /**
@@ -748,17 +774,18 @@ VkShaderModule evan::Utils::createShaderModule(VkDevice logicalDevice,
  * - The user-defined callback function for handling debug messages.
  */
 void evan::Utils::populateDebugMessengerCreateInfo(
-    VkDebugUtilsMessengerCreateInfoEXT &createInfo,
-    PFN_vkDebugUtilsMessengerCallbackEXT debugCallback) {
-  createInfo = {};
-  createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  createInfo.pfnUserCallback = debugCallback;
+	VkDebugUtilsMessengerCreateInfoEXT &createInfo,
+	PFN_vkDebugUtilsMessengerCallbackEXT debugCallback)
+{
+	createInfo		 = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	createInfo.pfnUserCallback = debugCallback;
 }
 
 /**
@@ -784,16 +811,17 @@ void evan::Utils::populateDebugMessengerCreateInfo(
  * instance.
  */
 VkResult evan::Utils::createDebugUtilsMessengerEXT(
-    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator,
-    VkDebugUtilsMessengerEXT *pDebugMessenger) {
-  auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-      instance, "vkCreateDebugUtilsMessengerEXT");
-  if (func != nullptr) {
-    return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-  } else {
-    return VK_ERROR_EXTENSION_NOT_PRESENT;
-  }
+	VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+	const VkAllocationCallbacks *pAllocator,
+	VkDebugUtilsMessengerEXT *pDebugMessenger)
+{
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+		instance, "vkCreateDebugUtilsMessengerEXT");
+	if (func != nullptr) {
+		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+	} else {
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
 }
 
 /**
@@ -812,28 +840,28 @@ VkResult evan::Utils::createDebugUtilsMessengerEXT(
  * attachment.
  * @throws std::runtime_error If no suitable format is found.
  */
-VkFormat
-evan::Utils::findSupportedDepthFormat(VkPhysicalDevice physicalDevice) {
-  const std::vector<VkFormat> candidates = {VK_FORMAT_D32_SFLOAT,
-                                            VK_FORMAT_D32_SFLOAT_S8_UINT,
-                                            VK_FORMAT_D24_UNORM_S8_UINT};
-  VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-  VkFormatFeatureFlags features =
-      VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+VkFormat evan::Utils::findSupportedDepthFormat(VkPhysicalDevice physicalDevice)
+{
+	const std::vector<VkFormat> candidates = { VK_FORMAT_D32_SFLOAT,
+											   VK_FORMAT_D32_SFLOAT_S8_UINT,
+											   VK_FORMAT_D24_UNORM_S8_UINT };
+	VkImageTiling tiling				   = VK_IMAGE_TILING_OPTIMAL;
+	VkFormatFeatureFlags features =
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-  for (auto format : candidates) {
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+	for (auto format: candidates) {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
 
-    if (tiling == VK_IMAGE_TILING_LINEAR &&
-        (props.linearTilingFeatures & features) == features) {
-      return format;
-    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-               (props.optimalTilingFeatures & features) == features) {
-      return format;
-    }
-  }
-  throw std::runtime_error("failed to find supported format!");
+		if (tiling == VK_IMAGE_TILING_LINEAR
+			&& (props.linearTilingFeatures & features) == features) {
+			return format;
+		} else if (tiling == VK_IMAGE_TILING_OPTIMAL
+				   && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
+	throw std::runtime_error("failed to find supported format!");
 }
 
 /**
@@ -855,28 +883,29 @@ evan::Utils::findSupportedDepthFormat(VkPhysicalDevice physicalDevice) {
  */
 
 VkImageView evan::Utils::createImageView(VkImage image, VkFormat format,
-                                         VkImageAspectFlags aspectFlags,
-                                         VkDevice logicalDevice,
-                                         uint32_t mipLevels) {
-  VkImageViewCreateInfo viewInfo{};
-  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  viewInfo.image = image;
-  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  viewInfo.format = format;
-  viewInfo.subresourceRange.aspectMask = aspectFlags;
-  viewInfo.subresourceRange.baseMipLevel = 0;
-  viewInfo.subresourceRange.levelCount = 1;
-  viewInfo.subresourceRange.baseArrayLayer = 0;
-  viewInfo.subresourceRange.layerCount = 1;
-  viewInfo.subresourceRange.levelCount = mipLevels;
+										 VkImageAspectFlags aspectFlags,
+										 VkDevice logicalDevice,
+										 uint32_t mipLevels)
+{
+	VkImageViewCreateInfo viewInfo {};
+	viewInfo.sType	  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image	  = image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format	  = format;
+	viewInfo.subresourceRange.aspectMask	 = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel	 = 0;
+	viewInfo.subresourceRange.levelCount	 = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount	 = 1;
+	viewInfo.subresourceRange.levelCount	 = mipLevels;
 
-  VkImageView imageView;
-  if (vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create texture image view!");
-  }
+	VkImageView imageView;
+	if (vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
 
-  return imageView;
+	return imageView;
 }
 
 /////////////////////
@@ -906,22 +935,23 @@ VkImageView evan::Utils::createImageView(VkImage image, VkFormat format,
  * list.
  */
 VkFormat evan::Utils::findSupportedFormat(
-    VkPhysicalDevice physicalDevice, const std::vector<VkFormat> &candidates,
-    VkImageTiling tiling, VkFormatFeatureFlags features) {
-  for (VkFormat format : candidates) {
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+	VkPhysicalDevice physicalDevice, const std::vector<VkFormat> &candidates,
+	VkImageTiling tiling, VkFormatFeatureFlags features)
+{
+	for (VkFormat format: candidates) {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
 
-    if (tiling == VK_IMAGE_TILING_LINEAR &&
-        (props.linearTilingFeatures & features) == features) {
-      return format;
-    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-               (props.optimalTilingFeatures & features) == features) {
-      return format;
-    }
-  }
+		if (tiling == VK_IMAGE_TILING_LINEAR
+			&& (props.linearTilingFeatures & features) == features) {
+			return format;
+		} else if (tiling == VK_IMAGE_TILING_OPTIMAL
+				   && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
 
-  throw std::runtime_error("failed to find supported format!");
+	throw std::runtime_error("failed to find supported format!");
 }
 
 /**
@@ -934,9 +964,10 @@ VkFormat evan::Utils::findSupportedFormat(
  * @param format The Vulkan format to check (VkFormat).
  * @return true if the format includes a stencil component, false otherwise.
  */
-bool evan::Utils::hasStencilComponent(VkFormat format) {
-  return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-         format == VK_FORMAT_D24_UNORM_S8_UINT;
+bool evan::Utils::hasStencilComponent(VkFormat format)
+{
+	return format == VK_FORMAT_D32_SFLOAT_S8_UINT
+		|| format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 /**
@@ -958,25 +989,25 @@ bool evan::Utils::hasStencilComponent(VkFormat format) {
  * @note The caller is responsible for ending the command buffer recording and
  * submitting it to a queue, as well as cleaning up resources after use.
  */
-VkCommandBuffer
-evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
-                                     VkCommandPool commandPool) {
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = commandPool;
-  allocInfo.commandBufferCount = 1;
+VkCommandBuffer evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
+													 VkCommandPool commandPool)
+{
+	VkCommandBufferAllocateInfo allocInfo {};
+	allocInfo.sType		  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level		  = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = commandPool;
+	allocInfo.commandBufferCount = 1;
 
-  VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
 
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VkCommandBufferBeginInfo beginInfo {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-  vkBeginCommandBuffer(commandBuffer, &beginInfo);
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-  return commandBuffer;
+	return commandBuffer;
 }
 
 /**
@@ -995,20 +1026,21 @@ evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
  * @param commandBuffer The command buffer to be ended, submitted, and freed.
  */
 void evan::Utils::endSingleTimeCommands(VkDevice logicalDevice,
-                                        VkCommandPool commandPool,
-                                        VkQueue graphicsQueue,
-                                        VkCommandBuffer commandBuffer) {
-  vkEndCommandBuffer(commandBuffer);
+										VkCommandPool commandPool,
+										VkQueue graphicsQueue,
+										VkCommandBuffer commandBuffer)
+{
+	vkEndCommandBuffer(commandBuffer);
 
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
+	VkSubmitInfo submitInfo {};
+	submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers	  = &commandBuffer;
 
-  vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphicsQueue);
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(graphicsQueue);
 
-  vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
+	vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
 }
 
 /**
@@ -1025,21 +1057,22 @@ void evan::Utils::endSingleTimeCommands(VkDevice logicalDevice,
  * otherwise.
  */
 bool evan::Utils::checkDeviceExtensionSupport(
-    VkPhysicalDevice device, std::vector<const char *> deviceExtensions) {
-  uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-                                       nullptr);
+	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
+{
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+										 nullptr);
 
-  std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-                                       availableExtensions.data());
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+										 availableExtensions.data());
 
-  std::set<std::string> requiredExtensions(deviceExtensions.begin(),
-                                           deviceExtensions.end());
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(),
+											 deviceExtensions.end());
 
-  for (const auto &extension : availableExtensions) {
-    requiredExtensions.erase(extension.extensionName);
-  }
+	for (const auto &extension: availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
 
-  return requiredExtensions.empty();
+	return requiredExtensions.empty();
 }
