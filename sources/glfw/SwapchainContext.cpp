@@ -146,17 +146,20 @@ void evan::glfw::SwapchainContext::setupDebugMessenger(VkInstance instance)
 
 void evan::glfw::SwapchainContext::createDescriptorPool(VkDevice logicalDevice)
 {
+	uint32_t materialCount = static_cast<uint32_t>(_materials.size());
+    uint32_t descriptorCount = materialCount * MAX_FRAMES_IN_FLIGHT;
+
 	std::array<VkDescriptorPoolSize, 2> poolSizes {};
 	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[0].descriptorCount = descriptorCount;
 	poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[1].descriptorCount = descriptorCount;
 
 	VkDescriptorPoolCreateInfo poolInfo {};
 	poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes	   = poolSizes.data();
-	poolInfo.maxSets	   = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolInfo.maxSets	   = descriptorCount;
 
 	if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr,
 							   &_descriptorPool)
