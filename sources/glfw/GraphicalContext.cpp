@@ -105,7 +105,6 @@ evan::glfw::GraphicalContext::~GraphicalContext()
 			func(_instance, nullptr, nullptr);
 		}
 	}
-	vkDestroyInstance(_instance, nullptr);
 }
 
 void evan::glfw::GraphicalContext::createInstance()
