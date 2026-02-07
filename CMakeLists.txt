@@ -7,8 +7,6 @@ project(evan
     LANGUAGES CXX
 )
 
-find_package(Vulkan REQUIRED)
-
 # Include common functions
 include(cmake/CommonFunctions.cmake)
 
@@ -71,6 +69,8 @@ FetchContent_Declare(glm
 )
 FetchContent_MakeAvailable(glm)
 
+find_package(Vulkan REQUIRED)
+
 # Collect common source files
 file(GLOB SOURCES_COMMON "${SOURCES_DIR}/common/*.cpp" "${SOURCES_DIR}/*.cpp")
 
@@ -103,8 +103,8 @@ if(BUILD_FOR_OPENXR)
 
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
-        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-        GIT_TAG release-1.1.53
+        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK-Source.git
+        GIT_TAG release-1.1.54
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
@@ -174,16 +174,8 @@ target_include_directories(${PROJECT_NAME}
 )
 
 # Optional components
-option(BUILD_TESTING "Build the tests" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_EXAMPLES "Build the examples" OFF)
-
-if(BUILD_TESTING)
-    message(STATUS "Building tests...")
-    add_subdirectory(tests)
-else()
-    message(STATUS "Skipping tests...")
-endif()
 
 if(BUILD_DOCS)
     message(STATUS "Building docs...")
