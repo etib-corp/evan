@@ -58,13 +58,24 @@ namespace evan
 		 */
 		virtual void createGraphicsPipeline() = 0;
 
+		/**
+		 * @struct Material
+		 * @brief The Material struct represents a material with its
+		 * associated Vulkan resources.
+		 */
+		struct Material {
+            VkImage image;
+            VkImageView imageView;
+            VkSampler sampler;
+            uint32_t mipLevels;
+            std::vector<VkDescriptorSet> descriptorSets;
+        };
+
 		std::vector<VkImageView>
 			_imageViews;				// Image views for the swapchain images
 		VkExtent2D _swapchainExtent;	// Dimensions of the swapchain images
 		std::vector<VkFramebuffer>
 			_swapchainFramebuffers;	   // Framebuffers for the swapchain images
-
-		uint32_t _mipLevels = 1;	// Number of mipmap levels for textures
 
 		VkFormat _swapchainColorFormat =
 			VK_FORMAT_UNDEFINED;	// Format of the swapchain images
