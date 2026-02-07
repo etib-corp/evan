@@ -37,4 +37,5 @@ sudo apt-get install -y \
   libwayland-dev \
   libdecor-0-dev \
   liburing-dev \
-  libxinerama-dev
+  libxinerama-dev \
+  libxxf86vm-dev
