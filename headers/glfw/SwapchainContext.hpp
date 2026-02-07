@@ -203,15 +203,8 @@ namespace evan
 			void createImageViews(VkDevice logicalDevice);
 
 			// Texture images
-			std::map<std::string, VkImage>
-				_textureImage;	  // Texture images mapped by their names
 			VkDeviceMemory _textureImageMemory;	   // Memory for texture images
-			std::map<std::string, VkImageView>
-				_textureImageView;	  // Image views for texture images mapped
-									  // by their names
-			std::map<std::string, VkSampler>
-				_textureSampler;	// Samplers for texture images mapped by
-									// their names
+	        std::map<std::string, Material> _materials;	   // Map of material names to Material structs
 
 			/**
 			 * @brief Creates texture image views for all texture images.
@@ -317,9 +310,6 @@ namespace evan
 
 			VkDescriptorPool _descriptorPool;	 // Vulkan descriptor pool for
 												 // managing descriptor sets
-			std::vector<VkDescriptorSet>
-				_descriptorSets;	// Vector of Vulkan descriptor sets for
-									// uniform data
 			VkDescriptorSetLayout
 				_descriptorSetLayout;	 // Vulkan descriptor set layout for
 										 // uniform data
@@ -399,9 +389,7 @@ namespace evan
 			 * descriptor pool and before rendering operations that require
 			 * resource binding.
 			 */
-			void createDescriptorSets(
-				VkDevice logicalDevice,
-				std::map<VkImageView, VkSampler> imagesViewsAndSamplers);
+			void createDescriptorSets(VkDevice logicalDevice);
 
 			std::vector<VkBuffer>
 				_uniformBuffers;	// Vector of Vulkan buffers for uniform data
@@ -584,9 +572,7 @@ namespace evan
 			 * descriptor pool and before rendering operations that require
 			 * resource binding.
 			 */
-			void createSingleDescriptorSets(VkDevice logicalDevice,
-											VkImageView textureImageView,
-											VkSampler textureSampler);
+			void createSingleDescriptorSets(VkDevice logicalDevice, const std::string &name);
 		};
 	}	 // namespace glfw
 }	 // namespace evan
