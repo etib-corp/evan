@@ -89,11 +89,15 @@ if(BUILD_FOR_OPENXR)
 
     # Add OpenXR platform defines
     add_compile_definitions(XR_USE_GRAPHICS_API_VULKAN)
-    
-    # Android-specific defines
+
+    # Android-specific defines and includes
     if(ANDROID)
         add_compile_definitions(XR_USE_PLATFORM_ANDROID)
         add_compile_definitions(VK_USE_PLATFORM_ANDROID_KHR)
+        include_directories(${JAVA_INCLUDE_PATHS})
+        find_library(log-lib log)
+        find_library(android-lib android)
+        find_library(jnigraphics-lib jnigraphics)
     endif()
 
     # Disable OpenXR tests and other unnecessary components
@@ -110,17 +114,12 @@ if(BUILD_FOR_OPENXR)
     )
     FetchContent_MakeAvailable(OpenXR-SDK)
 
-    # Find JNI only if building for Android
-    if(ANDROID)
-        find_package(JNI REQUIRED)
-    endif()
-
     # Add OpenXR compile definition
     add_compile_definitions(__OPENXR__)
 
     # Collect OpenXR-specific source files
     file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/openxr/*.cpp")
-    
+
     # Exclude Android-specific files on non-Android platforms
     if(NOT ANDROID)
         list(FILTER SOURCES_XR EXCLUDE REGEX ".*AndroidPlatform\\.cpp$")
@@ -131,7 +130,7 @@ if(BUILD_FOR_OPENXR)
 
     # Link OpenXR dependencies
     if(ANDROID)
-        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader JNI::JNI)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader ${log-lib} ${android-lib} ${jnigraphics-lib})
     else()
         target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader)
     endif()

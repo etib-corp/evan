@@ -63,13 +63,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: bash scripts/install_ubuntu_dependencies.sh
 
-      - name: Setup JAVA for OpenXR
-        if: matrix.build_backend == 'OpenXR'
-        uses: actions/setup-java@v5.2.0
-        with:
-          distribution: "temurin"
-          java-version: "21"
-
       - name: Setup Vulkan SDK
         uses: humbletim/setup-vulkan-sdk@v1.2.1
         with:
