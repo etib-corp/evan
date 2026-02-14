@@ -20,4 +20,32 @@
  SOFTWARE.
  */
 
-#include "glfw/test_AssetsManager.hpp"
+#pragma once
+
+// GLM configuration
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/hash.hpp>
+
+// Vulkan headers - needed for both GLFW and OpenXR
+#if defined(__GLFW__) || defined(__OPENXR__)
+	#include <vulkan/vulkan.h>
+#endif
+
+#ifdef __GLFW__
+	#include <vulkan/vulkan.hpp>
+	#define GLFW_INCLUDE_VULKAN
+	#include <GLFW/glfw3.h>
+	#include <GLFW/glfw3native.h>
+#endif
+
+#ifdef __OPENXR__
+	#ifdef _WIN32
+		#include <windows.h>
+	#endif
+	#include <openxr/openxr.h>
+	#ifdef __ANDROID__
+		#include <jni.h>
+	#endif
+	#include <openxr/openxr_platform.h>
+#endif

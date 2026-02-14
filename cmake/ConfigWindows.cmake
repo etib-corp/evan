@@ -1,5 +1,16 @@
 message(STATUS "Windows configuration loaded")
 
+# Windows platform defines
+add_compile_definitions(NOMINMAX)
+if(BUILD_FOR_GLFW)
+    add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
+    add_compile_definitions(GLFW_EXPOSE_NATIVE_WIN32)
+endif()
+if(BUILD_FOR_OPENXR)
+    add_compile_definitions(XR_USE_PLATFORM_WIN32)
+    add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
+endif()
+
 # Set Windows-specific configuration
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 

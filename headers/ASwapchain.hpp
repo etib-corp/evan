@@ -9,10 +9,11 @@
 
 #include <string>
 
-namespace evan {
-template <typename T> struct ASwapchain {
-  int32_t _width;
-  int32_t _height;
-  T swapchain;
-};
-} // namespace evan
+namespace evan
+{
+	template<typename T> struct ASwapchain {
+		int32_t _width;
+		int32_t _height;
+		T swapchain;
+	};
+}	 // namespace evan

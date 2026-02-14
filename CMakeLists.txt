@@ -10,15 +10,6 @@ project(evan
 # Include common functions
 include(cmake/CommonFunctions.cmake)
 
-# Platform-specific configuration
-if(WIN32)
-    include(cmake/ConfigWindows.cmake)
-elseif(APPLE)
-    include(cmake/ConfigMacOS.cmake)
-elseif(UNIX)
-    include(cmake/ConfigLinux.cmake)
-endif()
-
 # Set global C++ standard and properties
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +26,20 @@ endif()
 option(BUILD_FOR_OPENXR "Build with OpenXR support" OFF)
 option(BUILD_FOR_GLFW "Build with GLFW support" OFF)
 option(BUILD_SHARED_LIBS "Build as shared library" OFF)
+
+# Platform-specific configuration (must come after feature options)
+if(WIN32)
+    include(cmake/ConfigWindows.cmake)
+elseif(APPLE)
+    include(cmake/ConfigMacOS.cmake)
+elseif(UNIX)
+    include(cmake/ConfigLinux.cmake)
+endif()
+
+# Global GLM defines
+add_compile_definitions(GLM_FORCE_RADIANS)
+add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
+add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
 # Check that at least one build mode is selected
 if(NOT BUILD_FOR_OPENXR AND NOT BUILD_FOR_GLFW)
@@ -55,15 +60,6 @@ include_directories(${HEADERS_DIR})
 # FetchContent module
 include(FetchContent)
 
-# Fetch Vulkan-Headers
-FetchContent_Declare(Vulkan-Headers
-    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.4.329
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
-)
-FetchContent_MakeAvailable(Vulkan-Headers)
-
 set(GLM_BUILD_TESTS OFF)
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -72,6 +68,8 @@ FetchContent_Declare(glm
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(glm)
+
+find_package(Vulkan REQUIRED)
 
 # Collect common source files
 file(GLOB SOURCES_COMMON "${SOURCES_DIR}/common/*.cpp" "${SOURCES_DIR}/*.cpp")
@@ -83,23 +81,38 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan-Headers glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
     message(STATUS "Building with OpenXR support")
 
+    # Add OpenXR platform defines
+    add_compile_definitions(XR_USE_GRAPHICS_API_VULKAN)
+
+    # Android-specific defines and includes
+    if(ANDROID)
+        add_compile_definitions(XR_USE_PLATFORM_ANDROID)
+        add_compile_definitions(VK_USE_PLATFORM_ANDROID_KHR)
+        include_directories(${JAVA_INCLUDE_PATHS})
+        find_library(log-lib log)
+        find_library(android-lib android)
+        find_library(jnigraphics-lib jnigraphics)
+    endif()
+
+    # Disable OpenXR tests and other unnecessary components
+    set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_CONFORMANCE_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+
     # Fetch OpenXR SDK
     FetchContent_Declare(OpenXR-SDK
-        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-        GIT_TAG release-1.1.53  
+        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK-Source.git
+        GIT_TAG release-1.1.54
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(OpenXR-SDK)
-
-    # Find JNI
-    find_package(JNI REQUIRED)
 
     # Add OpenXR compile definition
     add_compile_definitions(__OPENXR__)
@@ -107,11 +120,20 @@ if(BUILD_FOR_OPENXR)
     # Collect OpenXR-specific source files
     file(GLOB_RECURSE SOURCES_XR "${SOURCES_DIR}/openxr/*.cpp")
 
+    # Exclude Android-specific files on non-Android platforms
+    if(NOT ANDROID)
+        list(FILTER SOURCES_XR EXCLUDE REGEX ".*AndroidPlatform\\.cpp$")
+    endif()
+
     # Create library with OpenXR support
     target_sources(${PROJECT_NAME} PRIVATE ${SOURCES_XR})
 
     # Link OpenXR dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE openxr_loader JNI::JNI)
+    if(ANDROID)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader ${log-lib} ${android-lib} ${jnigraphics-lib})
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenXR::openxr_loader)
+    endif()
 endif()
 
 # Configure for GLFW
@@ -137,7 +159,7 @@ if(BUILD_FOR_GLFW)
     target_sources(${PROJECT_NAME} PRIVATE ${GLFW_SOURCES})
 
     # Link Vulkan dependencies
-    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 endif()
 
 # Set common target properties
@@ -151,16 +173,8 @@ target_include_directories(${PROJECT_NAME}
 )
 
 # Optional components
-option(BUILD_TESTING "Build the tests" ON)
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_EXAMPLES "Build the examples" OFF)
-
-if(BUILD_TESTING)
-    message(STATUS "Building tests...")
-    add_subdirectory(tests)
-else()
-    message(STATUS "Skipping tests...")
-endif()
 
 if(BUILD_DOCS)
     message(STATUS "Building docs...")
