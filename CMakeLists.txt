@@ -69,6 +69,15 @@ FetchContent_Declare(glm
 )
 FetchContent_MakeAvailable(glm)
 
+FetchContent_Declare(utility
+    GIT_REPOSITORY https://github.com/etib-corp/utility.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+
+FetchContent_MakeAvailable(utility)
+
 find_package(Vulkan REQUIRED)
 
 # Collect common source files
@@ -81,7 +90,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
@@ -89,7 +98,6 @@ if(BUILD_FOR_OPENXR)
 
     # Add OpenXR platform defines
     add_compile_definitions(XR_USE_GRAPHICS_API_VULKAN)
-
     # Android-specific defines and includes
     if(ANDROID)
         add_compile_definitions(XR_USE_PLATFORM_ANDROID)
