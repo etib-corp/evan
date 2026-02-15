@@ -42,9 +42,9 @@ public:
 
   virtual void drawFrame(std::vector<Vertex> vertices) = 0;
 
-  void run();
-
   virtual void pollEvents() = 0;
+
+  virtual bool shouldClose() const = 0;
 
 protected:
   std::string _appName;    // Application name (defined by user)

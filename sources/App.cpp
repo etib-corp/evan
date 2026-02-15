@@ -15,22 +15,20 @@ evan::App::~App()
 {
 }
 
-std::shared_ptr<evan::Primitive> &evan::App::display(std::shared_ptr<Primitive> primitive)
+void evan::App::display(std::shared_ptr<Primitive> primitive)
 {
-    _primitives.push_back(primitive);
-    return _primitives.back();
+    // Should add the given primitive to the current scene's list of primitives to be rendered in the next frame.
 }
 
 void evan::App::drawFrame(float frameRate)
 {
-    for (const auto &primitive : _primitives) {
-    }
+    // Should get the current scene's primitives, render them to vertices, and then draw the frame using the software's graphical context.
 }
 
 void evan::App::run()
 {
-    // while(shouldClose()) {
-    //     _software->pollEvent();
-    //     drawFrame(60.0f)
-    // }
+    while(_software->shouldClose() == false) {
+        _software->pollEvents();
+        drawFrame(60.0f);
+    }
 }
