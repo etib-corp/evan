@@ -11,7 +11,6 @@
 #include <array>
 #include <memory>
 
-#include "Error.hpp"
 #include "Utils.hpp"
 
 /**
