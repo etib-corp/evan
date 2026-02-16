@@ -85,11 +85,8 @@ evan::glfw::SwapchainContext::SwapchainContext(
 							   properties._physicalDevice);
 	this->createDescriptorPool(properties._logicalDevice);
 
-	if (!this->_textureImageView.empty() && !this->_textureSampler.empty()) {
-		this->createDescriptorSets(
-			properties._logicalDevice,
-			{ { this->_textureImageView.begin()->second,
-				this->_textureSampler.begin()->second } });
+	if (!this->_materials.empty()) {
+		this->createDescriptorSets(properties._logicalDevice);
 	}
 
 	this->createGraphicsPipeline();
@@ -149,17 +146,20 @@ void evan::glfw::SwapchainContext::setupDebugMessenger(VkInstance instance)
 
 void evan::glfw::SwapchainContext::createDescriptorPool(VkDevice logicalDevice)
 {
+	uint32_t materialCount = static_cast<uint32_t>(_materials.size());
+    uint32_t descriptorCount = materialCount * MAX_FRAMES_IN_FLIGHT;
+
 	std::array<VkDescriptorPoolSize, 2> poolSizes {};
 	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[0].descriptorCount = descriptorCount;
 	poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[1].descriptorCount = descriptorCount;
 
 	VkDescriptorPoolCreateInfo poolInfo {};
 	poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes	   = poolSizes.data();
-	poolInfo.maxSets	   = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolInfo.maxSets	   = descriptorCount;
 
 	if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr,
 							   &_descriptorPool)
@@ -201,12 +201,10 @@ void evan::glfw::SwapchainContext::createDescriptorSetLayout(
 	}
 }
 
-void evan::glfw::SwapchainContext::createDescriptorSets(
-	VkDevice logicalDevice,
-	std::map<VkImageView, VkSampler> imagesViewsAndSamplers)
+void evan::glfw::SwapchainContext::createDescriptorSets(VkDevice logicalDevice)
 {
-	for (const auto [imageView, sampler]: imagesViewsAndSamplers) {
-		this->createSingleDescriptorSets(logicalDevice, imageView, sampler);
+	for (const auto &[name, material]: _materials) {
+		this->createSingleDescriptorSets(logicalDevice, name);
 	}
 }
 
@@ -287,7 +285,7 @@ void evan::glfw::SwapchainContext::createImageViews(VkDevice logicalDevice)
 	for (uint32_t i = 0; i < _swapchainImages.size(); i++) {
 		_imageViews[i] = Utils::createImageView(
 			_swapchainImages[i], _swapchainColorFormat,
-			VK_IMAGE_ASPECT_COLOR_BIT, logicalDevice, _mipLevels);
+			VK_IMAGE_ASPECT_COLOR_BIT, logicalDevice, 1);
 	}
 }
 
@@ -349,7 +347,7 @@ void evan::glfw::SwapchainContext::createTextureImage(
 		throw std::runtime_error("Failed to load texture image !");
 	}
 
-	_mipLevels = static_cast<uint32_t>(
+	_materials[texturePath].mipLevels = static_cast<uint32_t>(
 					 std::floor(std::log2(std::max(texWidth, texHeight))))
 		+ 1;
 
@@ -379,14 +377,14 @@ void evan::glfw::SwapchainContext::createTextureImage(
 		._physicalDevice = properties._physicalDevice,
 		._width			 = (uint32_t)texWidth,
 		._height		 = (uint32_t)texHeight,
-		._mipLevels		 = _mipLevels,
+		._mipLevels		 = _materials[texturePath].mipLevels,
 		._numSamples	 = VK_SAMPLE_COUNT_1_BIT,
 		._format		 = VK_FORMAT_R8G8B8A8_SRGB,
 		._tiling		 = VK_IMAGE_TILING_OPTIMAL,
 		._usage			 = VK_IMAGE_USAGE_TRANSFER_SRC_BIT
 			| VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		._properties  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		._image		  = _textureImage[texturePath],
+		._image		  = _materials[texturePath].image,
 		._imageMemory = _textureImageMemory
 	};
 	Utils::createImage(imageProperties);
@@ -395,11 +393,11 @@ void evan::glfw::SwapchainContext::createTextureImage(
 		._logicalDevice = properties._logicalDevice,
 		._commandPool	= properties._commandPool,
 		._graphicsQueue = properties._graphicsQueue,
-		._image			= _textureImage[texturePath],
+		._image			= _materials[texturePath].image,
 		._format		= VK_FORMAT_R8G8B8A8_SRGB,
 		._oldLayout		= VK_IMAGE_LAYOUT_UNDEFINED,
 		._newLayout		= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		._mipLevels		= _mipLevels
+		._mipLevels		= _materials[texturePath].mipLevels
 	};
 	Utils::transitionImageLayout(transitionProperties);
 
@@ -408,7 +406,7 @@ void evan::glfw::SwapchainContext::createTextureImage(
 		._commandPool	= properties._commandPool,
 		._graphicsQueue = properties._graphicsQueue,
 		._buffer		= stagingBuffer,
-		._image			= _textureImage[texturePath],
+		._image			= _materials[texturePath].image,
 		._width			= (uint32_t)texWidth,
 		._height		= (uint32_t)texHeight
 	};
@@ -419,11 +417,11 @@ void evan::glfw::SwapchainContext::createTextureImage(
 		._logicalDevice	 = properties._logicalDevice,
 		._commandPool	 = properties._commandPool,
 		._graphicsQueue	 = properties._graphicsQueue,
-		._image			 = _textureImage[texturePath],
+		._image			 = _materials[texturePath].image,
 		._imageFormat	 = VK_FORMAT_R8G8B8A8_SRGB,
 		._texWidth		 = (uint32_t)texWidth,
 		._texHeight		 = (uint32_t)texHeight,
-		._mipLevels		 = _mipLevels
+		._mipLevels		 = _materials[texturePath].mipLevels
 	};
 	Utils::generateMipmaps(propertiesMipmap);
 
@@ -434,10 +432,10 @@ void evan::glfw::SwapchainContext::createTextureImage(
 void evan::glfw::SwapchainContext::createTextureImageView(
 	VkDevice logicalDevice)
 {
-	for (const auto &[textureName, textureImage]: _textureImage) {
-		_textureImageView[textureName] = Utils::createImageView(
-			textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			logicalDevice, _mipLevels);
+	for (const auto &[textureName, _]: _materials) {
+		_materials[textureName].imageView = Utils::createImageView(
+			_materials[textureName].image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+			logicalDevice, _materials[textureName].mipLevels);
 	}
 }
 
@@ -455,7 +453,7 @@ void evan::glfw::SwapchainContext::createTextureSampler(
 	}
 
 	if (vkCreateSampler(logicalDevice, &samplerInfo, nullptr,
-						&_textureSampler[textureName])
+						&_materials[textureName].sampler)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create texture sampler for "
 								 + textureName + " !");
@@ -780,7 +778,7 @@ void evan::glfw::SwapchainContext::createColorResources(
 	Utils::createImage(imageProperties);
 	_colorImageView = Utils::createImageView(_colorImage, colorFormat,
 											 VK_IMAGE_ASPECT_COLOR_BIT,
-											 logicalDevice, _mipLevels);
+											 logicalDevice, 1);
 }
 
 void evan::glfw::SwapchainContext::createDepthResources(
@@ -805,7 +803,7 @@ void evan::glfw::SwapchainContext::createDepthResources(
 	Utils::createImage(depthImageProperties);
 	_depthImageView = Utils::createImageView(
 		_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
-		properties._logicalDevice, _mipLevels);
+		properties._logicalDevice, 1);
 
 	Utils::TransitionImageLayoutProperties transitionProperties = {
 		._logicalDevice = properties._logicalDevice,
@@ -839,13 +837,12 @@ VkSamplerCreateInfo evan::glfw::SwapchainContext::getDefaultSamplerInfo(
 	samplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias				= 0.0f;
 	samplerInfo.minLod					= 0.0f;
-	samplerInfo.maxLod					= static_cast<float>(_mipLevels);
+	samplerInfo.maxLod					= 1;
 	return samplerInfo;
 }
 
 void evan::glfw::SwapchainContext::createSingleDescriptorSets(
-	VkDevice logicalDevice, VkImageView textureImageView,
-	VkSampler textureSampler)
+	VkDevice logicalDevice, const std::string &name)
 {
 	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT,
 											   _descriptorSetLayout);
@@ -855,9 +852,9 @@ void evan::glfw::SwapchainContext::createSingleDescriptorSets(
 	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	allocInfo.pSetLayouts		 = layouts.data();
 
-	_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+	_materials[name].descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
 	if (vkAllocateDescriptorSets(logicalDevice, &allocInfo,
-								 _descriptorSets.data())
+								 _materials[name].descriptorSets.data())
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate descriptor sets !");
 	}
@@ -869,13 +866,13 @@ void evan::glfw::SwapchainContext::createSingleDescriptorSets(
 
 		VkDescriptorImageInfo imageInfo {};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView	  = textureImageView;
-		imageInfo.sampler	  = textureSampler;
+		imageInfo.imageView	  = _materials[name].imageView;
+		imageInfo.sampler	  = _materials[name].sampler;
 
 		std::array<VkWriteDescriptorSet, 2> descriptorWrites {};
 
 		descriptorWrites[0].sType	   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet	   = _descriptorSets[i];
+		descriptorWrites[0].dstSet	   = _materials[name].descriptorSets[i];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -883,7 +880,7 @@ void evan::glfw::SwapchainContext::createSingleDescriptorSets(
 		descriptorWrites[0].pBufferInfo		= &bufferInfo;
 
 		descriptorWrites[1].sType	   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet	   = _descriptorSets[i];
+		descriptorWrites[1].dstSet	   = _materials[name].descriptorSets[i];
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
 		descriptorWrites[1].descriptorType =
