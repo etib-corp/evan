@@ -66,16 +66,18 @@ evan::Utils::SwapChainSupportDetails
 
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
 											  &details.capabilities);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-										 nullptr);
+	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 nullptr) != VK_SUCCESS)
+		return details;
 	if (formatCount != 0) {
 		details.formats.resize(formatCount);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
 											 details.formats.data());
 	}
 
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-											  &presentModeCount, nullptr);
+	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+											  &presentModeCount, nullptr) != VK_SUCCESS)
+		return details;
 	if (presentModeCount != 0) {
 		details.presentModes.resize(presentModeCount);
 		vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -999,7 +1001,11 @@ VkCommandBuffer evan::Utils::beginSingleTimeCommands(VkDevice logicalDevice,
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
-	vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+	if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer)
+		!= VK_SUCCESS) {
+		std::cerr << "Failed to allocate command buffer" << std::endl;
+		return VK_NULL_HANDLE;
+	}
 
 	VkCommandBufferBeginInfo beginInfo {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1060,8 +1066,9 @@ bool evan::Utils::checkDeviceExtensionSupport(
 	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
 {
 	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-										 nullptr);
+	if (vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+											 nullptr) != VK_SUCCESS)
+		return false;
 
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
