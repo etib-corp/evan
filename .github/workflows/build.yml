@@ -70,6 +70,11 @@ jobs:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
 
+      - name: Setup Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz --no-install-recommends
+
       - name: Set reusable strings
         id: strings
         shell: bash
