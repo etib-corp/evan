@@ -70,11 +70,6 @@ jobs:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
 
-      - name: Setup Doxygen
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz --no-install-recommends
-
       - name: Set reusable strings
         id: strings
         shell: bash
@@ -88,7 +83,7 @@ jobs:
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DBUILD_TESTS=ON
+          -DBUILD_DOCS=OFF
           ${{ matrix.cmake_flags }}
           -S ${{ github.workspace }}
 
