@@ -1,12 +1,11 @@
-/*
+	/*
 ** EPITECH PROJECT, 2025
 ** evan
 ** File description:
 ** Version
 */
 
-#ifndef VERSION_HPP_
-#define VERSION_HPP_
+#pragma once
 
 #include "EvanPlatform.hpp"
 
@@ -64,5 +63,3 @@ namespace evan
 		unsigned int _patch;	// Patch version number
 	};
 }	 // namespace evan
-
-#endif /* !VERSION_HPP_ */

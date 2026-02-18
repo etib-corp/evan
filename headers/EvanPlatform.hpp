@@ -32,6 +32,8 @@
 	#include <vulkan/vulkan.h>
 #endif
 
+#include <vulkan/vulkan.h>
+
 #ifdef __GLFW__
 	#include <vulkan/vulkan.hpp>
 	#define GLFW_INCLUDE_VULKAN
