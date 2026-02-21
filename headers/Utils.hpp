@@ -85,7 +85,7 @@ namespace evan
 			 * values, indicating that the required queue families are
 			 * available. False otherwise.
 			 */
-			bool isComplete()
+			bool isComplete() const
 			{
 				return graphicsFamily.has_value() && presentFamily.has_value();
 			}

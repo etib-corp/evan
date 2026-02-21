@@ -61,7 +61,7 @@ int evan::FileAsset::seek(long offset, Seek whence)
 	return 0;
 }
 
-size_t evan::FileAsset::tell()
+size_t evan::FileAsset::tell() const
 {
 	return _pos;
 }

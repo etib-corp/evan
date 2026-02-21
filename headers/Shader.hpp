@@ -36,5 +36,7 @@ namespace evan
 
 		std::vector<uint32_t> _vertexCode;
 		std::vector<uint32_t> _fragmentCode;
+
+		VkDevice _logicalDevice;
 	};
 }	 // namespace evan
