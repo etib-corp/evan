@@ -92,7 +92,7 @@ namespace evan
 		 * @brief Returns the current position in the file.
 		 * @return The current position in the file.
 		 */
-		size_t tell();
+		size_t tell() const;
 
 		[[__nodiscard__]] inline const std::string &content() const
 		{
