@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include "EvanPlatform.hpp"\
+#include "EvanPlatform.hpp"
+#include "IPlatform.hpp"
 
 #include <optional>
 
@@ -53,8 +54,8 @@ namespace evan {
         public:
             virtual ~IDeviceBackend() = default;
 
-            virtual VkInstance createInstance() = 0;
-            
+            virtual VkInstance createInstance(const IPlatform& platform) = 0;
+
             virtual VkDevice createLogicalDevice() = 0;
 
             virtual VkPhysicalDevice pickPhysicalDevice() = 0;
@@ -90,5 +91,5 @@ namespace evan {
 			 * indices will remain incomplete.
 			 */
 			evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
-    }; 
+    };
 } // namespace evan

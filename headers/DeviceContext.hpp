@@ -29,11 +29,11 @@ namespace evan
 
             /**
              * @brief Retrieves the number of MSAA samples used by this device context.
-             * 
+             *
              * @return VkSampleCountFlagBits The MSAA sample count flag bits representing the 
              *         number of samples per pixel for multisample anti-aliasing operations.
              */
-            VkSampleCountFlagBits getMsaaSamples() const;  
+            VkSampleCountFlagBits getMsaaSamples() const;
 
         protected:
             VkInstance _VkInstance;    /// The Vulkan instance, which is the connection between the application and the Vulkan library. It is used to create and manage Vulkan resources and to query the capabilities of the Vulkan implementation.
@@ -48,11 +48,11 @@ namespace evan
 
             /**
              * @brief Determines and sets the maximum usable sample count for multi-sample anti-aliasing (MSAA).
-             * 
+             *
              * Queries the physical device properties to find the maximum sample count supported by both
              * the framebuffer color and depth attachments. Sets _msaaSamples to the highest supported
              * sample count, with a fallback to VK_SAMPLE_COUNT_1_BIT if no higher counts are available.
-             * 
+             *
              * Supported sample counts in descending order of preference:
              * - VK_SAMPLE_COUNT_64_BIT
              * - VK_SAMPLE_COUNT_32_BIT
@@ -61,7 +61,7 @@ namespace evan
              * - VK_SAMPLE_COUNT_4_BIT
              * - VK_SAMPLE_COUNT_2_BIT
              * - VK_SAMPLE_COUNT_1_BIT (default)
-             * 
+             *
              * @note This function should be called after the physical device has been selected.
              * @note The _msaaSamples member variable is updated with the determined sample count.
              */
@@ -69,14 +69,14 @@ namespace evan
 
             /**
              * @brief Creates a Vulkan command pool for the device context.
-             * 
+             *
              * Initializes a command pool with the specified queue family index and flags.
              * The command pool is configured to allow individual command buffers to be reset.
-             * 
+             *
              * @note The queue family index is currently hardcoded to 0, assuming the graphics
              *       queue family is at that index. This should be replaced with dynamic queue
              *       family selection in production code.
-             * 
+             *
              * @see vkCreateCommandPool
              * @see VkCommandPoolCreateInfo
              */
