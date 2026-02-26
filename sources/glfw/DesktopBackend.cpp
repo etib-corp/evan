@@ -31,8 +31,6 @@ evan::DesktopBackend::~DesktopBackend()
 
 VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow *window)
 {
-    VkSurfaceKHR surface;
-
 #ifdef _WIN32
 	VkWin32SurfaceCreateInfoKHR createInfo {};
 
@@ -40,7 +38,7 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow
 	createInfo.hwnd		 = glfwGetWin32Window(window);
 	createInfo.hinstance = GetModuleHandle(nullptr);
 
-	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface)
+	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &_surface)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create window surface!");
 	}
@@ -48,13 +46,13 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow
 	if (instance == VK_NULL_HANDLE) {
 		throw std::runtime_error("Vulkan instance is NULL!");
 	}
-	if (glfwCreateWindowSurface(instance, window, nullptr, &surface)
+	if (glfwCreateWindowSurface(instance, window, nullptr, &_surface)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create window surface!");
 	}
 #endif
 
-    return surface;
+    return _surface;
 }
 
 VkInstance evan::DesktopBackend::createInstance(const evan::IPlatform &platform, const std::string &appName, evan::Version &appVersion)
@@ -191,4 +189,32 @@ void evan::DesktopBackend::populateDebugMessengerCreateInfo(
 		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
 		| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
+}
+
+VkPhysicalDevice evan::DesktopBackend::pickPhysicalDevice(VkInstance instance)
+{
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+	if (deviceCount == 0) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	}
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+	for (const auto &device: devices) {
+		if (this->isDeviceSuitable(device, _surface, deviceExtensions)) {
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE) {
+		throw std::runtime_error("Failed to find a suitable GPU!");
+	}
+
+	return physicalDevice;
 }
