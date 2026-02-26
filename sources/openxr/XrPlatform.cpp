@@ -18,7 +18,7 @@ evan::XrPlatform::XrPlatform(const AndroidPlatformData &data)
         std::cerr << "Failed to get xrInitializeLoaderKHR function pointer." << std::endl;
         return;
     }
-   
+
     initializeLoader(reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR*>(&loaderInitInfo));
 }
 
@@ -33,7 +33,7 @@ evan::XrPlatform::~XrPlatform()
 std::vector<std::string> evan::XrPlatform::getRequiredInstanceExtensions() const
 {
     std::vector<std::string> extensions = {
-        XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME, 
+        XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME,
     };
 
     #ifdef __ANDROID__

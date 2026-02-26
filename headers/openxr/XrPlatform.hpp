@@ -59,7 +59,7 @@ namespace evan {
 			 * @return A pointer to the Android-specific instance creation
 			 * information as an XrBaseInStructure.
 			 */
-			XrBaseInStructure *getInstanceCreateInfoAndroid();
+			const XrBaseInStructure *getInstanceCreateInfoAndroid() const;
 
         protected:
             bool _shouldClose = false; // Flag to indicate if the platform should close
