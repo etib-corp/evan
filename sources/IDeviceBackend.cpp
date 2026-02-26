@@ -68,3 +68,78 @@ std::vector<VkLayerProperties> evan::IDeviceBackend::getAvailableLayers()
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
     return availableLayers;
 }
+
+bool evan::IDeviceBackend::isDeviceSuitable(VkPhysicalDevice device,
+								   VkSurfaceKHR surface,
+								   std::vector<const char *> deviceExtensions)
+{
+	QueueFamilyIndices indices = this->findQueueFamilies(device, surface);
+	bool extensionsSupported =
+		this->checkDeviceExtensionSupport(device, deviceExtensions);
+	bool swapChainAdequate = false;
+
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport =
+			this->querySwapChainSupport(device, surface);
+		swapChainAdequate = !swapChainSupport.formats.empty()
+			&& !swapChainSupport.presentModes.empty();
+	}
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate
+		&& supportedFeatures.samplerAnisotropy;
+}
+
+bool evan::IDeviceBackend::checkDeviceExtensionSupport(
+	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
+{
+	uint32_t extensionCount;
+	if (vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+											 nullptr) != VK_SUCCESS)
+		return false;
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+										 availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(),
+											 deviceExtensions.end());
+
+	for (const auto &extension: availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
+}
+
+evan::SwapChainSupportDetails
+	evan::IDeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
+									   VkSurfaceKHR surface)
+{
+	SwapChainSupportDetails details;
+	uint32_t formatCount;
+	uint32_t presentModeCount;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+											  &details.capabilities);
+	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 nullptr) != VK_SUCCESS)
+		return details;
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 details.formats.data());
+	}
+
+	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+											  &presentModeCount, nullptr) != VK_SUCCESS)
+		return details;
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			device, surface, &presentModeCount, details.presentModes.data());
+	}
+	return details;
+}
+
