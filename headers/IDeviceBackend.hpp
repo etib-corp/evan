@@ -60,9 +60,9 @@ namespace evan {
 
             virtual VkInstance createInstance(const IPlatform& platform, const std::string &appName, Version &appVersion) = 0;
 
-            virtual VkDevice createLogicalDevice() = 0;
+            virtual VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice) = 0;
 
-            virtual VkPhysicalDevice pickPhysicalDevice() = 0;
+            virtual VkPhysicalDevice pickPhysicalDevice(VkInstance instance) = 0;
 
 			/**
  			* @brief Finds the queue families supported by a given Vulkan physical device.
