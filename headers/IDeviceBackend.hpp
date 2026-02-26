@@ -56,6 +56,8 @@ namespace evan {
         public:
             virtual ~IDeviceBackend() = default;
 
+			virtual void init(const IPlatform& platform) = 0;
+
             virtual VkInstance createInstance(const IPlatform& platform, const std::string &appName, Version &appVersion) = 0;
 
             virtual VkDevice createLogicalDevice() = 0;
