@@ -35,11 +35,7 @@ void evan::XrContext::createInstance(const XrPlatform &platform)
 	// std::strcpy(createInfo.applicationInfo.applicationName, "evan");
 	// createInfo.applicationInfo.apiVersion = #CURRENT_OPENXR_VERSION;
 
-    #ifdef __ANDROID__
 	createInfo.next = platform.getInstanceCreateInfoAndroid();
-    #else
-        createInfo.next = nullptr;
-    #endif
 
     XrResult result = xrCreateInstance(&createInfo, &_instance);
     if (result != XR_SUCCESS) {
