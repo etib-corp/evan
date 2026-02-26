@@ -14,7 +14,7 @@
 namespace evan {
     /**
      * @brief OpenXR platform implementation.
-     * 
+     *
      * This class provides an implementation of the IPlatform interface for
      * OpenXR. It handles platform-specific functionality related to OpenXR.
      */
@@ -27,7 +27,7 @@ namespace evan {
 
             /**
              * @brief Constructor for XrPlatform.
-             * 
+             *
              * @param data The platform-specific data required for OpenXR initialization.
              */
             XrPlatform(const AndroidPlatformData &data);
@@ -36,7 +36,7 @@ namespace evan {
 
             /**
              * @brief Destructor for XrPlatform.
-             * 
+             *
              * Ensures proper cleanup of OpenXR resources.
              */
             ~XrPlatform() override;
@@ -60,10 +60,10 @@ namespace evan {
 			 * information as an XrBaseInStructure.
 			 */
 			XrBaseInStructure *getInstanceCreateInfoAndroid();
-        
+
         protected:
             bool _shouldClose = false; // Flag to indicate if the platform should close
 
-            XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid = 
+            XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {}; // Android-specific instance creation info
     };
 } // namespace evan
