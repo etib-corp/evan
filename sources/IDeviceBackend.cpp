@@ -59,3 +59,12 @@ evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevic
 
     return indices;
 }
+
+std::vector<VkLayerProperties> evan::IDeviceBackend::getAvailableLayers()
+{
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    return availableLayers;
+}

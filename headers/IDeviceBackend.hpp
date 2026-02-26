@@ -8,6 +8,8 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
+#include "Version.hpp"
+
 #include "IPlatform.hpp"
 
 #include <optional>
@@ -54,7 +56,7 @@ namespace evan {
         public:
             virtual ~IDeviceBackend() = default;
 
-            virtual VkInstance createInstance(const IPlatform& platform) = 0;
+            virtual VkInstance createInstance(const IPlatform& platform, const std::string &appName, Version &appVersion) = 0;
 
             virtual VkDevice createLogicalDevice() = 0;
 
@@ -91,5 +93,13 @@ namespace evan {
 			 * indices will remain incomplete.
 			 */
 			evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+
+			/**
+			 * @brief Retrieves the available Vulkan layers on the system.
+			 *
+			 * This function queries the Vulkan API to enumerate the available instance layers and
+			 * returns a vector of VkLayerProperties structures containing information about each layer.
+			 */
+			std::vector<VkLayerProperties> getAvailableLayers();
     };
 } // namespace evan
