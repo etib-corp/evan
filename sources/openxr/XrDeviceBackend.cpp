@@ -23,9 +23,8 @@ void evan::XrDeviceBackend::init(const IPlatform& platform)
     getSystem();
 }
 
-VkInstance evan::XrDeviceBackend::createInstance(const IPlatform& platform, const std::string &appName, Version &appVersion)
+void evan::XrDeviceBackend::createInstance(const IPlatform& platform, const std::string &appName, Version &appVersion)
 {
-    VkInstance instance = VK_NULL_HANDLE;
     XrGraphicsRequirementsVulkan2KHR graphicsRequirements {};
     PFN_xrGetVulkanGraphicsRequirements2KHR getVulkanGraphicsRequirements2KHR = nullptr;
     PFN_xrCreateVulkanInstanceKHR createVulkanInstanceKHR = nullptr;
@@ -35,11 +34,11 @@ VkInstance evan::XrDeviceBackend::createInstance(const IPlatform& platform, cons
     graphicsRequirements.type = XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR;
     if (xrGetInstanceProcAddr(_XrInstance, "xrGetVulkanGraphicsRequirements2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&getVulkanGraphicsRequirements2KHR)) != XR_SUCCESS) {
         std::cerr << "Failed to get xrGetVulkanGraphicsRequirements2KHR function pointer." << std::endl;
-        return instance;
+        return;
     }
     if (xrGetInstanceProcAddr(_XrInstance, "xrCreateVulkanInstanceKHR", reinterpret_cast<PFN_xrVoidFunction*>(&createVulkanInstanceKHR)) != XR_SUCCESS) {
         std::cerr << "Failed to get xrCreateVulkanInstanceKHR function pointer." << std::endl;
-        return instance;
+        return;
     }
 
     VkApplicationInfo appInfo {};
@@ -71,31 +70,29 @@ VkInstance evan::XrDeviceBackend::createInstance(const IPlatform& platform, cons
     vulkanCreateInfoKHR.systemId = _systemId;
     vulkanCreateInfoKHR.pfnGetInstanceProcAddr = &vkGetInstanceProcAddr;
 
-    if (createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &instance) != XR_SUCCESS) {
+    if (createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance) != XR_SUCCESS) {
         std::cerr << "Failed to create Vulkan instance through OpenXR." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
-    return instance;
 }
 
-VkDevice evan::XrDeviceBackend::createLogicalDevice(VkPhysicalDevice physicalDevice)
+void evan::XrDeviceBackend::createLogicalDevice()
 {
-    if (physicalDevice == VK_NULL_HANDLE) {
+    if (_physicalDevice == VK_NULL_HANDLE) {
         std::cerr << "Invalid Vulkan physical device provided." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
 
-    VkDevice device = VK_NULL_HANDLE;
     PFN_xrCreateVulkanDeviceKHR createVulkanDeviceKHR = nullptr;
 
     if (xrGetInstanceProcAddr(_XrInstance, "xrCreateVulkanDeviceKHR", reinterpret_cast<PFN_xrVoidFunction*>(&createVulkanDeviceKHR)) != XR_SUCCESS) {
         std::cerr << "Failed to get xrCreateVulkanDeviceKHR function pointer." << std::endl;
-        return device;
+        return;
     }
-    evan::QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    evan::QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
     if (!indices.isComplete()) {
         std::cerr << "Failed to find required queue families for the Vulkan device." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
 
     float queuePriority = 1.0f;
@@ -118,39 +115,36 @@ VkDevice evan::XrDeviceBackend::createLogicalDevice(VkPhysicalDevice physicalDev
     vulkanDeviceCreateInfoKHR.systemId = _systemId;
     vulkanDeviceCreateInfoKHR.pfnGetInstanceProcAddr = &vkGetInstanceProcAddr;
     vulkanDeviceCreateInfoKHR.vulkanCreateInfo = &createInfo;
-    vulkanDeviceCreateInfoKHR.vulkanPhysicalDevice = physicalDevice;
+    vulkanDeviceCreateInfoKHR.vulkanPhysicalDevice = _physicalDevice;
 
-    if (createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &device) != XR_SUCCESS) {
+    if (createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &_device) != XR_SUCCESS) {
         std::cerr << "Failed to create Vulkan device through OpenXR." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
-    return device;
 }
 
-VkPhysicalDevice evan::XrDeviceBackend::pickPhysicalDevice(VkInstance instance)
+void evan::XrDeviceBackend::pickPhysicalDevice()
 {
-    if (instance == VK_NULL_HANDLE) {
+    if (_VkInstance == VK_NULL_HANDLE) {
         std::cerr << "Invalid Vulkan instance provided." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
     PFN_xrGetVulkanGraphicsDevice2KHR getVulkanGraphicsDevice2KHR = nullptr;
     XrVulkanGraphicsDeviceGetInfoKHR deviceGetInfo {};
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
     if (xrGetInstanceProcAddr(_XrInstance, "xrGetVulkanGraphicsDevice2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&getVulkanGraphicsDevice2KHR)) != XR_SUCCESS) {
         std::cerr << "Failed to get xrGetVulkanGraphicsDevice2KHR function pointer." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
     deviceGetInfo.type = XR_TYPE_VULKAN_GRAPHICS_DEVICE_GET_INFO_KHR;
     deviceGetInfo.systemId = _systemId;
-    deviceGetInfo.vulkanInstance = instance;
+    deviceGetInfo.vulkanInstance = _VkInstance;
 
-    if (getVulkanGraphicsDevice2KHR(_XrInstance, &deviceGetInfo, &physicalDevice) != XR_SUCCESS) {
+    if (getVulkanGraphicsDevice2KHR(_XrInstance, &deviceGetInfo, &_physicalDevice) != XR_SUCCESS) {
         std::cerr << "Failed to get Vulkan physical device through OpenXR." << std::endl;
-        return VK_NULL_HANDLE;
+        return;
     }
-    return physicalDevice;
-
+    return;
 }
 
 void evan::XrDeviceBackend::createXrInstance(const IPlatform& platform)

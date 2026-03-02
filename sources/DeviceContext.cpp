@@ -13,9 +13,7 @@ evan::DeviceContext::DeviceContext()
 
 evan::DeviceContext::~DeviceContext()
 {
-    vkDestroyCommandPool(_device, _commandPool, nullptr);
-    vkDestroyDevice(_device, nullptr);
-    vkDestroyInstance(_VkInstance, nullptr);
+    vkDestroyCommandPool(_deviceBackend->_device, _commandPool, nullptr);
 }
 
 VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
@@ -26,7 +24,7 @@ VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 void evan::DeviceContext::getMaxUsableSampleCount()
 {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
-	vkGetPhysicalDeviceProperties(_physicalDevice, &physicalDeviceProperties);
+	vkGetPhysicalDeviceProperties(_deviceBackend->_physicalDevice, &physicalDeviceProperties);
 	VkSampleCountFlags counts =
 		physicalDeviceProperties.limits.framebufferColorSampleCounts
 		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
@@ -59,13 +57,12 @@ void evan::DeviceContext::createCommandPool()
 {
     evan::QueueFamilyIndices queueFamilyIndices = _deviceBackend->findQueueFamilies(_physicalDevice);
 
-
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value(); 
     commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    VkResult result = vkCreateCommandPool(_device, &commandPoolCreateInfo, nullptr, &_commandPool);
+    VkResult result = vkCreateCommandPool(_deviceBackend->_device, &commandPoolCreateInfo, nullptr, &_commandPool);
     if (result != VK_SUCCESS) {
         // TODO: replace with proper error handling
         std::cerr << "Failed to create command pool: " << result << std::endl;

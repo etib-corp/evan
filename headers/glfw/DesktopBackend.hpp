@@ -69,13 +69,13 @@ namespace evan
 		 */
 		VkSurfaceKHR _surface;
 
-		VkInstance createInstance(const IPlatform &platform,
+		void createInstance(const IPlatform &platform,
 								  const std::string &appName,
 								  Version &appVersion) override;
 
-		VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice) override;
+		void createLogicalDevice() override;
 
-		VkPhysicalDevice pickPhysicalDevice(VkInstance instance) override;
+		void pickPhysicalDevice() override;
 
 		private:
 		/**

@@ -30,6 +30,12 @@ evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevic
     return indices;
 }
 
+evan::IDeviceBackend::~IDeviceBackend()
+{
+	vkDestroyDevice(_device, nullptr);
+	vkDestroyInstance(_VkInstance, nullptr);
+}
+
 evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;

@@ -87,18 +87,18 @@ namespace evan
 	class IDeviceBackend
 	{
 		public:
-		virtual ~IDeviceBackend() = default;
+		virtual ~IDeviceBackend();
 
 		virtual void init(const IPlatform &platform) = 0;
 
-		virtual VkInstance createInstance(const IPlatform &platform,
+		virtual void createInstance(const IPlatform &platform,
 										  const std::string &appName,
 										  Version &appVersion) = 0;
 
-		virtual VkDevice
-			createLogicalDevice(VkPhysicalDevice physicalDevice) = 0;
+		virtual void
+			createLogicalDevice() = 0;
 
-		virtual VkPhysicalDevice pickPhysicalDevice(VkInstance instance) = 0;
+		virtual void pickPhysicalDevice() = 0;
 
 		/**
 		 * @brief Finds the queue families supported by a given Vulkan physical
@@ -163,6 +163,11 @@ namespace evan
 		bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
 							  std::vector<const char *> deviceExtensions);
 
+
+
+		VkInstance _VkInstance;    /// The Vulkan instance, which is the connection between the application and the Vulkan library. It is used to create and manage Vulkan resources and to query the capabilities of the Vulkan implementation.
+		VkPhysicalDevice _physicalDevice;    /// The physical device, which represents a Vulkan-compatible GPU. It is used to query the capabilities of the GPU and to create logical devices for rendering operations.
+		VkDevice _device;    /// The logical device, which represents an instance of a physical device and is used to perform rendering operations.
 		private:
 		/**
 		 * @brief Checks if the specified Vulkan physical device supports the

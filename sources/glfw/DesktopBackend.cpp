@@ -55,10 +55,8 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow
     return _surface;
 }
 
-VkInstance evan::DesktopBackend::createInstance(const evan::IPlatform &platform, const std::string &appName, evan::Version &appVersion)
+void evan::DesktopBackend::createInstance(const evan::IPlatform &platform, const std::string &appName, evan::Version &appVersion)
 {
-    VkInstance instance;
-
     if (enableValidationLayers && !this->checkValidationLayerSupport()) {
 		throw std::runtime_error(
 			"Validation layers requested, but not available!");
@@ -102,7 +100,7 @@ VkInstance evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 			(VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
 	}
 
-	VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
+	VkResult result = vkCreateInstance(&createInfo, nullptr, &_VkInstance);
 
 	if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
 		std::cout << "Failed to create instance due to incompatible driver ! "
@@ -114,7 +112,7 @@ VkInstance evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		createInfo.enabledExtensionCount   = (uint32_t)extensionsWrapped.size();
 		createInfo.ppEnabledExtensionNames = extensionsWrapped.data();
 
-		result = vkCreateInstance(&createInfo, nullptr, &instance);
+		result = vkCreateInstance(&createInfo, nullptr, &_VkInstance);
 		switch (result) {
 			case VK_ERROR_OUT_OF_HOST_MEMORY:
 				throw std::runtime_error("Host out of memory !");
@@ -137,7 +135,6 @@ VkInstance evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	} else {
 		throw std::runtime_error("Failed to create instance !");
 	}
-	return instance;
 }
 
 bool evan::DesktopBackend::checkValidationLayerSupport()
@@ -191,40 +188,34 @@ void evan::DesktopBackend::populateDebugMessengerCreateInfo(
 	createInfo.pfnUserCallback = debugCallback;
 }
 
-VkPhysicalDevice evan::DesktopBackend::pickPhysicalDevice(VkInstance instance)
+void evan::DesktopBackend::pickPhysicalDevice()
 {
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, nullptr);
 
 	if (deviceCount == 0) {
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, devices.data());
 
 	for (const auto &device: devices) {
 		if (this->isDeviceSuitable(device, _surface, deviceExtensions)) {
-			physicalDevice = device;
+			_physicalDevice = device;
 			break;
 		}
 	}
 
-	if (physicalDevice == VK_NULL_HANDLE) {
+	if (_physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("Failed to find a suitable GPU!");
 	}
-
-	return physicalDevice;
 }
 
-VkDevice evan::DesktopBackend::createLogicalDevice(VkPhysicalDevice physicalDevice)
+void evan::DesktopBackend::createLogicalDevice()
 {
-	VkDevice logicalDevice;
-
 	QueueFamilyIndices indices =
-		this->findQueueFamilies(physicalDevice, _surface);
+		this->findQueueFamilies(_physicalDevice, _surface);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(),
@@ -265,7 +256,7 @@ VkDevice evan::DesktopBackend::createLogicalDevice(VkPhysicalDevice physicalDevi
 		createInfo.enabledLayerCount = 0;
 	}
 
-	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice)
+	if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
 	}
@@ -276,5 +267,4 @@ VkDevice evan::DesktopBackend::createLogicalDevice(VkPhysicalDevice physicalDevi
 	// vkGetDeviceQueue(_logicalDevice, indices.presentFamily.value(), 0,
 	// 				 &_presentQueue);
 
-	return logicalDevice;
 }
