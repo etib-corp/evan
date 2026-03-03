@@ -7,15 +7,15 @@
 
 #include "IDeviceBackend.hpp"
 
-evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice device)
+evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice)
 {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
     for (uint32_t i = 0; i < queueFamilies.size(); i++) {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -36,15 +36,15 @@ evan::IDeviceBackend::~IDeviceBackend()
 	vkDestroyInstance(_VkInstance, nullptr);
 }
 
-evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
+evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
     for (uint32_t i = 0; i < queueFamilies.size(); i++) {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -52,7 +52,7 @@ evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevic
         }
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
 
         if (presentSupport) {
             indices.presentFamily = i;

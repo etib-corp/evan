@@ -121,6 +121,7 @@ void evan::XrDeviceBackend::createLogicalDevice()
         std::cerr << "Failed to create Vulkan device through OpenXR." << std::endl;
         return;
     }
+    this->createSession();
 }
 
 void evan::XrDeviceBackend::pickPhysicalDevice()
@@ -185,11 +186,26 @@ void evan::XrDeviceBackend::getSystem()
     }
 }
 
-void evan::XrDeviceBackend::createSession(VkDevice device)
+void evan::XrDeviceBackend::createSession()
 {
+    XrSessionCreateInfo sessionCreateInfo = {};
+    XrGraphicsBindingVulkan2KHR graphicsBindingVulkan = {};
 
+    graphicsBindingVulkan.type = XR_TYPE_GRAPHICS_BINDING_VULKAN2_KHR;
+    graphicsBindingVulkan.instance = _VkInstance;
+    graphicsBindingVulkan.physicalDevice = _physicalDevice;
+    graphicsBindingVulkan.device = _device;
+    graphicsBindingVulkan.queueFamilyIndex = this->findQueueFamilies(_physicalDevice);
+
+    sessionCreateInfo.type = XR_TYPE_SESSION_CREATE_INFO;
+    sessionCreateInfo.next = &graphicsBindingVulkan;
+    sessionCreateInfo.systemId = _systemId;
+
+    if (xrCreateSession(_XrInstance, &sessionCreateInfo, &_session) != XR_SUCCESS) {
+        // TODO: Throw error here
+        return;
+    }
 }
-
 
 std::vector<VkExtensionProperties> evan::XrDeviceBackend::getInstanceExtensions() const
 {

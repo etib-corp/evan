@@ -66,7 +66,7 @@ namespace evan
              */
             void getSystem();
 
-            void createSession(VkDevice device);
+            void createSession();
 
             /**
             * Retrieves the list of Vulkan instance extensions available for the validation layer.

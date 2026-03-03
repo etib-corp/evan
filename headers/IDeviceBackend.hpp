@@ -108,13 +108,13 @@ namespace evan
 		 * physical device and identifies the indices of queue families that
 		 * support specific capabilities, such as graphics operations.
 		 *
-		 * @param device The Vulkan physical device to query for queue family
+		 * @param physicalDevice The Vulkan physical device to query for queue family
 		 * properties.
 		 * @return A QueueFamilyIndices structure containing the indices of the
 		 * queue families that meet the required criteria. If no suitable queue
 		 * families are found, the indices will remain unset.
 		 */
-		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice);
 
 		/**
 		 * @brief Finds the queue families that support specific operations on a
@@ -125,14 +125,14 @@ namespace evan
 		 * the queue families of the specified physical device and checks their
 		 * capabilities.
 		 *
-		 * @param device The Vulkan physical device to query for queue family
+		 * @param physicalDevice The Vulkan physical device to query for queue family
 		 * properties.
 		 * @param surface The Vulkan surface to check for presentation support.
 		 * @return QueueFamilyIndices A structure containing the indices of the
 		 * graphics and presentation queue families. If no suitable queue
 		 * families are found, the indices will remain incomplete.
 		 */
-		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
+		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice,
 												   VkSurfaceKHR surface);
 
 		/**
