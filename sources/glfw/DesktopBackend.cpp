@@ -22,6 +22,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 
 evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
 {
+	Version appVersion(0, 1, 0);
+
+	this->createInstance(platform, "Evan", appVersion);
+	this->createSurface(_VkInstance, platform._window);
+	this->pickPhysicalDevice();
+	this->createLogicalDevice();
 }
 
 evan::DesktopBackend::~DesktopBackend()
