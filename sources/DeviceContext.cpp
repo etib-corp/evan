@@ -55,7 +55,7 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 
 void evan::DeviceContext::createCommandPool()
 {
-    evan::QueueFamilyIndices queueFamilyIndices = _deviceBackend->findQueueFamilies(_physicalDevice);
+    evan::QueueFamilyIndices queueFamilyIndices = _deviceBackend->findQueueFamilies(_deviceBackend->_physicalDevice);
 
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
