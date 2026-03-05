@@ -93,5 +93,21 @@ namespace evan
 						/// the color format and layout of the pixel data. It is
 						/// determined based on the surface capabilities and the
 						/// desired format for rendering output.
+		std::vector<VkImage>
+			_images;	/// A vector of Vulkan images that represent the
+						/// swapchain images. These images are created as part
+						/// of the swapchain and are used as the targets for
+						/// rendering operations. Each
+		std::vector<VkFramebuffer>
+			_framebuffers;	  /// A vector of Vulkan framebuffers that are
+							  /// associated with the swapchain images.
+							  /// Framebuffers are used to define the render
+							  /// targets for rendering operations and are
+							  /// typically created by combining the color and
+							  /// depth image views. Each framebuffer
+							  /// corresponds to a specific swapchain image and
+							  /// is used during the rendering process to
+							  /// specify where the rendered output should be
+							  /// stored.
 	};
 }	 // namespace evan
