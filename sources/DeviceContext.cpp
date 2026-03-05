@@ -38,8 +38,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 	return VK_FALSE;
 }
 
-evan::DeviceContext::DeviceContext()
+evan::DeviceContext::DeviceContext(const IPlatform &platform)
 {
+    #ifdef OPENXR
+        _deviceBackend = std::make_unique<XrDeviceBackend>(platform);
+    #elif defined(GLFW)
+        _deviceBackend = std::make_unique<DesktopBackend>(platform);
+    #else
+        std::cerr << "No platform defined. Please define either OPENXR or GLFW." << std::endl;
+        throw std::runtime_error("No platform defined for DeviceContext.");
+    #endif
 }
 
 evan::DeviceContext::~DeviceContext()

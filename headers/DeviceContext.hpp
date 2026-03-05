@@ -10,6 +10,12 @@
 #include "EvanPlatform.hpp"
 #include "ADeviceBackend.hpp"
 
+#ifdef OPENXR
+	#include "xr/XrPlatform.hpp"
+#elif defined(GLFW)
+	#include "glfw/DesktopPlatform.hpp"
+#endif
+
 #include <iostream>
 #include <memory>
 
@@ -29,7 +35,7 @@ namespace evan
 	class DeviceContext
 	{
 		public:
-		DeviceContext();
+		DeviceContext(const IPlatform &platform);
 		~DeviceContext();
 
 		/**
