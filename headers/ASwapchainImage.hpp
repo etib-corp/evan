@@ -8,6 +8,7 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
+#include "QueueFamilyIndices.hpp"
 #include "Version.hpp"
 
 namespace evan
@@ -31,6 +32,28 @@ namespace evan
 	{
 		public:
 		virtual ~ASwapchainImage();
+
+        /**
+         * @brief Creates image views for the swapchain images.
+         *
+         * This function iterates through the swapchain images and creates image views
+         * for each image. Image views are used to describe how the images should be
+         * accessed and are necessary for rendering operations. The created image views
+         * are stored in the _imageViews vector for later use in the rendering pipeline.
+         */
+		void createImageViews(VkDevice logicalDevice);
+
+        /**
+         * @brief Finds the queue family indices for a given Vulkan physical device.
+         *
+         * This function queries the Vulkan API to find the indices of the queue families
+         * that support graphics and presentation operations for the specified physical device.
+         * It returns a QueueFamilyIndices structure containing the indices of the graphics
+         * and presentation queue families. This information is essential for setting up the
+         * rendering pipeline and ensuring that the application can properly present rendered
+         * images to the screen.
+         */
+        virtual evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) = 0;
 
 		protected:
 		std::vector<VkFence>
@@ -109,5 +132,30 @@ namespace evan
 							  /// is used during the rendering process to
 							  /// specify where the rendered output should be
 							  /// stored.
+		private:
+		/**
+		 * @brief Creates a Vulkan image view for a given image.
+		 *
+		 * This function sets up and creates a Vulkan image view, which is used
+		 * to describe how an image resource should be accessed. It specifies
+		 * the format, view type, and subresource range for the image view.
+		 *
+		 * @param image The Vulkan image for which the image view is created.
+		 * @param format The format of the image view (e.g.,
+		 * VK_FORMAT_R8G8B8A8_SRGB).
+		 * @param aspectFlags Specifies which aspect(s) of the image are
+		 * included in the view (e.g., VK_IMAGE_ASPECT_COLOR_BIT for color
+		 * images).
+		 * @param logicalDevice The Vulkan logical device used to create the
+		 * image view.
+		 *
+		 * @return A VkImageView handle representing the created image view.
+		 *
+		 * @throws std::runtime_error If the image view creation fails.
+		 */
+
+		VkImageView createImageView(VkImage image, VkFormat format,
+									VkImageAspectFlags aspectFlags,
+									VkDevice logicalDevice, uint32_t mipLevels);
 	};
 }	 // namespace evan
