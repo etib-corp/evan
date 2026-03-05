@@ -7,8 +7,16 @@
 
 #include "openxr/XrDeviceBackend.hpp"
 
-evan::XrDeviceBackend::XrDeviceBackend()
+evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 {
+	Version appVersion(0, 1, 0);
+	createXrInstance(platform);
+	getSystem();
+
+	this->createInstance(platform, "Evan", appVersion);
+	this->pickPhysicalDevice();
+	this->createLogicalDevice();
+	this->createSession();
 }
 
 evan::XrDeviceBackend::~XrDeviceBackend()
@@ -17,10 +25,8 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 	xrDestroyInstance(_XrInstance);
 }
 
-void evan::XrDeviceBackend::init(const IPlatform &platform)
+void evan::XrDeviceBackend::init()
 {
-	createXrInstance(platform);
-	getSystem();
 }
 
 void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
@@ -144,7 +150,6 @@ void evan::XrDeviceBackend::createLogicalDevice()
 				  << std::endl;
 		return;
 	}
-	this->createSession();
 }
 
 void evan::XrDeviceBackend::pickPhysicalDevice()
