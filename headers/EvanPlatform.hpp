@@ -45,25 +45,6 @@ const std::vector<const char *> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"	 // Khronos validation layer
 };
 
-/*
- ** @brief Callback type for the debug messenger.
- **
- ** This callback is used to handle debug messages from the Vulkan
- * API.
- ** It is used to log the debug messages from the Vulkan API.
- **
- ** @param severity the severity of the message
- ** @param type the type of the message
- ** @param pCallbackData the callback data
- ** @param pUserData the user data
- **
- ** @return true if the message is handled, false otherwise
- */
-typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
-								 VkDebugUtilsMessageTypeFlagsEXT,
-								 const VkDebugUtilsMessengerCallbackDataEXT *,
-								 void *);
-
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>
@@ -88,3 +69,22 @@ typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
 	#endif
 	#include <openxr/openxr_platform.h>
 #endif
+
+/*
+ ** @brief Callback type for the debug messenger.
+ **
+ ** This callback is used to handle debug messages from the Vulkan
+ * API.
+ ** It is used to log the debug messages from the Vulkan API.
+ **
+ ** @param severity the severity of the message
+ ** @param type the type of the message
+ ** @param pCallbackData the callback data
+ ** @param pUserData the user data
+ **
+ ** @return true if the message is handled, false otherwise
+ */
+typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
+								 VkDebugUtilsMessageTypeFlagsEXT,
+								 const VkDebugUtilsMessengerCallbackDataEXT *,
+								 void *);
