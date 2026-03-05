@@ -2,12 +2,12 @@
 ** EPITECH PROJECT, 2026
 ** evan
 ** File description:
-** IDeviceBackend
+** ADeviceBackend
 */
 
-#include "IDeviceBackend.hpp"
+#include "ADeviceBackend.hpp"
 
-evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice)
+evan::QueueFamilyIndices evan::ADeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice)
 {
     QueueFamilyIndices indices;
 
@@ -30,13 +30,13 @@ evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevic
     return indices;
 }
 
-evan::IDeviceBackend::~IDeviceBackend()
+evan::ADeviceBackend::~ADeviceBackend()
 {
 	vkDestroyDevice(_device, nullptr);
 	vkDestroyInstance(_VkInstance, nullptr);
 }
 
-evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+evan::QueueFamilyIndices evan::ADeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
 
@@ -66,7 +66,7 @@ evan::QueueFamilyIndices evan::IDeviceBackend::findQueueFamilies(VkPhysicalDevic
     return indices;
 }
 
-std::vector<VkLayerProperties> evan::IDeviceBackend::getAvailableLayers()
+std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -75,7 +75,7 @@ std::vector<VkLayerProperties> evan::IDeviceBackend::getAvailableLayers()
     return availableLayers;
 }
 
-bool evan::IDeviceBackend::isDeviceSuitable(VkPhysicalDevice device,
+bool evan::ADeviceBackend::isDeviceSuitable(VkPhysicalDevice device,
 								   VkSurfaceKHR surface,
 								   std::vector<const char *> deviceExtensions)
 {
@@ -97,7 +97,7 @@ bool evan::IDeviceBackend::isDeviceSuitable(VkPhysicalDevice device,
 		&& supportedFeatures.samplerAnisotropy;
 }
 
-bool evan::IDeviceBackend::checkDeviceExtensionSupport(
+bool evan::ADeviceBackend::checkDeviceExtensionSupport(
 	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
 {
 	uint32_t extensionCount;
@@ -120,7 +120,7 @@ bool evan::IDeviceBackend::checkDeviceExtensionSupport(
 }
 
 evan::SwapChainSupportDetails
-	evan::IDeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
+	evan::ADeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
 									   VkSurfaceKHR surface)
 {
 	SwapChainSupportDetails details;

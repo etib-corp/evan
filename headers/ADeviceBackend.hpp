@@ -2,7 +2,7 @@
 ** EPITECH PROJECT, 2026
 ** evan
 ** File description:
-** IDeviceBackend
+** ADeviceBackend
 */
 
 #pragma once
@@ -84,10 +84,10 @@ namespace evan
 		}
 	};
 
-	class IDeviceBackend
+	class ADeviceBackend
 	{
 		public:
-		virtual ~IDeviceBackend();
+		virtual ~ADeviceBackend();
 
 		virtual void init(const IPlatform &platform) = 0;
 
@@ -181,7 +181,7 @@ namespace evan
 		 * @return true if the device supports all required extensions, false
 		 * otherwise.
 		 */
-		bool evan::IDeviceBackend::checkDeviceExtensionSupport(
+		bool evan::ADeviceBackend::checkDeviceExtensionSupport(
 			VkPhysicalDevice device,
 			std::vector<const char *> deviceExtensions);
 
@@ -200,7 +200,7 @@ namespace evan
 		 * support details for the specified device and surface.
 		 */
 		evan::SwapChainSupportDetails
-			evan::IDeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
+			evan::ADeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
 														VkSurfaceKHR surface);
 	};
 }	 // namespace evan

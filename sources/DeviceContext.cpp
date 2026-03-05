@@ -59,7 +59,7 @@ void evan::DeviceContext::createCommandPool()
 
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value(); 
+    commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
     commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     VkResult result = vkCreateCommandPool(_deviceBackend->_device, &commandPoolCreateInfo, nullptr, &_commandPool);

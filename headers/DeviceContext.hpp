@@ -8,7 +8,7 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
-#include "IDeviceBackend.hpp"
+#include "ADeviceBackend.hpp"
 
 #include <iostream>
 #include <memory>
@@ -40,7 +40,7 @@ namespace evan
             VkCommandPool _commandPool;    /// The command pool, which is used to allocate command buffers for recording rendering commands.
             VkSampleCountFlagBits _msaaSamples;    /// The number of samples used for multisampling anti-aliasing (MSAA), which is a technique used to improve the visual quality of rendered images by reducing aliasing artifacts.
 
-            std::unique_ptr<IDeviceBackend> _deviceBackend;    /// A unique pointer to an IDeviceBackend instance, which is responsible for providing platform-specific implementations of Vulkan device management operations. The IDeviceBackend interface defines methods for creating Vulkan instances, logical devices, and picking physical devices, allowing for abstraction and flexibility in the device context implementation.
+            std::unique_ptr<ADeviceBackend> _deviceBackend;    /// A unique pointer to an ADeviceBackend instance, which is responsible for providing platform-specific implementations of Vulkan device management operations. The ADeviceBackend interface defines methods for creating Vulkan instances, logical devices, and picking physical devices, allowing for abstraction and flexibility in the device context implementation.
         private:
 
             /**
