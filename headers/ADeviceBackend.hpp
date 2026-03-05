@@ -89,8 +89,6 @@ namespace evan
 		public:
 		virtual ~ADeviceBackend();
 
-		virtual void init(const IPlatform &platform) = 0;
-
 		virtual void createInstance(const IPlatform &platform,
 									const std::string &appName,
 									Version &appVersion) = 0;
@@ -166,7 +164,7 @@ namespace evan
 		 * @return true if the device supports all required extensions, false
 		 * otherwise.
 		 */
-		bool evan::ADeviceBackend::checkDeviceExtensionSupport(
+		bool checkDeviceExtensionSupport(
 			VkPhysicalDevice device,
 			std::vector<const char *> deviceExtensions);
 
@@ -185,7 +183,7 @@ namespace evan
 		 * support details for the specified device and surface.
 		 */
 		evan::SwapChainSupportDetails
-			evan::ADeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
+			querySwapChainSupport(VkPhysicalDevice device,
 														VkSurfaceKHR surface);
 	};
 }	 // namespace evan
