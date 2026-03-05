@@ -25,10 +25,6 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 	xrDestroyInstance(_XrInstance);
 }
 
-void evan::XrDeviceBackend::init()
-{
-}
-
 void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 										   const std::string &appName,
 										   Version &appVersion)
@@ -89,8 +85,9 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 	vulkanCreateInfoKHR.systemId			   = _systemId;
 	vulkanCreateInfoKHR.pfnGetInstanceProcAddr = &vkGetInstanceProcAddr;
 
-	if (createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance)
-		!= XR_SUCCESS) {
+	VkResult result = VK_SUCCESS;
+	createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance, &result);
+	if (result != VK_SUCCESS) {
 		std::cerr << "Failed to create Vulkan instance through OpenXR."
 				  << std::endl;
 		return;
@@ -114,7 +111,7 @@ void evan::XrDeviceBackend::createLogicalDevice()
 				  << std::endl;
 		return;
 	}
-	evan::QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+	evan::QueueFamilyIndices indices = findQueueFamilies();
 	if (!indices.isComplete()) {
 		std::cerr
 			<< "Failed to find required queue families for the Vulkan device."
@@ -144,8 +141,9 @@ void evan::XrDeviceBackend::createLogicalDevice()
 	vulkanDeviceCreateInfoKHR.vulkanCreateInfo		 = &createInfo;
 	vulkanDeviceCreateInfoKHR.vulkanPhysicalDevice	 = _physicalDevice;
 
-	if (createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &_device)
-		!= XR_SUCCESS) {
+	VkResult result = VK_SUCCESS;
+	createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &_device, &result);
+	if (result != VK_SUCCESS) {
 		std::cerr << "Failed to create Vulkan device through OpenXR."
 				  << std::endl;
 		return;
@@ -195,9 +193,10 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 	XrInstanceCreateInfo createInfo { XR_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.enabledExtensionNames = extensions.data();
-	// createInfo.enabledApiLayerNames = nullptr;
-	// std::strcpy(createInfo.applicationInfo.applicationName, "evan");
-	// createInfo.applicationInfo.apiVersion = #CURRENT_OPENXR_VERSION;
+	createInfo.enabledApiLayerCount = 0;
+	createInfo.enabledApiLayerNames = nullptr;
+	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
+	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
 	createInfo.next =
 		dynamic_cast<evan::XrPlatform *>(const_cast<IPlatform *>(&platform))
@@ -234,7 +233,7 @@ void evan::XrDeviceBackend::createSession()
 	graphicsBindingVulkan.instance		 = _VkInstance;
 	graphicsBindingVulkan.physicalDevice = _physicalDevice;
 	graphicsBindingVulkan.device		 = _device;
-	graphicsBindingVulkan.queueFamilyIndex = this->findQueueFamilies();
+	graphicsBindingVulkan.queueFamilyIndex = this->findQueueFamilies().graphicsFamily.value();
 
 	sessionCreateInfo.type	   = XR_TYPE_SESSION_CREATE_INFO;
 	sessionCreateInfo.next	   = &graphicsBindingVulkan;
@@ -256,7 +255,7 @@ std::vector<VkExtensionProperties>
 
 	if (vkEnumerateInstanceExtensionProperties(layerName.c_str(),
 											   &extensionCount, nullptr)
-		!= XR_SUCCESS) {
+		!= VK_SUCCESS) {
 		std::cerr << "Failed to enumerate OpenXR instance extension properties."
 				  << std::endl;
 		return extensions;
@@ -265,7 +264,7 @@ std::vector<VkExtensionProperties>
 	extensions.resize(extensionCount);
 	if (vkEnumerateInstanceExtensionProperties(
 			layerName.c_str(), &extensionCount, extensions.data())
-		!= XR_SUCCESS) {
+		!= VK_SUCCESS) {
 		std::cerr << "Failed to enumerate OpenXR instance extension properties."
 				  << std::endl;
 		return {};

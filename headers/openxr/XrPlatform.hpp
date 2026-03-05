@@ -64,6 +64,8 @@ namespace evan {
         protected:
             bool _shouldClose = false; // Flag to indicate if the platform should close
 
-            XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {}; // Android-specific instance creation info
+            #ifdef __ANDROID__
+                  XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid{};
+            #endif
     };
 } // namespace evan

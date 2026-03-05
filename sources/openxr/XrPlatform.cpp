@@ -9,17 +9,21 @@
 
 evan::XrPlatform::XrPlatform(const AndroidPlatformData &data)
 {
+    #ifdef __ANDROID__
     PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
 
-    XrLoaderInitInfoAndroidKHR loaderInitInfo{ XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR };
-    loaderInitInfo.applicationVM = data.applicationVM;
-    loaderInitInfo.applicationActivity = data.applicationActivity;
-    if (xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", reinterpret_cast<PFN_xrVoidFunction*>(&initializeLoader)) != XR_SUCCESS) {
-        std::cerr << "Failed to get xrInitializeLoaderKHR function pointer." << std::endl;
-        return;
+    if (xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", reinterpret_cast<PFN_xrVoidFunction*>(&initializeLoader)) == XR_SUCCESS) {
+        XrLoaderInitInfoAndroidKHR loaderInitInfoAndroid = {};
+        loaderInitInfoAndroid.type = XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR;
+        loaderInitInfoAndroid.next = nullptr;
+        loaderInitInfoAndroid.applicationVM = data.applicationVM;
+        loaderInitInfoAndroid.applicationContext = data.applicationActivity;
+        initializeLoader(reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR *>(&loaderInitInfoAndroid));
     }
-
-    initializeLoader(reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR*>(&loaderInitInfo));
+    _instanceCreateInfoAndroid = {XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
+    _instanceCreateInfoAndroid.applicationVM = data.applicationVM;
+    _instanceCreateInfoAndroid.applicationActivity = data.applicationActivity;
+    #endif
 }
 
 evan::XrPlatform::XrPlatform()
@@ -56,9 +60,7 @@ void evan::XrPlatform::pollEvents()
 const XrBaseInStructure* evan::XrPlatform::getInstanceCreateInfoAndroid() const
 {
     #ifdef __ANDROID__
-        static XrInstanceCreateInfoAndroidKHR androidCreateInfo{ XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR };
-        // Populate androidCreateInfo with necessary Android-specific instance creation information
-        return reinterpret_cast<const XrBaseInStructure*>(&androidCreateInfo);
+        return reinterpret_cast<const XrBaseInStructure*>(&_instanceCreateInfoAndroid);
     #else
         return nullptr;
     #endif
