@@ -9,7 +9,7 @@
 
 #include "EvanPlatform.hpp"
 
-#include "IDeviceBackend.hpp"
+#include "ADeviceBackend.hpp"
 #include "DesktopPlatform.hpp"
 
 /**
@@ -36,7 +36,7 @@ namespace evan
 	 * handles platform-specific functionality related to Desktop, such as
 	 * creating a Vulkan surface for rendering or later handling input events.
 	 */
-	class DesktopBackend: public IDeviceBackend
+	class DesktopBackend: public ADeviceBackend
 	{
 		public:
 		/**

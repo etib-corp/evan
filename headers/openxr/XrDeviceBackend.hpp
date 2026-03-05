@@ -9,7 +9,7 @@
 
 #include "openxr/XrPlatform.hpp"
 
-#include "IDeviceBackend.hpp"
+#include "ADeviceBackend.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -18,7 +18,7 @@
 
 namespace evan
 {
-    class XrDeviceBackend : public IDeviceBackend {
+    class XrDeviceBackend : public ADeviceBackend {
         public:
             XrDeviceBackend();
             ~XrDeviceBackend() override;
