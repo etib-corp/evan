@@ -31,29 +31,116 @@ namespace evan
 	class ASwapchainImage
 	{
 		public:
+		/**
+		 * @struct CreateImageProperties
+		 * @brief Encapsulates the properties required to create a Vulkan image
+		 * and allocate its memory.
+		 *
+		 * This structure holds all necessary parameters for creating a VkImage
+		 * object and allocating its associated device memory in Vulkan. It
+		 * includes device handles, image dimensions, format, usage flags, and
+		 * references to the resulting image and memory objects.
+		 *
+		 */
+		struct CreateImageProperties {
+			/*
+			 * @brief The Vulkan logical device used for image creation and
+			 * memory allocation.
+			 */
+			VkDevice _logicalDevice;
+			/*
+			 * @brief The Vulkan physical device used to determine memory
+			 * properties.
+			 */
+			VkPhysicalDevice _physicalDevice;
+			/*
+			 * @brief The width of the image in pixels.
+			 */
+			uint32_t _width;
+			/*
+			 * @brief The height of the image in pixels.
+			 */
+			uint32_t _height;
+			/*
+			 * @brief The number of mipmap levels for the image.
+			 */
+			uint32_t _mipLevels;
+			/*
+			 * @brief The number of samples for multisample anti-aliasing
+			 * (MSAA).
+			 */
+			VkSampleCountFlagBits _numSamples;
+			/*
+			 * @brief The format of the image (e.g., VK_FORMAT_R8G8B8A8_SRGB).
+			 */
+			VkFormat _format;
+			/*
+			 * @brief The tiling arrangement of the image (e.g.,
+			 * VK_IMAGE_TILING_OPTIMAL).
+			 */
+			VkImageTiling _tiling;
+			/*
+			 * @brief The usage flags for the image (e.g.,
+			 * VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT).
+			 */
+			VkImageUsageFlags _usage;
+			/*
+			 * @brief The memory property flags for the image (e.g.,
+			 * VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT).
+			 */
+			VkMemoryPropertyFlags _properties;
+			/*
+			 * @brief A reference to the VkImage object that will be created.
+			 */
+			VkImage &_image;
+			/*
+			 * @brief A reference to the VkDeviceMemory object that will be
+			 * allocated for the image.
+			 */
+			VkDeviceMemory &_imageMemory;
+		};
+
 		virtual ~ASwapchainImage();
 
-        /**
-         * @brief Creates image views for the swapchain images.
-         *
-         * This function iterates through the swapchain images and creates image views
-         * for each image. Image views are used to describe how the images should be
-         * accessed and are necessary for rendering operations. The created image views
-         * are stored in the _imageViews vector for later use in the rendering pipeline.
-         */
+		/**
+		 * @brief Creates image views for the swapchain images.
+		 *
+		 * This function iterates through the swapchain images and creates image
+		 * views for each image. Image views are used to describe how the images
+		 * should be accessed and are necessary for rendering operations. The
+		 * created image views are stored in the _imageViews vector for later
+		 * use in the rendering pipeline.
+		 */
 		void createImageViews(VkDevice logicalDevice);
 
-        /**
-         * @brief Finds the queue family indices for a given Vulkan physical device.
-         *
-         * This function queries the Vulkan API to find the indices of the queue families
-         * that support graphics and presentation operations for the specified physical device.
-         * It returns a QueueFamilyIndices structure containing the indices of the graphics
-         * and presentation queue families. This information is essential for setting up the
-         * rendering pipeline and ensuring that the application can properly present rendered
-         * images to the screen.
-         */
-        virtual evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) = 0;
+		/**
+		 * @brief Creates color resources for the swapchain images.
+		 *
+		 * This function creates the necessary color resources for the swapchain
+		 * images, including the color image, its associated image view, and the
+		 * memory allocation for the color image. These resources are essential
+		 * for rendering operations, as they serve as the targets for rendering
+		 * output. The function takes the logical device, physical device, and
+		 * the number of samples for multisamplin
+		 */
+		void evan::ASwapchainImage::createColorResources(
+			VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
+			VkSampleCountFlagBits msaaSamples);
+
+		/**
+		 * @brief Finds the queue family indices for a given Vulkan physical
+		 * device.
+		 *
+		 * This function queries the Vulkan API to find the indices of the queue
+		 * families that support graphics and presentation operations for the
+		 * specified physical device. It returns a QueueFamilyIndices structure
+		 * containing the indices of the graphics and presentation queue
+		 * families. This information is essential for setting up the rendering
+		 * pipeline and ensuring that the application can properly present
+		 * rendered images to the screen.
+		 */
+		virtual evan::QueueFamilyIndices
+			findQueueFamilies(VkPhysicalDevice device) = 0;
 
 		protected:
 		std::vector<VkFence>
@@ -157,5 +244,43 @@ namespace evan
 		VkImageView createImageView(VkImage image, VkFormat format,
 									VkImageAspectFlags aspectFlags,
 									VkDevice logicalDevice, uint32_t mipLevels);
+
+		/**
+		 * @brief Creates a Vulkan image and allocates memory for it based on
+		 * the provided properties.
+		 *
+		 * This function takes a CreateImageProperties structure that contains
+		 * all the necessary parameters for creating a Vulkan image and
+		 * allocating its associated memory. It sets up the VkImageCreateInfo
+		 * structure based on the provided properties, creates the image using
+		 * vkCreateImage, and allocates memory	for the image using
+		 * vkAllocateMemory. The created image and its memory are then stored in
+		 * the references provided in the CreateImageProperties structure.
+		 */
+		void createImage(
+			const evan::ASwapchainImage::CreateImageProperties &properties);
+
+		/**
+		 * @brief Finds a suitable memory type for a Vulkan resource.
+		 *
+		 * This function searches through the memory types available on the
+		 * given physical device and returns the index of a memory type that
+		 * satisfies the specified type filter and memory property flags.
+		 *
+		 * @param physicalDevice The Vulkan physical device to query for memory
+		 * properties.
+		 * @param typeFilter A bitmask specifying the acceptable memory types.
+		 * Each bit represents a memory type, and the function will check which
+		 * types are suitable.
+		 * @param properties A set of memory property flags that the desired
+		 * memory type must have. For example,
+		 * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT or
+		 *                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT.
+		 * @return The index of a suitable memory type.
+		 * @throws std::runtime_error If no suitable memory type is found.
+		 */
+		uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
+											 uint32_t typeFilter,
+											 VkMemoryPropertyFlags properties);
 	};
 }	 // namespace evan
