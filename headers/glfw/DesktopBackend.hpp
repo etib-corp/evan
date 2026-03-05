@@ -70,12 +70,14 @@ namespace evan
 		VkSurfaceKHR _surface;
 
 		void createInstance(const IPlatform &platform,
-								  const std::string &appName,
-								  Version &appVersion) override;
+							const std::string &appName,
+							Version &appVersion) override;
 
 		void createLogicalDevice() override;
 
 		void pickPhysicalDevice() override;
+
+		QueueFamilyIndices findQueueFamilies() override;
 
 		private:
 		/**

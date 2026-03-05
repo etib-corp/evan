@@ -22,14 +22,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 
 evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
 {
-
 }
 
 evan::DesktopBackend::~DesktopBackend()
 {
 }
 
-VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow *window)
+VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
+												 GLFWwindow *window)
 {
 #ifdef _WIN32
 	VkWin32SurfaceCreateInfoKHR createInfo {};
@@ -52,12 +52,14 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance, GLFWwindow
 	}
 #endif
 
-    return _surface;
+	return _surface;
 }
 
-void evan::DesktopBackend::createInstance(const evan::IPlatform &platform, const std::string &appName, evan::Version &appVersion)
+void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
+										  const std::string &appName,
+										  evan::Version &appVersion)
 {
-    if (enableValidationLayers && !this->checkValidationLayerSupport()) {
+	if (enableValidationLayers && !this->checkValidationLayerSupport()) {
 		throw std::runtime_error(
 			"Validation layers requested, but not available!");
 	}
@@ -139,7 +141,7 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform, const
 
 bool evan::DesktopBackend::checkValidationLayerSupport()
 {
-    auto availableLayers = this->getAvailableLayers();
+	auto availableLayers = this->getAvailableLayers();
 
 	for (const char *layerName: validationLayers) {
 		bool layerFound = false;
@@ -214,8 +216,7 @@ void evan::DesktopBackend::pickPhysicalDevice()
 
 void evan::DesktopBackend::createLogicalDevice()
 {
-	QueueFamilyIndices indices =
-		this->findQueueFamilies(_physicalDevice, _surface);
+	QueueFamilyIndices indices = this->findQueueFamilies();
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(),
@@ -260,11 +261,37 @@ void evan::DesktopBackend::createLogicalDevice()
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
 	}
+}
 
-	// TODO: move that in DeviceContext
-	// vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value(), 0,
-	// 				 &_graphicsQueue);
-	// vkGetDeviceQueue(_logicalDevice, indices.presentFamily.value(), 0,
-	// 				 &_presentQueue);
+evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
+{
+	QueueFamilyIndices indices;
 
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
+											 nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
+											 queueFamilies.data());
+
+	for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface,
+											 &presentSupport);
+
+		if (presentSupport) {
+			indices.presentFamily = i;
+		}
+
+		if (indices.isComplete()) {
+			break;
+		}
+	}
+
+	return indices;
 }

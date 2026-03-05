@@ -92,48 +92,24 @@ namespace evan
 		virtual void init(const IPlatform &platform) = 0;
 
 		virtual void createInstance(const IPlatform &platform,
-										  const std::string &appName,
-										  Version &appVersion) = 0;
+									const std::string &appName,
+									Version &appVersion) = 0;
 
-		virtual void
-			createLogicalDevice() = 0;
+		virtual void createLogicalDevice() = 0;
 
 		virtual void pickPhysicalDevice() = 0;
 
 		/**
-		 * @brief Finds the queue families supported by a given Vulkan physical
-		 * device.
+		 * @brief Finds the queue family indices for the Vulkan physical device.
 		 *
-		 * This function iterates through the queue families of the specified
-		 * physical device and identifies the indices of queue families that
-		 * support specific capabilities, such as graphics operations.
-		 *
-		 * @param physicalDevice The Vulkan physical device to query for queue family
-		 * properties.
-		 * @return A QueueFamilyIndices structure containing the indices of the
-		 * queue families that meet the required criteria. If no suitable queue
-		 * families are found, the indices will remain unset.
+		 * This function queries the Vulkan API to find the indices of the queue
+		 * families that support graphics and presentation operations. It
+		 * returns a QueueFamilyIndices structure containing the indices of the
+		 * graphics and presentation queue families, if they are found. If the
+		 * required queue families are not found, the corresponding optional
+		 * values in the QueueFamilyIndices structure will be empty.
 		 */
-		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice);
-
-		/**
-		 * @brief Finds the queue families that support specific operations on a
-		 * given Vulkan physical device and surface.
-		 *
-		 * This function identifies the queue families that support graphics
-		 * operations and presentation to a given surface. It iterates through
-		 * the queue families of the specified physical device and checks their
-		 * capabilities.
-		 *
-		 * @param physicalDevice The Vulkan physical device to query for queue family
-		 * properties.
-		 * @param surface The Vulkan surface to check for presentation support.
-		 * @return QueueFamilyIndices A structure containing the indices of the
-		 * graphics and presentation queue families. If no suitable queue
-		 * families are found, the indices will remain incomplete.
-		 */
-		evan::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice,
-												   VkSurfaceKHR surface);
+		virtual evan::QueueFamilyIndices findQueueFamilies() = 0;
 
 		/**
 		 * @brief Retrieves the available Vulkan layers on the system.
@@ -163,11 +139,20 @@ namespace evan
 		bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
 							  std::vector<const char *> deviceExtensions);
 
-
-
-		VkInstance _VkInstance;    /// The Vulkan instance, which is the connection between the application and the Vulkan library. It is used to create and manage Vulkan resources and to query the capabilities of the Vulkan implementation.
-		VkPhysicalDevice _physicalDevice;    /// The physical device, which represents a Vulkan-compatible GPU. It is used to query the capabilities of the GPU and to create logical devices for rendering operations.
-		VkDevice _device;    /// The logical device, which represents an instance of a physical device and is used to perform rendering operations.
+		VkInstance
+			_VkInstance;	/// The Vulkan instance, which is the connection
+							/// between the application and the Vulkan library.
+							/// It is used to create and manage Vulkan resources
+							/// and to query the capabilities of the Vulkan
+							/// implementation.
+		VkPhysicalDevice
+			_physicalDevice;	/// The physical device, which represents a
+								/// Vulkan-compatible GPU. It is used to query
+								/// the capabilities of the GPU and to create
+								/// logical devices for rendering operations.
+		VkDevice _device;		/// The logical device, which represents an
+								/// instance of a physical device and is used to
+								/// perform rendering operations.
 		private:
 		/**
 		 * @brief Checks if the specified Vulkan physical device supports the
@@ -188,10 +173,10 @@ namespace evan
 		/**
 		 * @brief Queries the swap chain support details for a given Vulkan
 		 * physical device and surface.
-		 * This function retrieves information about the swap chain capabilities,
-		 * available surface formats, and present modes for the specified Vulkan
-		 * physical device and surface. It populates a SwapChainSupportDetails
-		 * structure with the retrieved information.
+		 * This function retrieves information about the swap chain
+		 * capabilities, available surface formats, and present modes for the
+		 * specified Vulkan physical device and surface. It populates a
+		 * SwapChainSupportDetails structure with the retrieved information.
 		 * @param device The Vulkan physical device to query for swap chain
 		 * support.
 		 * @param surface The Vulkan surface to check for compatibility with the

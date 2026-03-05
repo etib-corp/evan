@@ -7,79 +7,26 @@
 
 #include "ADeviceBackend.hpp"
 
-evan::QueueFamilyIndices evan::ADeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice)
-{
-    QueueFamilyIndices indices;
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphicsFamily = i;
-        }
-
-        if (indices.isComplete()) {
-            break;
-        }
-    }
-
-    return indices;
-}
-
 evan::ADeviceBackend::~ADeviceBackend()
 {
 	vkDestroyDevice(_device, nullptr);
 	vkDestroyInstance(_VkInstance, nullptr);
 }
 
-evan::QueueFamilyIndices evan::ADeviceBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
-{
-    QueueFamilyIndices indices;
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphicsFamily = i;
-        }
-
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
-
-        if (presentSupport) {
-            indices.presentFamily = i;
-        }
-
-        if (indices.isComplete()) {
-            break;
-        }
-    }
-
-    return indices;
-}
-
 std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
 {
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-    return availableLayers;
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+	return availableLayers;
 }
 
-bool evan::ADeviceBackend::isDeviceSuitable(VkPhysicalDevice device,
-								   VkSurfaceKHR surface,
-								   std::vector<const char *> deviceExtensions)
+bool evan::ADeviceBackend::isDeviceSuitable(
+	VkPhysicalDevice device, VkSurfaceKHR surface,
+	std::vector<const char *> deviceExtensions)
 {
-	QueueFamilyIndices indices = this->findQueueFamilies(device, surface);
+	QueueFamilyIndices indices = this->findQueueFamilies();
 	bool extensionsSupported =
 		this->checkDeviceExtensionSupport(device, deviceExtensions);
 	bool swapChainAdequate = false;
@@ -102,7 +49,8 @@ bool evan::ADeviceBackend::checkDeviceExtensionSupport(
 {
 	uint32_t extensionCount;
 	if (vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-											 nullptr) != VK_SUCCESS)
+											 nullptr)
+		!= VK_SUCCESS)
 		return false;
 
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -121,7 +69,7 @@ bool evan::ADeviceBackend::checkDeviceExtensionSupport(
 
 evan::SwapChainSupportDetails
 	evan::ADeviceBackend::querySwapChainSupport(VkPhysicalDevice device,
-									   VkSurfaceKHR surface)
+												VkSurfaceKHR surface)
 {
 	SwapChainSupportDetails details;
 	uint32_t formatCount;
@@ -130,7 +78,8 @@ evan::SwapChainSupportDetails
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
 											  &details.capabilities);
 	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-											 nullptr) != VK_SUCCESS)
+											 nullptr)
+		!= VK_SUCCESS)
 		return details;
 	if (formatCount != 0) {
 		details.formats.resize(formatCount);
@@ -139,7 +88,8 @@ evan::SwapChainSupportDetails
 	}
 
 	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-											  &presentModeCount, nullptr) != VK_SUCCESS)
+												  &presentModeCount, nullptr)
+		!= VK_SUCCESS)
 		return details;
 	if (presentModeCount != 0) {
 		details.presentModes.resize(presentModeCount);
@@ -148,4 +98,3 @@ evan::SwapChainSupportDetails
 	}
 	return details;
 }
-
