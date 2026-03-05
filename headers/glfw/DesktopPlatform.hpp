@@ -42,7 +42,6 @@ namespace evan {
 
             void pollEvents() override;
 
-        protected:
             GLFWwindow *_window = nullptr; // Pointer to the GLFW window
     };
 } // namespace evan

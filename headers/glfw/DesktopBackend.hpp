@@ -12,6 +12,8 @@
 #include "ADeviceBackend.hpp"
 #include "DesktopPlatform.hpp"
 
+#include "Version.hpp"
+
 /**
  * @brief List of Vulkan device extensions to enable.
  *
