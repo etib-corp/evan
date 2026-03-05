@@ -21,10 +21,8 @@ namespace evan
 	class XrDeviceBackend: public ADeviceBackend
 	{
 		public:
-		XrDeviceBackend();
+		XrDeviceBackend(const IPlatform &platform);
 		~XrDeviceBackend() override;
-
-		void init(const IPlatform &platform) override;
 
 		void createInstance(const IPlatform &platform,
 							const std::string &appName,
