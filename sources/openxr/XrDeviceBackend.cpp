@@ -330,3 +330,17 @@ evan::QueueFamilyIndices evan::XrDeviceBackend::findQueueFamilies()
 
 	return indices;
 }
+
+uint32_t evan::XrDeviceBackend::countSwapchainFormats()
+{
+	uint32_t swapchainFormatCount = 0;
+	xrEnumerateSwapchainFormats(_session, 0, &swapchainFormatCount, nullptr);
+	return swapchainFormatCount;
+}
+
+std::vector<int64_t> evan::XrDeviceBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount)
+{
+	std::vector<int64_t> swapchainFormats(swapchainFormatCount);
+	xrEnumerateSwapchainFormats(_session, swapchainFormatCount, &swapchainFormatCount, swapchainFormats.data());
+	return swapchainFormats;
+}

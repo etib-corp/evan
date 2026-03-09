@@ -301,3 +301,25 @@ evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
 
 	return indices;
 }
+
+uint32_t evan::DesktopBackend::countSwapchainFormats()
+{
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
+										 nullptr);
+	return formatCount;
+}
+
+std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount)
+{
+	std::vector<int32_t> swapchainFormats(swapchainFormatCount);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &swapchainFormatCount,
+										 reinterpret_cast<VkSurfaceFormatKHR *>(swapchainFormats.data()));
+
+	std::vector<int64_t> swapchainFormats64(swapchainFormatCount);
+	std::transform(swapchainFormats.begin(), swapchainFormats.end(),
+				   swapchainFormats64.begin(), [](int32_t format) {
+					   return static_cast<int64_t>(format);
+				   });
+	return swapchainFormats64;
+}
