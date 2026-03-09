@@ -302,7 +302,7 @@ evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
 	return indices;
 }
 
-uint32_t evan::DesktopBackend::countSwapchainFormats()
+uint32_t evan::DesktopBackend::countSwapchainFormats() const
 {
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
@@ -310,7 +310,7 @@ uint32_t evan::DesktopBackend::countSwapchainFormats()
 	return formatCount;
 }
 
-std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount)
+std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount) const
 {
 	std::vector<int32_t> swapchainFormats(swapchainFormatCount);
 	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &swapchainFormatCount,

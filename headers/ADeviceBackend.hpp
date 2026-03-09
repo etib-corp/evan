@@ -57,8 +57,8 @@ namespace evan
 									const std::string &appName,
 									Version &appVersion) = 0;
 
-		virtual uint32_t countSwapchainFormats() = 0;
-		virtual std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) = 0;
+		virtual uint32_t countSwapchainFormats() const = 0;
+		virtual std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) const = 0;
 
 		virtual void createLogicalDevice() = 0;
 

@@ -34,8 +34,8 @@ namespace evan
 
 		QueueFamilyIndices findQueueFamilies() override;
 
-		uint32_t countSwapchainFormats() override;
-		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) override;
+		uint32_t countSwapchainFormats() const override;
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) const override;
 
 		protected:
 		/**
