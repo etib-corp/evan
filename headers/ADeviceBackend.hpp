@@ -57,6 +57,9 @@ namespace evan
 									const std::string &appName,
 									Version &appVersion) = 0;
 
+		virtual uint32_t countSwapchainFormats() = 0;
+		virtual std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) = 0;
+
 		virtual void createLogicalDevice() = 0;
 
 		virtual void pickPhysicalDevice() = 0;
@@ -101,6 +104,24 @@ namespace evan
 		bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
 							  std::vector<const char *> deviceExtensions);
 
+		/**
+		 * @brief Queries the swap chain support details for a given Vulkan
+		 * physical device and surface.
+		 * This function retrieves information about the swap chain
+		 * capabilities, available surface formats, and present modes for the
+		 * specified Vulkan physical device and surface. It populates a
+		 * SwapChainSupportDetails structure with the retrieved information.
+		 * @param device The Vulkan physical device to query for swap chain
+		 * support.
+		 * @param surface The Vulkan surface to check for compatibility with the
+		 * device.
+		 * @return A SwapChainSupportDetails structure containing the swap chain
+		 * support details for the specified device and surface.
+		 */
+		evan::SwapChainSupportDetails
+			querySwapChainSupport(VkPhysicalDevice device,
+														VkSurfaceKHR surface);
+
 		VkInstance
 			_VkInstance;	/// The Vulkan instance, which is the connection
 							/// between the application and the Vulkan library.
@@ -132,22 +153,5 @@ namespace evan
 			VkPhysicalDevice device,
 			std::vector<const char *> deviceExtensions);
 
-		/**
-		 * @brief Queries the swap chain support details for a given Vulkan
-		 * physical device and surface.
-		 * This function retrieves information about the swap chain
-		 * capabilities, available surface formats, and present modes for the
-		 * specified Vulkan physical device and surface. It populates a
-		 * SwapChainSupportDetails structure with the retrieved information.
-		 * @param device The Vulkan physical device to query for swap chain
-		 * support.
-		 * @param surface The Vulkan surface to check for compatibility with the
-		 * device.
-		 * @return A SwapChainSupportDetails structure containing the swap chain
-		 * support details for the specified device and surface.
-		 */
-		evan::SwapChainSupportDetails
-			querySwapChainSupport(VkPhysicalDevice device,
-														VkSurfaceKHR surface);
 	};
 }	 // namespace evan

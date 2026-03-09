@@ -34,6 +34,9 @@ namespace evan
 
 		QueueFamilyIndices findQueueFamilies() override;
 
+		uint32_t countSwapchainFormats() override;
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) override;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with platform-specific extensions

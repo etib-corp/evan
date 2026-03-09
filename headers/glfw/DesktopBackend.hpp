@@ -65,6 +65,9 @@ namespace evan
 		 */
 		VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
 
+		uint32_t countSwapchainFormats() override;
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) override;
+
 		/**
 		 * @brief Retrieves the Vulkan surface associated with the Desktop
 		 * backend.
