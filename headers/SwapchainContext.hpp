@@ -8,79 +8,76 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
+#include "ADeviceBackend.hpp"
 
 #include <map>
 #include <memory>
+#include <iostream>
 
 namespace evan
 {
-    class SwapchainImageContext {
-        public:
-            ~SwapchainImageContext();
 
-            virtual void init() = 0;
+	/**
+	 * @class SwapchainContext
+	 * @brief Represents the context for managing the swapchain in the rendering
+	 * system.
+	 *
+	 * The SwapchainContext class encapsulates the functionality related to
+	 * managing the swapchain in the rendering system. It is responsible for
+	 * handling the creation, configuration, and management of the swapchain,
+	 * which is a series of images used for presenting rendered frames to the
+	 * display. This class serves as a central point for managing
+	 * swapchain-related operations in the engine.
+	 *
+	 */
+	class SwapchainContext
+	{
+		public:
+		SwapchainContext(const ADeviceBackend &deviceBackend);
+		~SwapchainContext();
 
-        protected:
-            void createDepthResources();
+		/**
+		 * @brief Struct to encapsulate details about swap chain support.
+		 *
+		 * This struct contains information about the swap chain capabilities,
+		 * available surface formats, and present modes for a Vulkan surface.
+		 * It is typically used to query and store the swap chain support
+		 * details for a Vulkan physical device.
+		 *
+		 * @struct SwapChainSupportDetails
+		 */
+		struct SwapChainSupportDetails {
+			/*
+			 * @brief Vulkan surface capabilities, such as the minimum and
+			 * maximum image count, extent, and supported transforms.
+			 */
+			VkSurfaceCapabilitiesKHR capabilities;
 
-        private:
-            std::vector<VkFence> _inFlightFences;
-            std::vector<VkFence> _imagesInFlight;
+			/*
+			 * @brief A list of supported surface formats (color space and pixel
+			 * format).
+			 */
+			std::vector<VkSurfaceFormatKHR> formats;
 
-            VkImage _depthImage;
-            VkImageView _depthImageView;
-            VkDeviceMemory _depthImageMemory;
+			/*
+			 * @brief A list of supported presentation modes (e.g., FIFO,
+			 * Mailbox, etc.).
+			 */
+			std::vector<VkPresentModeKHR> presentModes;
+		};
 
-            VkImage _colorImage;
-            VkImageView _colorImageView;
-            VkDeviceMemory _colorImageMemory;
+		protected:
+		VkRenderPass _renderPass;
 
-            std::vector<VkImageView> _imageViews;
-            VkExtent2D _extent;
-            VkFormat _swapchainColorFormat = VK_FORMAT_UNDEFINED;
-            std::vector<VkFramebuffer> _framebuffers;
-
-            #ifdef OPENXR
-            std::vector<XrSwapchainImageVulkan2KHR>  _swapchainImages;
-            #elifdef GLFW
-            std::vector<VkImage> _swapchainImages;
-            #endif
-
-            struct TextureImage {
-                VkCommandPool _commandPool;
-                VkQueue _graphicsQueue;            
-            } _textureImage;
-            
-            VkSampleCountFlagBits _msaaSamples;
-            VkDevice _logicalDevice;
-            VkPhysicalDevice _physicalDevice;
-
-    };
-
-    /**
-     * @class SwapchainContext
-     * @brief Represents the context for managing the swapchain in the rendering system.
-     *
-     * The SwapchainContext class encapsulates the functionality related to managing the swapchain in the rendering system. It is responsible for handling the creation, configuration, and management of the swapchain, which is a series of images used for presenting rendered frames to the display. This class serves as a central point for managing swapchain-related operations in the engine.
-     *
-     */
-    class SwapchainContext {
-        public:
-            ~SwapchainContext();
-
-        protected:
-            VkRenderPass _renderPass;
-
-            #ifdef OPENXR
-            std::map<XrSwapchian, std::shared_ptr<SwapchainImageContext>> _swapchainImages;
-            #endif
-
-        private:
-            /**
-             * @brief Creates the render pass for the swapchain context.
-             * 
-             * 
-             */
-            virtual void createRenderPass() = 0;
-    };
-} // namespace evan
+		private:
+		void createRenderPass(const ADeviceBackend &deviceBackend,
+							  VkSampleCountFlagBits msaaSamples);
+		VkFormat
+			selectSwapchainFormat(const std::vector<int64_t> &swapchainFormats);
+		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+		VkFormat findSupportedFormat(
+			VkPhysicalDevice physicalDevice,
+			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
+			VkFormatFeatureFlags features);
+	};
+}	 // namespace evan
