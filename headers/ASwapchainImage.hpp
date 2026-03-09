@@ -123,7 +123,7 @@ namespace evan
 		 * output. The function takes the logical device, physical device, and
 		 * the number of samples for multisamplin
 		 */
-		void evan::ASwapchainImage::createColorResources(
+		void createColorResources(
 			VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
 			VkSampleCountFlagBits msaaSamples);
 

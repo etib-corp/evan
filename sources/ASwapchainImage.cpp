@@ -50,6 +50,10 @@ void evan::ASwapchainImage::createColorResources(
 											 logicalDevice, 1);
 }
 
+///////////////////////
+// Private functions //
+///////////////////////
+
 VkImageView evan::ASwapchainImage::createImageView(VkImage image, VkFormat format,
 										 VkImageAspectFlags aspectFlags,
 										 VkDevice logicalDevice,
