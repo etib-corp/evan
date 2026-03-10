@@ -70,7 +70,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 
     this->createImages(backend->_device, _swapchain);
     this->createImageViews(backend->_device);
-    this->createColorResources(backend->_device, backend->_physicalDevice, deviceContext.getMsaaSamples());
+    this->createColorResources(*backend, deviceContext.getMsaaSamples());
     this->createDepthResources(deviceContext);
     this->createFramebuffers(backend->_device, renderpass);
 }

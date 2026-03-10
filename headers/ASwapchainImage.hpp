@@ -34,75 +34,6 @@ namespace evan
 	{
 		public:
 		/**
-		 * @struct CreateImageProperties
-		 * @brief Encapsulates the properties required to create a Vulkan image
-		 * and allocate its memory.
-		 *
-		 * This structure holds all necessary parameters for creating a VkImage
-		 * object and allocating its associated device memory in Vulkan. It
-		 * includes device handles, image dimensions, format, usage flags, and
-		 * references to the resulting image and memory objects.
-		 *
-		 */
-		struct CreateImageProperties {
-			/*
-			 * @brief The Vulkan logical device used for image creation and
-			 * memory allocation.
-			 */
-			VkDevice _logicalDevice;
-			/*
-			 * @brief The Vulkan physical device used to determine memory
-			 * properties.
-			 */
-			VkPhysicalDevice _physicalDevice;
-			/*
-			 * @brief The width of the image in pixels.
-			 */
-			uint32_t _width;
-			/*
-			 * @brief The height of the image in pixels.
-			 */
-			uint32_t _height;
-			/*
-			 * @brief The number of mipmap levels for the image.
-			 */
-			uint32_t _mipLevels;
-			/*
-			 * @brief The number of samples for multisample anti-aliasing
-			 * (MSAA).
-			 */
-			VkSampleCountFlagBits _numSamples;
-			/*
-			 * @brief The format of the image (e.g., VK_FORMAT_R8G8B8A8_SRGB).
-			 */
-			VkFormat _format;
-			/*
-			 * @brief The tiling arrangement of the image (e.g.,
-			 * VK_IMAGE_TILING_OPTIMAL).
-			 */
-			VkImageTiling _tiling;
-			/*
-			 * @brief The usage flags for the image (e.g.,
-			 * VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT).
-			 */
-			VkImageUsageFlags _usage;
-			/*
-			 * @brief The memory property flags for the image (e.g.,
-			 * VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT).
-			 */
-			VkMemoryPropertyFlags _properties;
-			/*
-			 * @brief A reference to the VkImage object that will be created.
-			 */
-			VkImage &_image;
-			/*
-			 * @brief A reference to the VkDeviceMemory object that will be
-			 * allocated for the image.
-			 */
-			VkDeviceMemory &_imageMemory;
-		};
-
-		/**
 		 * @struct TransitionImageLayoutProperties
 		 * @brief Encapsulates the properties required to perform an image
 		 * layout transition in Vulkan.
@@ -174,9 +105,7 @@ namespace evan
 		 * output. The function takes the logical device, physical device, and
 		 * the number of samples for multisamplin
 		 */
-		void createColorResources(VkDevice logicalDevice,
-								  VkPhysicalDevice physicalDevice,
-								  VkSampleCountFlagBits msaaSamples);
+		void createColorResources(const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples);
 
 		void createDepthResources(const DeviceContext &deviceContext);
 
@@ -293,44 +222,6 @@ namespace evan
 		VkImageView createImageView(VkImage image, VkFormat format,
 									VkImageAspectFlags aspectFlags,
 									VkDevice logicalDevice, uint32_t mipLevels);
-
-		/**
-		 * @brief Creates a Vulkan image and allocates memory for it based on
-		 * the provided properties.
-		 *
-		 * This function takes a CreateImageProperties structure that contains
-		 * all the necessary parameters for creating a Vulkan image and
-		 * allocating its associated memory. It sets up the VkImageCreateInfo
-		 * structure based on the provided properties, creates the image using
-		 * vkCreateImage, and allocates memory	for the image using
-		 * vkAllocateMemory. The created image and its memory are then stored in
-		 * the references provided in the CreateImageProperties structure.
-		 */
-		void createImage(
-			const evan::ASwapchainImage::CreateImageProperties &properties);
-
-		/**
-		 * @brief Finds a suitable memory type for a Vulkan resource.
-		 *
-		 * This function searches through the memory types available on the
-		 * given physical device and returns the index of a memory type that
-		 * satisfies the specified type filter and memory property flags.
-		 *
-		 * @param physicalDevice The Vulkan physical device to query for memory
-		 * properties.
-		 * @param typeFilter A bitmask specifying the acceptable memory types.
-		 * Each bit represents a memory type, and the function will check which
-		 * types are suitable.
-		 * @param properties A set of memory property flags that the desired
-		 * memory type must have. For example,
-		 * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT or
-		 *                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT.
-		 * @return The index of a suitable memory type.
-		 * @throws std::runtime_error If no suitable memory type is found.
-		 */
-		uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
-								uint32_t typeFilter,
-								VkMemoryPropertyFlags properties);
 
 		void transitionImageLayout(
 			const TransitionImageLayoutProperties &properties);
