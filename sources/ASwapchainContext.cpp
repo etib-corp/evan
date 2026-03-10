@@ -7,11 +7,6 @@
 
 #include "ASwapchainContext.hpp"
 
-evan::ASwapchainContext::~ASwapchainContext()
-{
-	// vkDestroyRenderPass(, _renderPass, nullptr);
-}
-
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend, VkSampleCountFlagBits msaaSamples)
 {
