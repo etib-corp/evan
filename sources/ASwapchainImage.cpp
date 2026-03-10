@@ -120,6 +120,16 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 	}
 }
 
+void evan::ASwapchainImage::createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain)
+{
+	uint32_t imageCount;
+
+	vkGetSwapchainImagesKHR(logicalDevice, swapchain, &imageCount, nullptr);
+	_images.resize(imageCount);
+	vkGetSwapchainImagesKHR(logicalDevice, swapchain, &imageCount,
+							_images.data());
+}
+
 ///////////////////////
 // Private functions //
 ///////////////////////

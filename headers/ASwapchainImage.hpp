@@ -183,6 +183,8 @@ namespace evan
 		void createFramebuffers(VkDevice logicalDevice,
 								VkRenderPass renderPass);
 
+		void createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain);
+
 		/**
 		 * @brief Finds the queue family indices for a given Vulkan physical
 		 * device.
