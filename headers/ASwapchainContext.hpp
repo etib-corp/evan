@@ -68,8 +68,7 @@ namespace evan
 		protected:
 		VkRenderPass _renderPass;
 
-		private:
-		void createRenderPass(const ADeviceBackend &deviceBackend,
+		void createRenderPass(const std::shared_ptr<ADeviceBackend> &deviceBackend,
 							  VkSampleCountFlagBits msaaSamples);
 		VkFormat
 			selectSwapchainFormat(const std::vector<int64_t> &swapchainFormats);
@@ -78,5 +77,6 @@ namespace evan
 			VkPhysicalDevice physicalDevice,
 			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
 			VkFormatFeatureFlags features);
+		private:
 	};
 }	 // namespace evan

@@ -13,11 +13,11 @@ evan::ASwapchainContext::~ASwapchainContext()
 }
 
 void evan::ASwapchainContext::createRenderPass(
-	const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples)
+	const std::shared_ptr<ADeviceBackend> &deviceBackend, VkSampleCountFlagBits msaaSamples)
 {
-	auto swapchainFormatCount = deviceBackend.countSwapchainFormats();
+	auto swapchainFormatCount = deviceBackend->countSwapchainFormats();
 	auto swapchainFormats =
-		deviceBackend.enumerateSwapchainFormats(swapchainFormatCount);
+		deviceBackend->enumerateSwapchainFormats(swapchainFormatCount);
 	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
 
 	VkAttachmentDescription colorAttachment {};
@@ -31,7 +31,7 @@ void evan::ASwapchainContext::createRenderPass(
 	colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment {};
-	depthAttachment.format = this->findDepthFormat(deviceBackend._physicalDevice);
+	depthAttachment.format = this->findDepthFormat(deviceBackend->_physicalDevice);
 	depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -94,7 +94,7 @@ void evan::ASwapchainContext::createRenderPass(
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies   = &dependency;
 
-	if (vkCreateRenderPass(deviceBackend._device, &renderPassInfo, nullptr,
+	if (vkCreateRenderPass(deviceBackend->_device, &renderPassInfo, nullptr,
 						   &_renderPass)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to create render pass!");
