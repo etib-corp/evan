@@ -5,14 +5,14 @@
 ** SwapchainContext
 */
 
-#include "SwapchainContext.hpp"
+#include "ASwapchainContext.hpp"
 
-evan::SwapchainContext::~SwapchainContext()
+evan::ASwapchainContext::~ASwapchainContext()
 {
 	// vkDestroyRenderPass(, _renderPass, nullptr);
 }
 
-void evan::SwapchainContext::createRenderPass(
+void evan::ASwapchainContext::createRenderPass(
 	const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples)
 {
 	auto swapchainFormatCount = deviceBackend.countSwapchainFormats();
@@ -101,7 +101,7 @@ void evan::SwapchainContext::createRenderPass(
 	}
 }
 
-VkFormat evan::SwapchainContext::selectSwapchainFormat(
+VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 	const std::vector<int64_t> &swapchainFormats)
 {
 	constexpr VkFormat kPreferredSwapchainFormats[] = {
@@ -125,7 +125,7 @@ VkFormat evan::SwapchainContext::selectSwapchainFormat(
 }
 
 VkFormat
-	evan::SwapchainContext::findDepthFormat(VkPhysicalDevice physicalDevice)
+	evan::ASwapchainContext::findDepthFormat(VkPhysicalDevice physicalDevice)
 {
 	return findSupportedFormat(physicalDevice,
 							   { VK_FORMAT_D32_SFLOAT,
@@ -135,7 +135,7 @@ VkFormat
 							   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-VkFormat evan::SwapchainContext::findSupportedFormat(
+VkFormat evan::ASwapchainContext::findSupportedFormat(
 	VkPhysicalDevice physicalDevice, const std::vector<VkFormat> &candidates,
 	VkImageTiling tiling, VkFormatFeatureFlags features)
 {
