@@ -32,6 +32,36 @@ const std::vector<const char *> deviceExtensions = {
 namespace evan
 {
 	/**
+	 * @brief Struct to encapsulate details about swap chain support.
+	 *
+	 * This struct contains information about the swap chain capabilities,
+	 * available surface formats, and present modes for a Vulkan surface.
+	 * It is typically used to query and store the swap chain support
+	 * details for a Vulkan physical device.
+	 *
+	 * @struct SwapChainSupportDetails
+	 */
+	struct SwapChainSupportDetails {
+		/*
+		 * @brief Vulkan surface capabilities, such as the minimum and
+		 * maximum image count, extent, and supported transforms.
+		 */
+		VkSurfaceCapabilitiesKHR capabilities;
+
+		/*
+		 * @brief A list of supported surface formats (color space and pixel
+		 * format).
+		 */
+		std::vector<VkSurfaceFormatKHR> formats;
+
+		/*
+		 * @brief A list of supported presentation modes (e.g., FIFO,
+		 * Mailbox, etc.).
+		 */
+		std::vector<VkPresentModeKHR> presentModes;
+	};
+
+	/**
 	 * @brief Desktop backend implementation.
 	 *
 	 * This class provides an implementation of the backend for Desktop. It
@@ -84,6 +114,24 @@ namespace evan
 		void pickPhysicalDevice() override;
 
 		QueueFamilyIndices findQueueFamilies() override;
+
+		/**
+		 * @brief Queries the swap chain support details for a given Vulkan
+		 * physical device and surface.
+		 * This function retrieves information about the swap chain
+		 * capabilities, available surface formats, and present modes for the
+		 * specified Vulkan physical device and surface. It populates a
+		 * SwapChainSupportDetails structure with the retrieved information.
+		 * @param device The Vulkan physical device to query for swap chain
+		 * support.
+		 * @param surface The Vulkan surface to check for compatibility with the
+		 * device.
+		 * @return A SwapChainSupportDetails structure containing the swap chain
+		 * support details for the specified device and surface.
+		 */
+		evan::SwapChainSupportDetails
+			querySwapChainSupport(VkPhysicalDevice device,
+								  VkSurfaceKHR surface);
 
 		private:
 		/**
