@@ -37,6 +37,8 @@ namespace evan
 		uint32_t countSwapchainFormats() const override;
 		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) const override;
 
+		std::vector<XrViewConfigurationView> enumerateViewConfigurations() const;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with platform-specific extensions

@@ -8,7 +8,11 @@
 #pragma once
 
 #include "ASwapchainContext.hpp"
+#include "ASwapchainImage.hpp"
 #include "DeviceContext.hpp"
+#include "openxr/XrDeviceBackend.hpp"
+
+#include <map>
 
 namespace evan
 {
@@ -16,5 +20,10 @@ namespace evan
     {
     public:
         XrSwapchainContext(const DeviceContext& deviceContext);
+
+    private:
+        std::vector<XrViewConfigurationView> _viewsConfigurations;
+        std::map<XrSwapchain, std::shared_ptr<ASwapchainImage>> _swapchainImages; // Map of swapchain to its images
+        std::vector<XrView> _views; // Vector of XrView structures for each view configuration
     };
 } // namespace evan

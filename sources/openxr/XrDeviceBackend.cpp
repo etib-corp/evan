@@ -344,3 +344,17 @@ std::vector<int64_t> evan::XrDeviceBackend::enumerateSwapchainFormats(uint32_t s
 	xrEnumerateSwapchainFormats(_session, swapchainFormatCount, &swapchainFormatCount, swapchainFormats.data());
 	return swapchainFormats;
 }
+
+std::vector<XrViewConfigurationView> evan::XrDeviceBackend::enumerateViewConfigurations() const
+{
+	uint32_t viewConfigurationCount = 0;
+	xrEnumerateViewConfigurationViews(_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &viewConfigurationCount, nullptr);
+
+	if (viewConfigurationCount == 0) {
+		std::cerr << "No view configurations found for the OpenXR system." << std::endl;
+		return {};
+	}
+	std::vector<XrViewConfigurationView> viewConfigurations(viewConfigurationCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
+	xrEnumerateViewConfigurationViews(_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, viewConfigurationCount, &viewConfigurationCount, viewConfigurations.data());
+	return viewConfigurations;
+}
