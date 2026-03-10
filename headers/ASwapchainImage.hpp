@@ -180,6 +180,9 @@ namespace evan
 
 		void createDepthResources(const DeviceContext &deviceContext);
 
+		void createFramebuffers(VkDevice logicalDevice,
+								VkRenderPass renderPass);
+
 		/**
 		 * @brief Finds the queue family indices for a given Vulkan physical
 		 * device.

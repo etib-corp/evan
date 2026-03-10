@@ -92,6 +92,34 @@ void evan::ASwapchainImage::createDepthResources(
 	this->transitionImageLayout(transitionProperties);
 }
 
+void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
+											   VkRenderPass renderPass)
+{
+	_framebuffers.resize(_imageViews.size());
+
+	for (size_t i = 0; i < _imageViews.size(); i++) {
+		std::array<VkImageView, 3> attachments = { _colorView,
+												   _depthView,
+												   _imageViews[i] };
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType	   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.attachmentCount =
+			static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width		 = _extent.width;
+		framebufferInfo.height		 = _extent.height;
+		framebufferInfo.layers		 = 1;
+
+		if (vkCreateFramebuffer(logicalDevice, &framebufferInfo, nullptr,
+								&_framebuffers[i])
+			!= VK_SUCCESS) {
+			throw std::runtime_error("Failed to create framebuffer!");
+		}
+	}
+}
+
 ///////////////////////
 // Private functions //
 ///////////////////////
