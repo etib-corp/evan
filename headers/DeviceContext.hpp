@@ -48,6 +48,12 @@ namespace evan
 		 */
 		VkSampleCountFlagBits getMsaaSamples() const;
 
+		std::shared_ptr<ADeviceBackend> getDeviceBackend() const;
+
+		VkCommandPool getCommandPool() const;
+
+		VkQueue getGraphicsQueue() const;
+
 		protected:
 		VkQueue _graphicsQueue;		   /// The graphics queue, which is used to
 									   /// submit rendering commands to the GPU.
@@ -62,7 +68,7 @@ namespace evan
 							 /// to improve the visual quality of rendered
 							 /// images by reducing aliasing artifacts.
 
-		std::unique_ptr<ADeviceBackend>
+		std::shared_ptr<ADeviceBackend>
 			_deviceBackend;	   /// A unique pointer to an ADeviceBackend
 							   /// instance, which is responsible for providing
 							   /// platform-specific implementations of Vulkan

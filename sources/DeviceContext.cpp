@@ -41,9 +41,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 evan::DeviceContext::DeviceContext(const IPlatform &platform)
 {
     #ifdef OPENXR
-        _deviceBackend = std::make_unique<XrDeviceBackend>(platform);
+        _deviceBackend = std::make_shared<XrDeviceBackend>(platform);
     #elif defined(GLFW)
-        _deviceBackend = std::make_unique<DesktopBackend>(platform);
+        _deviceBackend = std::make_shared<DesktopBackend>(platform);
     #else
         std::cerr << "No platform defined. Please define either OPENXR or GLFW." << std::endl;
         throw std::runtime_error("No platform defined for DeviceContext.");
@@ -58,6 +58,21 @@ evan::DeviceContext::~DeviceContext()
 VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 {
 	return _msaaSamples;
+}
+
+std::shared_ptr<evan::ADeviceBackend> evan::DeviceContext::getDeviceBackend() const
+{
+	return _deviceBackend;
+}
+
+VkCommandPool evan::DeviceContext::getCommandPool() const
+{
+	return _commandPool;
+}
+
+VkQueue evan::DeviceContext::getGraphicsQueue() const
+{
+	return _graphicsQueue;
 }
 
 void evan::DeviceContext::getMaxUsableSampleCount()
