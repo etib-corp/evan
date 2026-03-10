@@ -8,6 +8,8 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
+#include "DeviceContext.hpp"
+
 #include "QueueFamilyIndices.hpp"
 #include "Version.hpp"
 
@@ -100,6 +102,55 @@ namespace evan
 			VkDeviceMemory &_imageMemory;
 		};
 
+		/**
+		 * @struct TransitionImageLayoutProperties
+		 * @brief Encapsulates the properties required to perform an image
+		 * layout transition in Vulkan.
+		 *
+		 * This structure holds all necessary Vulkan objects and parameters
+		 * needed to transition the layout of a VkImage, such as device, command
+		 * pool, queue, image, format, old and new layouts, and the number of
+		 * mipmap levels.
+		 *
+		 */
+		struct TransitionImageLayoutProperties {
+			/*
+			 * @brief The Vulkan logical device used for command buffer
+			 * operations.
+			 */
+			VkDevice _logicalDevice;
+			/*
+			 * @brief The Vulkan command pool used to allocate command buffers
+			 * for the layout transition.
+			 */
+			VkCommandPool _commandPool;
+			/*
+			 * @brief The Vulkan graphics queue used to submit the command
+			 * buffer for execution.
+			 */
+			VkQueue _graphicsQueue;
+			/*
+			 * @brief The Vulkan image whose layout is to be transitioned.
+			 */
+			VkImage _image;
+			/*
+			 * @brief The format of the image being transitioned.
+			 */
+			VkFormat _format;
+			/*
+			 * @brief The old layout of the image before the transition.
+			 */
+			VkImageLayout _oldLayout;
+			/*
+			 * @brief The new layout of the image after the transition.
+			 */
+			VkImageLayout _newLayout;
+			/*
+			 * @brief The number of mipmap levels in the image.
+			 */
+			uint32_t _mipLevels;
+		};
+
 		virtual ~ASwapchainImage();
 
 		/**
@@ -123,24 +174,33 @@ namespace evan
 		 * output. The function takes the logical device, physical device, and
 		 * the number of samples for multisamplin
 		 */
-		void createColorResources(
-			VkDevice logicalDevice, VkPhysicalDevice physicalDevice,
-			VkSampleCountFlagBits msaaSamples);
+		void createColorResources(VkDevice logicalDevice,
+								  VkPhysicalDevice physicalDevice,
+								  VkSampleCountFlagBits msaaSamples);
+
+		void createDepthResources(const DeviceContext &deviceContext);
 
 		/**
 		 * @brief Finds the queue family indices for a given Vulkan physical
 		 * device.
 		 *
-		 * This function queries the Vulkan API to find the indices of the queue
-		 * families that support graphics and presentation operations for the
-		 * specified physical device. It returns a QueueFamilyIndices structure
-		 * containing the indices of the graphics and presentation queue
-		 * families. This information is essential for setting up the rendering
-		 * pipeline and ensuring that the application can properly present
-		 * rendered images to the screen.
+		 * This function queries the Vulkan API to find the indices of the
+		 * queue families that support graphics and presentation operations
+		 * for the specified physical device. It returns a
+		 * QueueFamilyIndices structure containing the indices of the
+		 * graphics and presentation queue families. This information is
+		 * essential for setting up the rendering pipeline and ensuring that
+		 * the application can properly present rendered images to the
+		 * screen.
 		 */
 		virtual evan::QueueFamilyIndices
 			findQueueFamilies(VkPhysicalDevice device) = 0;
+
+		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+		VkFormat evan::ASwapchainImage::findSupportedFormat(
+			VkPhysicalDevice physicalDevice,
+			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
+			VkFormatFeatureFlags features);
 
 		protected:
 		std::vector<VkFence>
@@ -280,7 +340,18 @@ namespace evan
 		 * @throws std::runtime_error If no suitable memory type is found.
 		 */
 		uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
-											 uint32_t typeFilter,
-											 VkMemoryPropertyFlags properties);
+								uint32_t typeFilter,
+								VkMemoryPropertyFlags properties);
+
+		void transitionImageLayout(
+			const TransitionImageLayoutProperties &properties);
+
+		VkCommandBuffer beginSingleTimeCommands(VkDevice logicalDevice,
+												VkCommandPool commandPool);
+		bool hasStencilComponent(VkFormat format);
+		void endSingleTimeCommands(VkDevice logicalDevice,
+								   VkCommandPool commandPool,
+								   VkQueue graphicsQueue,
+								   VkCommandBuffer commandBuffer);
 	};
 }	 // namespace evan
