@@ -66,7 +66,8 @@ namespace evan
 		VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
 
 		uint32_t countSwapchainFormats() const override;
-		std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) const override;
+		std::vector<int64_t> enumerateSwapchainFormats(
+			uint32_t swapchainFormatCount) const override;
 
 		/**
 		 * @brief Retrieves the Vulkan surface associated with the Desktop
@@ -85,6 +86,41 @@ namespace evan
 		QueueFamilyIndices findQueueFamilies() override;
 
 		private:
+		/**
+		 * @brief Checks if the specified Vulkan physical device is suitable for
+		 * use.
+		 *
+		 * This function evaluates the capabilities and features of the given
+		 * Vulkan physical device to determine if it meets the requirements for
+		 * the application. It checks for support for necessary queue families,
+		 * device extensions, and swap chain support.
+		 *
+		 * @param device The Vulkan physical device to evaluate.
+		 * @param surface The Vulkan surface to check for compatibility with the
+		 * device.
+		 * @param deviceExtensions A list of required device extensions that
+		 * must be supported by the device.
+		 * @return true if the device is suitable for use, false otherwise.
+		 */
+		bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
+							  std::vector<const char *> deviceExtensions);
+
+		/**
+		 * @brief Checks if the specified Vulkan physical device supports the
+		 * required device extensions. This function queries the Vulkan API to
+		 * determine if the given physical device supports all of the required
+		 * device extensions specified in the deviceExtensions vector.
+		 * @param device The Vulkan physical device to check for extension
+		 * support.
+		 * @param deviceExtensions A list of required device extensions that
+		 * must be supported by the device.
+		 * @return true if the device supports all required extensions, false
+		 * otherwise.
+		 */
+		bool checkDeviceExtensionSupport(
+			VkPhysicalDevice device,
+			std::vector<const char *> deviceExtensions);
+
 		/**
 		 * @brief Checks if the required validation layers are supported.
 		 *

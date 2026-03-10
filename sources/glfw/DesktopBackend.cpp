@@ -145,6 +145,51 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	}
 }
 
+bool evan::DesktopBackend::isDeviceSuitable(
+	VkPhysicalDevice device, VkSurfaceKHR surface,
+	std::vector<const char *> deviceExtensions)
+{
+	QueueFamilyIndices indices = this->findQueueFamilies();
+	bool extensionsSupported =
+		this->checkDeviceExtensionSupport(device, deviceExtensions);
+	bool swapChainAdequate = false;
+
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport =
+			this->querySwapChainSupport(device, surface);
+		swapChainAdequate = !swapChainSupport.formats.empty()
+			&& !swapChainSupport.presentModes.empty();
+	}
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate
+		&& supportedFeatures.samplerAnisotropy;
+}
+
+bool evan::DesktopBackend::checkDeviceExtensionSupport(
+	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
+{
+	uint32_t extensionCount;
+	if (vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+											 nullptr)
+		!= VK_SUCCESS)
+		return false;
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+										 availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(),
+											 deviceExtensions.end());
+
+	for (const auto &extension: availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
+}
+
 bool evan::DesktopBackend::checkValidationLayerSupport()
 {
 	auto availableLayers = this->getAvailableLayers();
