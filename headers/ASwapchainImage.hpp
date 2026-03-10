@@ -185,22 +185,6 @@ namespace evan
 
 		void createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain);
 
-		/**
-		 * @brief Finds the queue family indices for a given Vulkan physical
-		 * device.
-		 *
-		 * This function queries the Vulkan API to find the indices of the
-		 * queue families that support graphics and presentation operations
-		 * for the specified physical device. It returns a
-		 * QueueFamilyIndices structure containing the indices of the
-		 * graphics and presentation queue families. This information is
-		 * essential for setting up the rendering pipeline and ensuring that
-		 * the application can properly present rendered images to the
-		 * screen.
-		 */
-		virtual evan::QueueFamilyIndices
-			findQueueFamilies(VkPhysicalDevice device) = 0;
-
 		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
 		VkFormat evan::ASwapchainImage::findSupportedFormat(
 			VkPhysicalDevice physicalDevice,
