@@ -186,7 +186,7 @@ namespace evan
 		void createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain);
 
 		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
-		VkFormat evan::ASwapchainImage::findSupportedFormat(
+		VkFormat findSupportedFormat(
 			VkPhysicalDevice physicalDevice,
 			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
 			VkFormatFeatureFlags features);
