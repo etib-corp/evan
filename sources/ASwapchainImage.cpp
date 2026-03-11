@@ -127,10 +127,6 @@ void evan::ASwapchainImage::createImages(VkDevice logicalDevice, VkSwapchainKHR 
 							_images.data());
 }
 
-///////////////////////
-// Private functions //
-///////////////////////
-
 VkImageView evan::ASwapchainImage::createImageView(
 	VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
 	VkDevice logicalDevice, uint32_t mipLevels)
@@ -155,6 +151,10 @@ VkImageView evan::ASwapchainImage::createImageView(
 
 	return imageView;
 }
+///////////////////////
+// Private functions //
+///////////////////////
+
 
 VkFormat evan::ASwapchainImage::findDepthFormat(VkPhysicalDevice physicalDevice)
 {

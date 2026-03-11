@@ -39,6 +39,22 @@ namespace evan
 
 		std::vector<XrViewConfigurationView> enumerateViewConfigurations() const;
 
+		XrInstance
+			_XrInstance;	/// The OpenXR instance, which represents the
+							/// connection between the application and the
+							/// OpenXR runtime. It is used to create and manage
+							/// OpenXR resources and to query the capabilities
+							/// of the OpenXR implementation.
+		XrSystemId _systemId;	 /// The OpenXR system ID, which represents the
+								 /// specific XR system (e.g., VR headset) that
+								 /// the application is targeting. It is used to
+								 /// query the capabilities of the XR system and
+								 /// to create sessions for rendering.
+		XrSession
+			_session;	 /// The OpenXR session, which represents an active
+						 /// connection to the XR system. It is used to manage
+						 /// the lifecycle of the XR experience and to submit
+						 /// rendering commands for display on the XR device.
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with platform-specific extensions
@@ -131,22 +147,5 @@ namespace evan
 		 *
 		 */
 		std::vector<const char *> getRequiredInstanceExtensionsAndroid();
-
-		XrInstance
-			_XrInstance;	/// The OpenXR instance, which represents the
-							/// connection between the application and the
-							/// OpenXR runtime. It is used to create and manage
-							/// OpenXR resources and to query the capabilities
-							/// of the OpenXR implementation.
-		XrSystemId _systemId;	 /// The OpenXR system ID, which represents the
-								 /// specific XR system (e.g., VR headset) that
-								 /// the application is targeting. It is used to
-								 /// query the capabilities of the XR system and
-								 /// to create sessions for rendering.
-		XrSession
-			_session;	 /// The OpenXR session, which represents an active
-						 /// connection to the XR system. It is used to manage
-						 /// the lifecycle of the XR experience and to submit
-						 /// rendering commands for display on the XR device.
 	};
 }	 // namespace evan

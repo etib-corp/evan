@@ -121,6 +121,13 @@ namespace evan
 			VkFormatFeatureFlags features);
 
 		protected:
+		const uint32_t MAX_FRAMES_IN_FLIGHT = 2;	/// The maximum number of frames that can be
+											/// processed concurrently. This is used to
+											/// manage synchronization and ensure that
+											/// the CPU does not get too far ahead of
+											/// the GPU, which can lead to increased
+											/// latency and reduced performance.
+
 		std::vector<VkFence>
 			_inFlightFences;	/// Fences to synchronize rendering operations
 								/// for each swapchain image.
@@ -197,7 +204,26 @@ namespace evan
 							  /// is used during the rendering process to
 							  /// specify where the rendered output should be
 							  /// stored.
-		private:
+		std::vector<VkFence> _inFlightFences;	/// A vector of Vulkan fences used to synchronize
+								/// rendering operations for each swapchain image.
+								/// Fences are used to ensure that the CPU does not
+								/// get too far ahead of the GPU, which can lead to
+								/// increased latency and reduced performance. Each
+								/// fence corresponds to a specific swapchain image
+								/// and is signaled when the rendering operations for
+								/// that image are complete, allowing the CPU to
+								/// proceed with the next set of rendering commands.
+
+		std::vector<VkFence> _imageAvailableFences;	/// A vector of Vulkan fences used to synchronize
+								/// the availability of swapchain images for
+								/// rendering. These fences are signaled when a
+								/// swapchain image becomes available for rendering,
+								/// allowing the CPU to proceed with rendering
+								/// commands that target that image. Each fence
+								/// corresponds to a specific swapchain image and is
+								/// used to manage synchronization between the CPU and
+								/// GPU during the rendering process.
+
 		/**
 		 * @brief Creates a Vulkan image view for a given image.
 		 *
@@ -222,6 +248,7 @@ namespace evan
 		VkImageView createImageView(VkImage image, VkFormat format,
 									VkImageAspectFlags aspectFlags,
 									VkDevice logicalDevice, uint32_t mipLevels);
+		private:
 
 		void transitionImageLayout(
 			const TransitionImageLayoutProperties &properties);

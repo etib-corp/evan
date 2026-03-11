@@ -11,8 +11,10 @@
 #include "ASwapchainImage.hpp"
 #include "DeviceContext.hpp"
 #include "openxr/XrDeviceBackend.hpp"
+#include "openxr/XrSwapchainImage.hpp"
 
 #include <map>
+#include <memory>
 
 namespace evan
 {
