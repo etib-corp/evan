@@ -10,12 +10,14 @@
 #include "ASwapchainImage.hpp"
 #include "DeviceContext.hpp"
 
+#include <openxr/openxr.h>
+
 namespace evan
 {
     class XrSwapchainImage : public ASwapchainImage
     {
     public:
-        XrSwapchainImage();
+        XrSwapchainImage(const DeviceContext &deviceContext, XrSwapchain swapchain, XrSwapchainCreateInfo createInfo);
     private:
         VkViewport _viewport = {
             0, 0, 0, 0, 0, 1.0
@@ -25,5 +27,6 @@ namespace evan
         };	  // Scissor rectangle for rendering
         std::vector<XrSwapchainImageVulkan2KHR>
 				_swapchainImages;
+        XrSwapchainImageBaseHeader *_swapchainImagesBase;	// Base pointer for swapchain images
     };
 } // namespace evan
