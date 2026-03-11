@@ -16,16 +16,6 @@
 #include <fstream>
 #include <algorithm>
 
-/*
- * @brief Maximum number of frames in flight.
- *
- * This constant defines the maximum number of frames that can be in flight
- * at any given time. It is used to manage synchronization and resource
- * allocation for rendering operations in Vulkan.
- *
- */
-const int MAX_FRAMES_IN_FLIGHT = 2;
-
 namespace evan {
     class Renderer {
         public:

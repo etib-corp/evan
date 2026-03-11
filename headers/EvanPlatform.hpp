@@ -45,6 +45,16 @@ const std::vector<const char *> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"	 // Khronos validation layer
 };
 
+/*
+ * @brief Maximum number of frames in flight.
+ *
+ * This constant defines the maximum number of frames that can be in flight
+ * at any given time. It is used to manage synchronization and resource
+ * allocation for rendering operations in Vulkan.
+ *
+ */
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>
