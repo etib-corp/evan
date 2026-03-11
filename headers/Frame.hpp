@@ -35,6 +35,8 @@ namespace evan {
         void createSyncObjects(VkDevice device);
         void createUniformBuffer(const ADeviceBackend &deviceBackend);
 
+        VkBuffer getUniformBuffer() const;
+
         protected:
         VkCommandBuffer _commandBuffer;
         VkSemaphore _image;

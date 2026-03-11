@@ -66,3 +66,8 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
     vkMapMemory(deviceBackend._device, _uniformBufferMemory, 0, bufferSize, 0,
                 &_uniformBufferMapped);
 }
+
+VkBuffer evan::Frame::getUniformBuffer() const
+{
+    return _uniformBuffer;
+}
