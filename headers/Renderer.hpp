@@ -26,6 +26,9 @@ namespace evan {
 
         void createDescriptorPool(VkDevice device, uint32_t materialCount);
 
+        VkDescriptorPool getDescriptorPool() const;
+        const std::vector<VkBuffer>& getUniformBuffers() const;
+
         protected:
             VkPipeline _pipeline;
             VkPipelineLayout _pipelineLayout;

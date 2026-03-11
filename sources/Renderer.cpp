@@ -182,6 +182,20 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 	}
 }
 
+VkDescriptorPool evan::Renderer::getDescriptorPool() const
+{
+	return _descriptorPool;
+}
+
+const std::vector<VkBuffer>& evan::Renderer::getUniformBuffers() const
+{
+	std::vector<VkBuffer> uniformBuffers;
+	for (const Frame& frame: _frames) {
+		uniformBuffers.push_back(frame.getUniformBuffer());
+	}
+	return uniformBuffers;
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////
