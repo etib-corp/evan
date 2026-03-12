@@ -10,6 +10,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "Renderer.hpp"
+
 evan::Material::Material(const DeviceContext &deviceContext,
 						 const Renderer &renderer,
 						 const std::string &texturePath)

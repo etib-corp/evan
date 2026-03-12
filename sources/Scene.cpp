@@ -7,6 +7,8 @@
 
 #include "Scene.hpp"
 
+#include "Renderer.hpp"
+
 evan::Scene::Scene(const DeviceContext &deviceContext, const Renderer &renderer,
                 std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData)
 {

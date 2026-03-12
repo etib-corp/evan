@@ -11,10 +11,11 @@
 
 #include "ADeviceBackend.hpp"
 #include "DeviceContext.hpp"
-#include "Renderer.hpp"
 
 namespace evan
 {
+	class Renderer;
+
 	class Material
 	{
 		public:

@@ -16,6 +16,8 @@
 #include <map>
 
 namespace evan {
+    class Renderer;
+
     class Scene {
         public:
         Scene(const DeviceContext &deviceContext, const Renderer &renderer,
