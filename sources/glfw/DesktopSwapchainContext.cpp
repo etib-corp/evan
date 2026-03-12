@@ -16,3 +16,8 @@ evan::DesktopSwapchainContext::DesktopSwapchainContext(const DeviceContext &devi
 evan::DesktopSwapchainContext::~DesktopSwapchainContext()
 {
 }
+
+VkResult evan::DesktopSwapchainContext::aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
+{
+    return vkAcquireNextImageKHR(device, _swapchainImage->_swapchain, UINT64_MAX, imageAvailableSemaphore, inFlightFence, &imageIndex);
+}

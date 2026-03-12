@@ -17,8 +17,9 @@ namespace evan {
         DesktopSwapchainImage(const DeviceContext &deviceContext, GLFWwindow *window, VkRenderPass renderpass);
         ~DesktopSwapchainImage();
 
+        VkSwapchainKHR _swapchain;
+
         private:
-            VkSwapchainKHR _swapchain;
 
             VkSurfaceFormatKHR chooseSwapSurfaceFormat(
 	            const std::vector<VkSurfaceFormatKHR> &availableFormats);

@@ -19,6 +19,8 @@ namespace evan {
         DesktopSwapchainContext(const DeviceContext &deviceContext, GLFWwindow *window);
         ~DesktopSwapchainContext();
 
+        VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
+
         private:
         std::shared_ptr<DesktopSwapchainImage> _swapchainImage;
 

@@ -67,6 +67,8 @@ namespace evan
 
 		VkRenderPass getRenderPass() const;
 
+		virtual VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) = 0;
+
 		protected:
 		VkRenderPass _renderPass;
 
