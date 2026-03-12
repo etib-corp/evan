@@ -71,3 +71,8 @@ VkBuffer evan::Frame::getUniformBuffer() const
 {
     return _uniformBuffer;
 }
+
+void evan::Frame::resetCommandBuffer()
+{
+    vkResetCommandBuffer(_commandBuffer, /*VkCommandBufferResetFlagBits*/ 0);
+}

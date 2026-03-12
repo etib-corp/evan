@@ -37,11 +37,14 @@ namespace evan {
 
         VkBuffer getUniformBuffer() const;
 
-        protected:
-        VkCommandBuffer _commandBuffer;
-        VkSemaphore _image;
-        VkSemaphore _render;
+        void resetCommandBuffer();
+
         VkFence _inFlight;
+        VkSemaphore _image;
+        VkCommandBuffer _commandBuffer;
+
+        protected:
+        VkSemaphore _render;
         VkBuffer _uniformBuffer;
         VkDeviceMemory _uniformBufferMemory;
         void * _uniformBufferMapped;
