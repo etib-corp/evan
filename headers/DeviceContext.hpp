@@ -10,9 +10,9 @@
 #include "EvanPlatform.hpp"
 #include "ADeviceBackend.hpp"
 
-#ifdef OPENXR
+#ifdef __OPENXR__
 	#include "xr/XrPlatform.hpp"
-#elif defined(GLFW)
+#elif defined(__GLFW__)
 	#include "glfw/DesktopPlatform.hpp"
 #endif
 
