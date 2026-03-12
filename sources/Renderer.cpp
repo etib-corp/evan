@@ -182,6 +182,11 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 	}
 }
 
+void evan::Renderer::createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend)
+{
+	_frames.emplace_back(commandPool, deviceBackend);
+}
+
 VkDescriptorPool evan::Renderer::getDescriptorPool() const
 {
 	return _descriptorPool;
