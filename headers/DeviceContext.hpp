@@ -11,7 +11,8 @@
 #include "ADeviceBackend.hpp"
 
 #ifdef __OPENXR__
-	#include "xr/XrPlatform.hpp"
+	#include "openxr/XrPlatform.hpp"
+	#include "openxr/XrDeviceBackend.hpp"
 #elif defined(__GLFW__)
 	#include "glfw/DesktopPlatform.hpp"
 	#include "glfw/DesktopBackend.hpp"

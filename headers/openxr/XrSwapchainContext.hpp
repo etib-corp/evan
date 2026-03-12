@@ -23,6 +23,8 @@ namespace evan
     public:
         XrSwapchainContext(const DeviceContext& deviceContext);
 
+        VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
+
     private:
         std::vector<XrViewConfigurationView> _viewsConfigurations;
         std::map<XrSwapchain, std::shared_ptr<ASwapchainImage>> _swapchainImages; // Map of swapchain to its images

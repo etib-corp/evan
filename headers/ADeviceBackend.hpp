@@ -351,17 +351,17 @@ namespace evan
 		void copyBuffer(const CopyBufferProperties &properties) const;
 
 		VkInstance
-			_VkInstance;	/// The Vulkan instance, which is the connection
+			_VkInstance = VK_NULL_HANDLE;	/// The Vulkan instance, which is the connection
 							/// between the application and the Vulkan library.
 							/// It is used to create and manage Vulkan resources
 							/// and to query the capabilities of the Vulkan
 							/// implementation.
 		VkPhysicalDevice
-			_physicalDevice;	/// The physical device, which represents a
+			_physicalDevice = VK_NULL_HANDLE;	/// The physical device, which represents a
 								/// Vulkan-compatible GPU. It is used to query
 								/// the capabilities of the GPU and to create
 								/// logical devices for rendering operations.
-		VkDevice _device;		/// The logical device, which represents an
+		VkDevice _device = VK_NULL_HANDLE;		/// The logical device, which represents an
 								/// instance of a physical device and is used to
 								/// perform rendering operations.
 		private:

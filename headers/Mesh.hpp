@@ -11,6 +11,8 @@
 
 #include "Vertex.hpp"
 
+#include <string>
+
 namespace evan {
     struct Mesh {
         std::vector<Vertex> vertices;

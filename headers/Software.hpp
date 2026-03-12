@@ -16,8 +16,8 @@
 #include "IPlatform.hpp"
 
 #ifdef __OPENXR__
-    #include "openxr/XRPlatform.hpp"
-    #include "openxr/XRSwapchainContext.hpp"
+    #include "openxr/XrPlatform.hpp"
+    #include "openxr/XrSwapchainContext.hpp"
 #elif defined(__GLFW__)
     #include "glfw/DesktopPlatform.hpp"
     #include "glfw/DesktopSwapchainContext.hpp"

@@ -18,9 +18,6 @@ evan::XrSwapchainContext::XrSwapchainContext(
     _viewsConfigurations = dynamic_cast<XrDeviceBackend *>(deviceContext.getDeviceBackend().get())->enumerateViewConfigurations();
     _views.resize(_viewsConfigurations.size(), { XR_TYPE_VIEW });
 
-    auto swapchainFormatCount = deviceContext.getDeviceBackend()->countSwapchainFormats();
-	auto swapchainFormats =
-		deviceContext.getDeviceBackend()->enumerateSwapchainFormats(swapchainFormatCount);
 	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
 
     for (const auto &viewConfig : _viewsConfigurations) {
@@ -50,4 +47,16 @@ evan::XrSwapchainContext::XrSwapchainContext(
         };
         _swapchainImages[swapchain] = std::make_shared<XrSwapchainImage>(properties);
     }
+}
+
+VkResult evan::XrSwapchainContext::aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
+{
+    XrSwapchainImageAcquireInfo acquire_info{};
+    acquire_info.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
+    XrResult result = xrAcquireSwapchainImage(_swapchainImages.begin()->first, &acquire_info, &imageIndex);
+    if (result != XR_SUCCESS) {
+        std::cerr << "Failed to acquire swapchain image with error code: " << result << std::endl;
+        return VK_ERROR_OUT_OF_DATE_KHR;
+    }
+    return VK_SUCCESS;
 }

@@ -10,9 +10,9 @@
 evan::Software::Software()
 {
     #ifdef __OPENXR__
-        _platform = std::make_shared<XRPlatform>(); // TODO: Pass the platform data
+        _platform = std::make_shared<XrPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext);
+        _swapchainContext = std::make_shared<XrSwapchainContext>(*_deviceContext);
     #elif defined(__GLFW__)
         _platform = std::make_shared<DesktopPlatform>("Evan app", 800, 600);
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
@@ -27,9 +27,9 @@ evan::Software::Software()
 evan::Software::Software(const std::string &windowName, const uint32_t width, const uint32_t height)
 {
     #ifdef __OPENXR__
-        _platform = std::make_shared<XRPlatform>(); // TODO: Pass the platform data
+        _platform = std::make_shared<XrPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext);
+        _swapchainContext = std::make_shared<XrSwapchainContext>(*_deviceContext);
     #elif defined(__GLFW__)
         _platform = std::make_shared<DesktopPlatform>(windowName, width, height);
         _deviceContext = std::make_shared<DeviceContext>(*_platform);

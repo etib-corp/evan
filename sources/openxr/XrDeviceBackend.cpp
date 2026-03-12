@@ -21,8 +21,12 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 
 evan::XrDeviceBackend::~XrDeviceBackend()
 {
-	xrDestroySession(_session);
-	xrDestroyInstance(_XrInstance);
+	if (_session != XR_NULL_HANDLE) {
+		xrDestroySession(_session);
+	}
+	if (_XrInstance != XR_NULL_HANDLE) {
+		xrDestroyInstance(_XrInstance);
+	}
 }
 
 void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
@@ -47,6 +51,15 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 				  << std::endl;
 		return;
 	}
+	XrResult xrResult =
+		getVulkanGraphicsRequirements2KHR(_XrInstance, _systemId,
+									  &graphicsRequirements);
+	if (xrResult != XR_SUCCESS) {
+		std::cerr
+			<< "Failed to query Vulkan graphics requirements through OpenXR."
+			<< std::endl;
+		return;
+	}
 	if (xrGetInstanceProcAddr(
 			_XrInstance, "xrCreateVulkanInstanceKHR",
 			reinterpret_cast<PFN_xrVoidFunction *>(&createVulkanInstanceKHR))
@@ -62,12 +75,12 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 	appInfo.applicationVersion = appVersion.to_uint32_t();
 	appInfo.pEngineName		   = "evan";
 	appInfo.engineVersion	   = VK_MAKE_VERSION(0, 1, 0);
-	appInfo.apiVersion		   = VK_API_VERSION_1_0;
+	appInfo.apiVersion		   = graphicsRequirements.minApiVersionSupported;
 
 	if (enableValidationLayers) {
-		layers = this->getRequiredInstanceExtensions();
-		if (!layers.empty()) {
-			extensions = this->getRequiredInstanceExtensionsAndroid();
+		extensions = this->getRequiredInstanceExtensions();
+		if (!extensions.empty()) {
+			layers = this->getRequiredInstanceExtensionsAndroid();
 		}
 	}
 
@@ -112,7 +125,7 @@ void evan::XrDeviceBackend::createLogicalDevice()
 		return;
 	}
 	evan::QueueFamilyIndices indices = findQueueFamilies();
-	if (!indices.isComplete()) {
+	if (!indices.graphicsFamily.has_value()) {
 		std::cerr
 			<< "Failed to find required queue families for the Vulkan device."
 			<< std::endl;
@@ -184,9 +197,12 @@ void evan::XrDeviceBackend::pickPhysicalDevice()
 
 void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 {
+	std::vector<std::string> requiredExtensions =
+		platform.getRequiredInstanceExtensions();
 	std::vector<const char *> extensions;
+	extensions.reserve(requiredExtensions.size());
 
-	for (const auto &ext: platform.getRequiredInstanceExtensions()) {
+	for (const auto &ext: requiredExtensions) {
 		extensions.push_back(ext.c_str());
 	}
 
@@ -228,12 +244,19 @@ void evan::XrDeviceBackend::createSession()
 {
 	XrSessionCreateInfo sessionCreateInfo			  = {};
 	XrGraphicsBindingVulkan2KHR graphicsBindingVulkan = {};
+	QueueFamilyIndices indices = findQueueFamilies();
+
+	if (indices.graphicsFamily == std::nullopt) {
+		std::cerr << "Failed to create OpenXR session: no graphics queue family found."
+				  << std::endl;
+		return;
+	}
 
 	graphicsBindingVulkan.type			 = XR_TYPE_GRAPHICS_BINDING_VULKAN2_KHR;
 	graphicsBindingVulkan.instance		 = _VkInstance;
 	graphicsBindingVulkan.physicalDevice = _physicalDevice;
 	graphicsBindingVulkan.device		 = _device;
-	graphicsBindingVulkan.queueFamilyIndex = this->findQueueFamilies().graphicsFamily.value();
+	graphicsBindingVulkan.queueFamilyIndex = indices.graphicsFamily.value();
 
 	sessionCreateInfo.type	   = XR_TYPE_SESSION_CREATE_INFO;
 	sessionCreateInfo.next	   = &graphicsBindingVulkan;
@@ -241,7 +264,7 @@ void evan::XrDeviceBackend::createSession()
 
 	if (xrCreateSession(_XrInstance, &sessionCreateInfo, &_session)
 		!= XR_SUCCESS) {
-		// TODO: Throw error here
+		std::cerr << "Failed to create OpenXR session." << std::endl;
 		return;
 	}
 }
@@ -300,7 +323,7 @@ std::vector<const char *>
 
 	for (const auto &layer: this->getAvailableLayers()) {
 		if (std::strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0) {
-			availableLayers.emplace_back(layer.layerName);
+			availableLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 		}
 	}
 	return availableLayers;
@@ -321,9 +344,6 @@ evan::QueueFamilyIndices evan::XrDeviceBackend::findQueueFamilies()
 	for (uint32_t i = 0; i < queueFamilies.size(); i++) {
 		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
-		}
-
-		if (indices.isComplete()) {
 			break;
 		}
 	}

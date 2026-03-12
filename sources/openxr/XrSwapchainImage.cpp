@@ -36,7 +36,7 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
         image.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
     }
     for (size_t i = 0; i < _swapchainImages.size(); ++i) {
-        properties.deviceContext.getDeviceBackend()->createImageView(_swapchainImages[i].image, _format, VK_IMAGE_ASPECT_COLOR_BIT, 1, _imageViews[i]);
+         _imageViews[i] = properties.deviceContext.getDeviceBackend()->createImageView(_swapchainImages[i].image, _format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 
     this->createColorResources(*properties.deviceContext.getDeviceBackend(), properties.deviceContext.getMsaaSamples());
