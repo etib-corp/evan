@@ -100,7 +100,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility stb)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
