@@ -20,6 +20,8 @@ evan::Software::Software()
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
+    auto deviceBackend = _deviceContext->getDeviceBackend();
+    _renderer = std::make_shared<Renderer>(deviceBackend->_device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
 }
 
 evan::Software::Software(const std::string &windowName, const uint32_t width, const uint32_t height)
@@ -35,6 +37,8 @@ evan::Software::Software(const std::string &windowName, const uint32_t width, co
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
+    auto deviceBackend = _deviceContext->getDeviceBackend();
+    _renderer = std::make_shared<Renderer>(deviceBackend->_device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
 }
 
 evan::Software::~Software()

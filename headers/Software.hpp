@@ -49,6 +49,14 @@ namespace evan
             Software(const std::string &windowName, const uint32_t width, const uint32_t height);
             ~Software();
 
+            void init();
+
+            void run();
+
+            void update(); // For logic updates, input handling, etc.
+
+            void render(); // For rendering the current scene.
+
             void addScene(std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData);
 
         protected:
