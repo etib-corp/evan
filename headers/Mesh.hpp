@@ -9,6 +9,8 @@
 
 #include "EvanPlatform.hpp"
 
+#include "Vertex.hpp"
+
 namespace evan {
     struct Mesh {
         std::vector<Vertex> vertices;
