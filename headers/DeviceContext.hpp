@@ -14,6 +14,7 @@
 	#include "xr/XrPlatform.hpp"
 #elif defined(__GLFW__)
 	#include "glfw/DesktopPlatform.hpp"
+	#include "glfw/DesktopBackend.hpp"
 #endif
 
 #include <iostream>

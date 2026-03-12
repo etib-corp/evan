@@ -43,7 +43,7 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
     #ifdef __OPENXR__
         _deviceBackend = std::make_shared<XrDeviceBackend>(platform);
     #elif defined(__GLFW__)
-        _deviceBackend = std::make_shared<DesktopBackend>(platform);
+        _deviceBackend = std::make_shared<DesktopBackend>((DesktopPlatform&)platform);
     #else
         std::cerr << "No platform defined. Please define either OPENXR or GLFW." << std::endl;
         throw std::runtime_error("No platform defined for DeviceContext.");
