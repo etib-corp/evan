@@ -20,14 +20,6 @@ evan::Software::Software()
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
-    auto device = _deviceContext->getDeviceBackend()->_device;
-
-    _renderer = std::make_shared<Renderer>();
-    _renderer->createGraphicsPipeline(device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        _renderer->createFrame(_deviceContext->getCommandPool(), *_deviceContext->getDeviceBackend());
-    }
-    _renderer->createDescriptorPool(device, 1000); // TODO: Change this with the AssetManager when it will be implemented
 }
 
 evan::Software::Software(const std::string &windowName, const uint32_t width, const uint32_t height)
@@ -43,14 +35,6 @@ evan::Software::Software(const std::string &windowName, const uint32_t width, co
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
-    auto device = _deviceContext->getDeviceBackend()->_device;
-
-    _renderer = std::make_shared<Renderer>();
-    _renderer->createGraphicsPipeline(device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        _renderer->createFrame(_deviceContext->getCommandPool(), *_deviceContext->getDeviceBackend());
-    }
-    _renderer->createDescriptorPool(device, 1000); // TODO: Change this with the AssetManager when it will be implemented
 }
 
 evan::Software::~Software()

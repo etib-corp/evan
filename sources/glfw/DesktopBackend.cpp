@@ -27,7 +27,9 @@ evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
 	this->createInstance(platform, "Evan", appVersion);
 	this->createSurface(_VkInstance, platform._window);
 	this->pickPhysicalDevice();
+	std::cout << "Physical device picked" << std::endl;
 	this->createLogicalDevice();
+	std::cout << "Logical device created" << std::endl;
 }
 
 evan::DesktopBackend::~DesktopBackend()
@@ -182,11 +184,23 @@ bool evan::DesktopBackend::isDeviceSuitable(
 	VkPhysicalDevice device, VkSurfaceKHR surface,
 	std::vector<const char *> deviceExtensions)
 {
+	// Temporary assignment to check device properties and features before picking the device.
+	// This will be reset to VK_NULL_HANDLE if the device is not suitable.
+	_physicalDevice = device;
+
 	QueueFamilyIndices indices = this->findQueueFamilies();
+
+	_physicalDevice = VK_NULL_HANDLE;
+	std::cout << "Queue families found: " << indices.graphicsFamily.has_value()
+			  << " (graphics), " << indices.presentFamily.has_value()
+			  << " (present)" << std::endl;
 	bool extensionsSupported =
 		this->checkDeviceExtensionSupport(device, deviceExtensions);
+	std::cout << "Device extensions supported: " << extensionsSupported
+			  << std::endl;
 	bool swapChainAdequate = false;
 
+	std::cout << "Checking swap chain adequacy..." << std::endl;
 	if (extensionsSupported) {
 		SwapChainSupportDetails swapChainSupport =
 			this->querySwapChainSupport(device, surface);
