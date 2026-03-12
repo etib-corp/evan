@@ -19,8 +19,10 @@
 namespace evan {
     class Renderer {
         public:
-        Renderer();
+        Renderer(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
         ~Renderer();
+
+        void createDescriptorSetLayout(VkDevice device);
 
         void createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
 
