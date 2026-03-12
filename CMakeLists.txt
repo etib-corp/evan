@@ -71,6 +71,14 @@ FetchContent_Declare(glm
 )
 FetchContent_MakeAvailable(glm)
 
+FetchContent_Declare(stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG 2fb8c5a3deb2110c89669f8d6f36e5833b556b44 # commit from March 5, 2026
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(stb)
+
 FetchContent_Declare(utility
     GIT_REPOSITORY https://github.com/etib-corp/utility.git
     GIT_TAG main
@@ -92,7 +100,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility stb)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)
@@ -180,6 +188,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${HEADERS_DIR}>
         $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${stb_SOURCE_DIR}>
 )
 
 # Optional components
