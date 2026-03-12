@@ -196,6 +196,11 @@ const std::vector<VkBuffer>& evan::Renderer::getUniformBuffers() const
 	return uniformBuffers;
 }
 
+VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
+{
+	return _descriptorSetLayout;
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////

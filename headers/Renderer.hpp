@@ -28,6 +28,7 @@ namespace evan {
 
         VkDescriptorPool getDescriptorPool() const;
         const std::vector<VkBuffer>& getUniformBuffers() const;
+        VkDescriptorSetLayout getDescriptorSetLayout() const;
 
         protected:
             VkPipeline _pipeline;
