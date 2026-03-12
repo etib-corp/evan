@@ -49,8 +49,6 @@ namespace evan
             Software(const std::string &windowName, const uint32_t width, const uint32_t height);
             ~Software();
 
-            void init();
-
             void run();
 
             void update(); // For logic updates, input handling, etc.

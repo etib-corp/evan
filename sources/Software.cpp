@@ -49,3 +49,24 @@ void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<st
 {
     _scenes.emplace_back(*_deviceContext, *_renderer, texturePaths, meshData);
 }
+
+void evan::Software::run()
+{
+    while (!_platform->shouldClose()) {
+        _platform->pollEvents();
+
+        this->update();
+        this->render();
+    }
+}
+
+void evan::Software::update()
+{
+    // Logic updates, input handling, etc.
+    // Will be implemented in the future when the input system and scene management will be implemented.
+}
+
+void evan::Software::render()
+{
+    // Render the current scene.
+}
