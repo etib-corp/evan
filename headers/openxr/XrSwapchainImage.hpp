@@ -45,9 +45,6 @@ operations needed for managing the swapchain images, such as creating image view
 
         XrSwapchainImage(const CreateXrSwapchainImageProperties &properties);
 
-        void createCommandBuffer(const DeviceContext &deviceContext);
-
-        void createSynchronizationObjects(const DeviceContext &deviceContext);
     private:
         VkViewport _viewport = {
             0, 0, 0, 0, 0, 1.0
@@ -58,6 +55,5 @@ operations needed for managing the swapchain images, such as creating image view
         std::vector<XrSwapchainImageVulkan2KHR>
 				_swapchainImages;
         XrSwapchainImageBaseHeader *_swapchainImagesBase;	// Base pointer for swapchain images
-        std::vector<VkCommandBuffer> _commandBuffers;	// Command buffers for rendering
     };
 } // namespace evan

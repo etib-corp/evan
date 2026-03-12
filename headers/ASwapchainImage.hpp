@@ -78,16 +78,6 @@ namespace evan
 									 VkFormatFeatureFlags features);
 
 		protected:
-		const uint32_t MAX_FRAMES_IN_FLIGHT = 2;	/// The maximum number of frames that can be
-											/// processed concurrently. This is used to
-											/// manage synchronization and ensure that
-											/// the CPU does not get too far ahead of
-											/// the GPU, which can lead to increased
-											/// latency and reduced performance.
-
-		std::vector<VkFence>
-			_inFlightFences;	/// Fences to synchronize rendering operations
-								/// for each swapchain image.
 		VkImage
 			_depthImage;	/// The depth image, which is used for depth testing
 							/// during rendering. It stores depth information
