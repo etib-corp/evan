@@ -40,9 +40,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 
 evan::DeviceContext::DeviceContext(const IPlatform &platform)
 {
-    #ifdef OPENXR
+    #ifdef __OPENXR__
         _deviceBackend = std::make_shared<XrDeviceBackend>(platform);
-    #elif defined(GLFW)
+    #elif defined(__GLFW__)
         _deviceBackend = std::make_shared<DesktopBackend>(platform);
     #else
         std::cerr << "No platform defined. Please define either OPENXR or GLFW." << std::endl;
