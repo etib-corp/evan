@@ -49,10 +49,14 @@ void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 
 void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
 {
-    // TODO: Change this with the AssetManager when it will be implemented
-    // Maybe we can encapsulate the shader creation in another method.
-	std::vector<uint32_t> vertShaderCode = readFile("shaders/vert.spv");
-	std::vector<uint32_t> fragShaderCode = readFile("shaders/frag.spv");
+	auto vertShaderFile = g_assetManager->get("shaders/vert.spv");
+	auto fragShaderFile = g_assetManager->get("shaders/frag.spv");
+
+	std::string vertShaderString = vertShaderFile->content();
+	std::string fragShaderString = fragShaderFile->content();
+
+	std::vector<uint32_t> vertShaderCode(vertShaderString.size() / sizeof(uint32_t));
+	std::vector<uint32_t> fragShaderCode(fragShaderString.size() / sizeof(uint32_t));
 
     Shader shader(vertShaderCode, fragShaderCode, device);
 
@@ -236,25 +240,4 @@ const std::vector<VkBuffer>& evan::Renderer::getUniformBuffers() const
 VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
 {
 	return _descriptorSetLayout;
-}
-
-/////////////////////
-// Private Methods //
-/////////////////////
-
-std::vector<uint32_t> evan::Renderer::readFile(const std::string &filename)
-{
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		throw std::runtime_error("Failed to open file: " + filename);
-	}
-
-	size_t fileSize = (size_t)file.tellg();
-	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-
-	file.seekg(0);
-	file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
-	file.close();
-	return buffer;
 }

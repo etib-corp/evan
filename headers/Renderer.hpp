@@ -42,8 +42,5 @@ namespace evan {
             VkDescriptorSetLayout _descriptorSetLayout;
             VkDescriptorPool _descriptorPool;
 
-        private:
-            std::vector<uint32_t> readFile(const std::string &filename);
-
     };
 }
