@@ -22,6 +22,47 @@ namespace evan
 	{
 		public:
 		/**
+		 * @struct CopyBufferProperties
+		 * @brief Encapsulates properties required for copying data between
+		 * Vulkan buffers.
+		 *
+		 * This structure holds all necessary Vulkan objects and parameters
+		 * needed to perform a buffer-to-buffer copy operation, such as the
+		 * logical device, command pool, graphics queue, source and destination
+		 * buffers, and the size of the data to copy.
+		 *
+		 */
+		struct CopyBufferProperties {
+			/*
+			 * @brief The Vulkan logical device used for command buffer
+			 * operations.
+			 */
+			VkDevice _logicalDevice;
+			/*
+			 * @brief The Vulkan command pool used to allocate command buffers
+			 * for the copy operation.
+			 */
+			VkCommandPool _commandPool;
+			/*
+			 * @brief The Vulkan graphics queue used to submit the command
+			 * buffer for execution.
+			 */
+			VkQueue _graphicsQueue;
+			/*
+			 * @brief The Vulkan buffer from which data will be copied.
+			 */
+			VkBuffer _srcBuffer;
+			/*
+			 * @brief The Vulkan buffer to which data will be copied.
+			 */
+			VkBuffer _dstBuffer;
+			/*
+			 * @brief The size of the data to copy in bytes.
+			 */
+			VkDeviceSize _size;
+		};
+
+		/**
 		 * @brief Properties required to copy data from a buffer to an image in
 		 * Vulkan.
 		 *
@@ -306,6 +347,8 @@ namespace evan
 
 		void copyBufferToImage(
 			const CopyBufferToImageProperties &properties) const;
+
+		void copyBuffer(const CopyBufferProperties &properties) const;
 
 		VkInstance
 			_VkInstance;	/// The Vulkan instance, which is the connection

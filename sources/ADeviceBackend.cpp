@@ -289,3 +289,18 @@ void evan::ADeviceBackend::copyBufferToImage(
 								properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
 }
+
+void evan::ADeviceBackend::copyBuffer(const CopyBufferProperties &properties) const
+{
+	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(
+		properties._logicalDevice, properties._commandPool);
+
+	VkBufferCopy copyRegion {};
+	copyRegion.size = properties._size;
+	vkCmdCopyBuffer(commandBuffer, properties._srcBuffer, properties._dstBuffer,
+					1, &copyRegion);
+
+	this->endSingleTimeCommands(properties._logicalDevice,
+								 properties._commandPool,
+								 properties._graphicsQueue, commandBuffer);
+}
