@@ -90,7 +90,7 @@ namespace evan
 		void generateMipmaps(const GenerateMipmapsProperties &properties,
 							 const ADeviceBackend &deviceBackend);
 
-		VkSamplerCreateInfo evan::Material::getDefaultSamplerInfo(
+		VkSamplerCreateInfo getDefaultSamplerInfo(
 			const VkPhysicalDeviceProperties &properties);
 
 		private:
