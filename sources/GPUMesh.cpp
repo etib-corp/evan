@@ -2,12 +2,12 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** Mesh
+** GPUMesh
 */
 
-#include "Mesh.hpp"
+#include "GPUMesh.hpp"
 
-evan::Mesh::Mesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID)
+evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID)
 {
     auto deviceBackend = deviceContext.getDeviceBackend();
 	_indexCount = indices.size();
@@ -65,11 +65,11 @@ evan::Mesh::Mesh(const DeviceContext &deviceContext, std::vector<Vertex> vertice
     this->createIndexBuffer(deviceContext, indices);
 }
 
-evan::Mesh::~Mesh()
+evan::GPUMesh::~GPUMesh()
 {
 }
 
-void evan::Mesh::createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices)
+void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices)
 {
 	auto deviceBackend = deviceContext.getDeviceBackend();
 

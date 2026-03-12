@@ -2,7 +2,7 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** Mesh
+** GPUMesh
 */
 
 #pragma once
@@ -14,10 +14,10 @@
 #include "Vertex.hpp"
 
 namespace evan {
-    class Mesh {
+    class GPUMesh {
         public:
-        Mesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID);
-        ~Mesh();
+        GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID);
+        ~GPUMesh();
 
         void createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices);
 
