@@ -33,59 +33,15 @@ namespace evan
 	class ASwapchainImage
 	{
 		public:
-		/**
-		 * @struct TransitionImageLayoutProperties
-		 * @brief Encapsulates the properties required to perform an image
-		 * layout transition in Vulkan.
-		 *
-		 * This structure holds all necessary Vulkan objects and parameters
-		 * needed to transition the layout of a VkImage, such as device, command
-		 * pool, queue, image, format, old and new layouts, and the number of
-		 * mipmap levels.
-		 *
-		 */
-		struct TransitionImageLayoutProperties {
-			/*
-			 * @brief The Vulkan logical device used for command buffer
-			 * operations.
-			 */
-			VkDevice _logicalDevice;
-			/*
-			 * @brief The Vulkan command pool used to allocate command buffers
-			 * for the layout transition.
-			 */
-			VkCommandPool _commandPool;
-			/*
-			 * @brief The Vulkan graphics queue used to submit the command
-			 * buffer for execution.
-			 */
-			VkQueue _graphicsQueue;
-			/*
-			 * @brief The Vulkan image whose layout is to be transitioned.
-			 */
-			VkImage _image;
-			/*
-			 * @brief The format of the image being transitioned.
-			 */
-			VkFormat _format;
-			/*
-			 * @brief The old layout of the image before the transition.
-			 */
-			VkImageLayout _oldLayout;
-			/*
-			 * @brief The new layout of the image after the transition.
-			 */
-			VkImageLayout _newLayout;
-			/*
-			 * @brief The number of mipmap levels in the image.
-			 */
-			uint32_t _mipLevels;
-		};
-
 		virtual ~ASwapchainImage();
 
 		/**
 		 * @brief Creates image views for the swapchain images.
+		 *
+		 * @param deviceBackend A reference to the ADeviceBackend instance,
+		 * which is used to create the image views. The ADeviceBackend provides
+		 * the necessary Vulkan device and other resources required for image
+		 * view creation.
 		 *
 		 * This function iterates through the swapchain images and creates image
 		 * views for each image. Image views are used to describe how the images
@@ -93,7 +49,7 @@ namespace evan
 		 * created image views are stored in the _imageViews vector for later
 		 * use in the rendering pipeline.
 		 */
-		void createImageViews(VkDevice logicalDevice);
+		void createImageViews(const ADeviceBackend &deviceBackend);
 
 		/**
 		 * @brief Creates color resources for the swapchain images.
@@ -105,7 +61,8 @@ namespace evan
 		 * output. The function takes the logical device, physical device, and
 		 * the number of samples for multisamplin
 		 */
-		void createColorResources(const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples);
+		void createColorResources(const ADeviceBackend &deviceBackend,
+								  VkSampleCountFlagBits msaaSamples);
 
 		void createDepthResources(const DeviceContext &deviceContext);
 
@@ -115,10 +72,10 @@ namespace evan
 		void createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain);
 
 		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
-		VkFormat findSupportedFormat(
-			VkPhysicalDevice physicalDevice,
-			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
-			VkFormatFeatureFlags features);
+		VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice,
+									 const std::vector<VkFormat> &candidates,
+									 VkImageTiling tiling,
+									 VkFormatFeatureFlags features);
 
 		protected:
 		const uint32_t MAX_FRAMES_IN_FLIGHT = 2;	/// The maximum number of frames that can be
@@ -204,61 +161,6 @@ namespace evan
 							  /// is used during the rendering process to
 							  /// specify where the rendered output should be
 							  /// stored.
-		std::vector<VkFence> _inFlightFences;	/// A vector of Vulkan fences used to synchronize
-								/// rendering operations for each swapchain image.
-								/// Fences are used to ensure that the CPU does not
-								/// get too far ahead of the GPU, which can lead to
-								/// increased latency and reduced performance. Each
-								/// fence corresponds to a specific swapchain image
-								/// and is signaled when the rendering operations for
-								/// that image are complete, allowing the CPU to
-								/// proceed with the next set of rendering commands.
-
-		std::vector<VkFence> _imageAvailableFences;	/// A vector of Vulkan fences used to synchronize
-								/// the availability of swapchain images for
-								/// rendering. These fences are signaled when a
-								/// swapchain image becomes available for rendering,
-								/// allowing the CPU to proceed with rendering
-								/// commands that target that image. Each fence
-								/// corresponds to a specific swapchain image and is
-								/// used to manage synchronization between the CPU and
-								/// GPU during the rendering process.
-
-		/**
-		 * @brief Creates a Vulkan image view for a given image.
-		 *
-		 * This function sets up and creates a Vulkan image view, which is used
-		 * to describe how an image resource should be accessed. It specifies
-		 * the format, view type, and subresource range for the image view.
-		 *
-		 * @param image The Vulkan image for which the image view is created.
-		 * @param format The format of the image view (e.g.,
-		 * VK_FORMAT_R8G8B8A8_SRGB).
-		 * @param aspectFlags Specifies which aspect(s) of the image are
-		 * included in the view (e.g., VK_IMAGE_ASPECT_COLOR_BIT for color
-		 * images).
-		 * @param logicalDevice The Vulkan logical device used to create the
-		 * image view.
-		 *
-		 * @return A VkImageView handle representing the created image view.
-		 *
-		 * @throws std::runtime_error If the image view creation fails.
-		 */
-
-		VkImageView createImageView(VkImage image, VkFormat format,
-									VkImageAspectFlags aspectFlags,
-									VkDevice logicalDevice, uint32_t mipLevels);
 		private:
-
-		void transitionImageLayout(
-			const TransitionImageLayoutProperties &properties);
-
-		VkCommandBuffer beginSingleTimeCommands(VkDevice logicalDevice,
-												VkCommandPool commandPool);
-		bool hasStencilComponent(VkFormat format);
-		void endSingleTimeCommands(VkDevice logicalDevice,
-								   VkCommandPool commandPool,
-								   VkQueue graphicsQueue,
-								   VkCommandBuffer commandBuffer);
 	};
 }	 // namespace evan

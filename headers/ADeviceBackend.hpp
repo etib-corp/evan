@@ -14,12 +14,104 @@
 #include "QueueFamilyIndices.hpp"
 
 #include <set>
+#include <iostream>
 
 namespace evan
 {
 	class ADeviceBackend
 	{
 		public:
+		/**
+		 * @brief Properties required to copy data from a buffer to an image in
+		 * Vulkan.
+		 *
+		 * This structure encapsulates all necessary Vulkan objects and
+		 * parameters needed to perform a buffer-to-image copy operation.
+		 *
+		 */
+		struct CopyBufferToImageProperties {
+			/*
+			 * @brief The Vulkan logical device used for command buffer
+			 * operations.
+			 */
+			VkDevice _logicalDevice;
+			/*
+			 * @brief The Vulkan command pool used to allocate command buffers
+			 * for the copy operation.
+			 */
+			VkCommandPool _commandPool;
+			/*
+			 * @brief The Vulkan graphics queue used to submit the command
+			 * buffer for execution.
+			 */
+			VkQueue _graphicsQueue;
+			/*
+			 * @brief The Vulkan buffer containing the image data to be copied.
+			 */
+			VkBuffer _buffer;
+			/*
+			 * @brief The Vulkan image to which the data will be copied.
+			 */
+			VkImage _image;
+			/*
+			 * @brief The layout of the image before the copy operation.
+			 */
+			uint32_t _width;
+			/*
+			 * @brief The layout of the image before the copy operation.
+			 */
+			uint32_t _height;
+		};
+
+		/**
+		 * @struct TransitionImageLayoutProperties
+		 * @brief Encapsulates the properties required to perform an image
+		 * layout transition in Vulkan.
+		 *
+		 * This structure holds all necessary Vulkan objects and parameters
+		 * needed to transition the layout of a VkImage, such as device, command
+		 * pool, queue, image, format, old and new layouts, and the number of
+		 * mipmap levels.
+		 *
+		 */
+		struct TransitionImageLayoutProperties {
+			/*
+			 * @brief The Vulkan logical device used for command buffer
+			 * operations.
+			 */
+			VkDevice _logicalDevice;
+			/*
+			 * @brief The Vulkan command pool used to allocate command buffers
+			 * for the layout transition.
+			 */
+			VkCommandPool _commandPool;
+			/*
+			 * @brief The Vulkan graphics queue used to submit the command
+			 * buffer for execution.
+			 */
+			VkQueue _graphicsQueue;
+			/*
+			 * @brief The Vulkan image whose layout is to be transitioned.
+			 */
+			VkImage _image;
+			/*
+			 * @brief The format of the image being transitioned.
+			 */
+			VkFormat _format;
+			/*
+			 * @brief The old layout of the image before the transition.
+			 */
+			VkImageLayout _oldLayout;
+			/*
+			 * @brief The new layout of the image after the transition.
+			 */
+			VkImageLayout _newLayout;
+			/*
+			 * @brief The number of mipmap levels in the image.
+			 */
+			uint32_t _mipLevels;
+		};
+
 		/**
 		 * @struct CreateImageProperties
 		 * @brief Encapsulates the properties required to create a Vulkan image
@@ -141,7 +233,8 @@ namespace evan
 									Version &appVersion) = 0;
 
 		virtual uint32_t countSwapchainFormats() const = 0;
-		virtual std::vector<int64_t> enumerateSwapchainFormats(uint32_t swapchainFormatCount) const = 0;
+		virtual std::vector<int64_t>
+			enumerateSwapchainFormats(uint32_t swapchainFormatCount) const = 0;
 
 		virtual void createLogicalDevice() = 0;
 
@@ -170,11 +263,49 @@ namespace evan
 
 		void createBuffer(const CreateBufferProperties &properties) const;
 
+		void transitionImageLayout(
+			const TransitionImageLayoutProperties &properties) const;
+		VkCommandBuffer
+			beginSingleTimeCommands(VkDevice logicalDevice,
+									VkCommandPool commandPool) const;
+		bool hasStencilComponent(VkFormat format) const;
+		void endSingleTimeCommands(VkDevice logicalDevice,
+								   VkCommandPool commandPool,
+								   VkQueue graphicsQueue,
+								   VkCommandBuffer commandBuffer) const;
+
 		uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
-											   uint32_t typeFilter,
-											   VkMemoryPropertyFlags properties) const;
+								uint32_t typeFilter,
+								VkMemoryPropertyFlags properties) const;
 
 		void createImage(const CreateImageProperties &properties) const;
+
+		/**
+		 * @brief Creates a Vulkan image view for a given image.
+		 *
+		 * This function sets up and creates a Vulkan image view, which is used
+		 * to describe how an image resource should be accessed. It specifies
+		 * the format, view type, and subresource range for the image view.
+		 *
+		 * @param image The Vulkan image for which the image view is created.
+		 * @param format The format of the image view (e.g.,
+		 * VK_FORMAT_R8G8B8A8_SRGB).
+		 * @param aspectFlags Specifies which aspect(s) of the image are
+		 * included in the view (e.g., VK_IMAGE_ASPECT_COLOR_BIT for color
+		 * images).
+		 * @param logicalDevice The Vulkan logical device used to create the
+		 * image view.
+		 *
+		 * @return A VkImageView handle representing the created image view.
+		 *
+		 * @throws std::runtime_error If the image view creation fails.
+		 */
+		VkImageView createImageView(VkImage image, VkFormat format,
+									VkImageAspectFlags aspectFlags, uint32_t mipLevels) const;
+
+
+		void copyBufferToImage(
+			const CopyBufferToImageProperties &properties) const;
 
 		VkInstance
 			_VkInstance;	/// The Vulkan instance, which is the connection
@@ -191,6 +322,5 @@ namespace evan
 								/// instance of a physical device and is used to
 								/// perform rendering operations.
 		private:
-
 	};
 }	 // namespace evan
