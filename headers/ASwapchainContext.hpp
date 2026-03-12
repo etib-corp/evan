@@ -65,6 +65,8 @@ namespace evan
 			std::vector<VkPresentModeKHR> presentModes;
 		};
 
+		VkRenderPass getRenderPass() const;
+
 		protected:
 		VkRenderPass _renderPass;
 

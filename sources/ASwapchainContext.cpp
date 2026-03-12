@@ -96,6 +96,11 @@ void evan::ASwapchainContext::createRenderPass(
 	}
 }
 
+VkRenderPass evan::ASwapchainContext::getRenderPass() const
+{
+	return _renderPass;
+}
+
 VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 	const std::vector<int64_t> &swapchainFormats)
 {
