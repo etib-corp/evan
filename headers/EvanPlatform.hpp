@@ -22,6 +22,9 @@
 
 #pragma once
 
+#include <utility/asset_manager/android_asset_manager.hpp>
+#include <utility/asset_manager/default_asset_manager.hpp>
+
 // GLM configuration
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -98,3 +101,9 @@ typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
 								 VkDebugUtilsMessageTypeFlagsEXT,
 								 const VkDebugUtilsMessengerCallbackDataEXT *,
 								 void *);
+
+#ifdef __ANDROID__
+	const std::unique_ptr<utility::AssetManager> g_assetManager = std::make_unique<utility::AndroidAssetManager>();
+#else
+	const std::unique_ptr<utility::AssetManager> g_assetManager = std::make_unique<utility::DefaultAssetManager>();
+#endif
