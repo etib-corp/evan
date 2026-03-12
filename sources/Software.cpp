@@ -12,11 +12,11 @@ evan::Software::Software()
     #ifdef __OPENXR__
         _platform = std::make_shared<XRPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext)
+        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext);
     #elif defined(__GLFW__)
         _platform = std::make_shared<DesktopPlatform>("Evan app", 800, 600);
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<DesktopSwapchainContext>(*_deviceContext)
+        _swapchainContext = std::make_shared<DesktopSwapchainContext>(*_deviceContext, ((DesktopPlatform*)_platform.get())->_window);
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
@@ -35,11 +35,11 @@ evan::Software::Software(const std::string &windowName, const uint32_t width, co
     #ifdef __OPENXR__
         _platform = std::make_shared<XRPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext)
+        _swapchainContext = std::make_shared<XRSwapchainContext>(*_deviceContext);
     #elif defined(__GLFW__)
         _platform = std::make_shared<DesktopPlatform>(windowName, width, height);
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
-        _swapchainContext = std::make_shared<DesktopSwapchainContext>(*_deviceContext)
+        _swapchainContext = std::make_shared<DesktopSwapchainContext>(*_deviceContext, ((DesktopPlatform*)_platform.get())->_window);
     #else
         throw std::runtime_error("Unsupported platform");
     #endif
