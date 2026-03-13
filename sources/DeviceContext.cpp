@@ -51,7 +51,9 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	this->getMaxUsableSampleCount();
 	this->setupDebugMessenger();
 	this->createGraphicsQueue();
-	this->createPresentQueue();
+	#if defined(__GLFW__)
+		dynamic_cast<evan::DesktopBackend*>(_deviceBackend.get())->createPresentQueue();
+	#endif
 	this->createCommandPool();
 }
 
@@ -141,14 +143,6 @@ void evan::DeviceContext::createGraphicsQueue()
 
 	vkGetDeviceQueue(_deviceBackend->_device, indices.graphicsFamily.value(), 0,
 					 &_graphicsQueue);
-}
-
-void evan::DeviceContext::createPresentQueue()
-{
-	QueueFamilyIndices indices = _deviceBackend->findQueueFamilies();
-
-	vkGetDeviceQueue(_deviceBackend->_device, indices.presentFamily.value(), 0,
-					 &_presentQueue);
 }
 
 void evan::DeviceContext::setupDebugMessenger()

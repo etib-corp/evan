@@ -95,6 +95,16 @@ namespace evan
 		 */
 		VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
 
+		/**
+		 * @brief Creates the presentation queue for the device context.
+		 *
+		 * This function retrieves the presentation queue from the logical
+		 * device and stores it in a member variable (not shown in this
+		 * snippet). It assumes that the logical device has already been created
+		 * and that the presentation queue family index has been determined.
+		 */
+		void createPresentQueue();
+
 		uint32_t countSwapchainFormats() const override;
 		std::vector<int64_t> enumerateSwapchainFormats(
 			uint32_t swapchainFormatCount) const override;
@@ -104,6 +114,8 @@ namespace evan
 		 * backend.
 		 */
 		VkSurfaceKHR _surface;
+
+		VkQueue _presentQueue;	  // Vulkan queue for presentation
 
 		void createInstance(const IPlatform &platform,
 							const std::string &appName,

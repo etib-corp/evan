@@ -59,7 +59,6 @@ namespace evan
 		protected:
 		VkQueue _graphicsQueue;		   /// The graphics queue, which is used to
 									   /// submit rendering commands to the GPU.
-		VkQueue _presentQueue;	  // Vulkan queue for presentation
 
 		VkCommandPool _commandPool;	   /// The command pool, which is used to
 									   /// allocate command buffers for
@@ -134,16 +133,6 @@ namespace evan
 		 * that the graphics queue family index has been determined.
 		 */
 		void createGraphicsQueue();
-
-		/**
-		 * @brief Creates the presentation queue for the device context.
-		 *
-		 * This function retrieves the presentation queue from the logical
-		 * device and stores it in a member variable (not shown in this
-		 * snippet). It assumes that the logical device has already been created
-		 * and that the presentation queue family index has been determined.
-		 */
-		void createPresentQueue();
 
 		/**
 		 * @brief Sets up the Vulkan debug messenger for the device context.
