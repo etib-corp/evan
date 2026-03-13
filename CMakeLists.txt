@@ -73,7 +73,7 @@ FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
-    GIT_TAG 2fb8c5a3deb2110c89669f8d6f36e5833b556b44 # commit from March 5, 2026
+    GIT_TAG master
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
