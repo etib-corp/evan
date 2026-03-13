@@ -65,7 +65,7 @@ void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 	int texHeight	= 0;
 	int texChannels = 0;
 
-	auto file				= g_assetManager->get(texturePath);
+	auto file				= g_assetManager->open(texturePath);
 	std::string fileContent = file->content();
 	stbi_uc *pixels			= stbi_load_from_memory(
 		reinterpret_cast<const stbi_uc *>(fileContent.c_str()),

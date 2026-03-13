@@ -105,5 +105,5 @@ typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
 #ifdef __ANDROID__
 	const std::unique_ptr<utility::AssetManager> g_assetManager = std::make_unique<utility::AndroidAssetManager>();
 #else
-	const std::unique_ptr<utility::AssetManager> g_assetManager = std::make_unique<utility::DefaultAssetManager>();
+	extern std::unique_ptr<utility::AssetManager> g_assetManager;
 #endif

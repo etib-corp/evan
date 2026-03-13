@@ -49,8 +49,8 @@ void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 
 void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
 {
-	auto vertShaderFile = g_assetManager->get("shaders/vert.spv");
-	auto fragShaderFile = g_assetManager->get("shaders/frag.spv");
+	auto fragShaderFile = g_assetManager->open(std::string("./shaders/frag.spv"));
+	auto vertShaderFile = g_assetManager->open(std::string("./shaders/vert.spv"));
 	std::cout << "Vertex shader size: " << vertShaderFile << " bytes" << std::endl;
 	std::cout << "Creating graphics pipeline..." << std::endl;
 
@@ -58,7 +58,10 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 	std::string fragShaderString = fragShaderFile->content();
 
 	std::vector<uint32_t> vertShaderCode(vertShaderString.size() / sizeof(uint32_t));
+	std::memcpy(vertShaderCode.data(), vertShaderString.data(), vertShaderString.size());
+
 	std::vector<uint32_t> fragShaderCode(fragShaderString.size() / sizeof(uint32_t));
+	std::memcpy(fragShaderCode.data(), fragShaderString.data(), fragShaderString.size());
 
     Shader shader(vertShaderCode, fragShaderCode, device);
 
