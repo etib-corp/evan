@@ -331,21 +331,22 @@ std::vector<const char *>
 
 evan::QueueFamilyIndices evan::XrDeviceBackend::findQueueFamilies()
 {
-	QueueFamilyIndices indices;
-
+	QueueFamilyIndices indices = {};
 	uint32_t queueFamilyCount = 0;
+
 	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
 											 nullptr);
 
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
 											 queueFamilies.data());
-
-	for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+	int i = 0;
+	for (const auto &queueFamily: queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
 			break;
 		}
+		i++;
 	}
 
 	return indices;
