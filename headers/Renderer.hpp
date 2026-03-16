@@ -22,6 +22,8 @@ namespace evan {
         Renderer(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
         ~Renderer();
 
+        void destroy(VkDevice device);
+
         void createDescriptorSetLayout(VkDevice device);
 
         void createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);

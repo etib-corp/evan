@@ -20,6 +20,14 @@ evan::Renderer::~Renderer()
 {
 }
 
+void evan::Renderer::destroy(VkDevice device)
+{
+	vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
+	vkDestroyDescriptorSetLayout(device, _descriptorSetLayout, nullptr);
+	vkDestroyPipeline(device, _pipeline, nullptr);
+	vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
+}
+
 void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 {
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
