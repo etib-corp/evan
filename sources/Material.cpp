@@ -56,6 +56,13 @@ evan::Material::~Material()
 {
 }
 
+void evan::Material::destroy(VkDevice device)
+{
+	vkDestroyImage(device, _image, nullptr);
+	vkFreeMemory(device, _memory, nullptr);
+	vkDestroySampler(device, _sampler, nullptr);
+}
+
 void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 								 const std::string &texturePath,
 								 VkCommandPool commandPool,

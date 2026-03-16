@@ -66,6 +66,8 @@ namespace evan
 				 const std::string &texturePath);
 		~Material();
 
+		void destroy(VkDevice device);
+
 		void createImage(const ADeviceBackend &deviceBackend,
 						 const std::string &texturePath,
 						 VkCommandPool commandPool, VkQueue graphicsQueue);
