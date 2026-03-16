@@ -51,8 +51,6 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 {
 	auto fragShaderFile = g_assetManager->open(std::string("./shaders/frag.spv"));
 	auto vertShaderFile = g_assetManager->open(std::string("./shaders/vert.spv"));
-	std::cout << "Vertex shader size: " << vertShaderFile << " bytes" << std::endl;
-	std::cout << "Creating graphics pipeline..." << std::endl;
 
 	std::string vertShaderString = vertShaderFile->content();
 	std::string fragShaderString = fragShaderFile->content();
