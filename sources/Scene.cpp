@@ -30,3 +30,14 @@ evan::Scene::Scene(const DeviceContext &deviceContext, const Renderer &renderer,
 evan::Scene::~Scene()
 {
 }
+
+void evan::Scene::destroy(VkDevice device)
+{
+    for (auto &mesh : _meshes) {
+        mesh.destroy(device);
+    }
+
+    for (auto &[_, material] : _materials) {
+        material.destroy(device);
+    }
+}

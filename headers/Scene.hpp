@@ -24,6 +24,8 @@ namespace evan {
                 std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData);
         ~Scene();
 
+        void destroy(VkDevice device);
+
         protected:
         std::vector<GPUMesh> _meshes;
         std::map<uint32_t, Material> _materials;
