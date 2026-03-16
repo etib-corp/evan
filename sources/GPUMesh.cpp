@@ -69,6 +69,14 @@ evan::GPUMesh::~GPUMesh()
 {
 }
 
+void evan::GPUMesh::destroy(VkDevice device)
+{
+	vkDestroyBuffer(device, _vertexBuffer, nullptr);
+	vkFreeMemory(device, _vertexBufferMemory, nullptr);
+	vkDestroyBuffer(device, _indexBuffer, nullptr);
+	vkFreeMemory(device, _indexBufferMemory, nullptr);
+}
+
 void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices)
 {
 	auto deviceBackend = deviceContext.getDeviceBackend();

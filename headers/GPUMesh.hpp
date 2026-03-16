@@ -19,6 +19,8 @@ namespace evan {
         GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID);
         ~GPUMesh();
 
+        void destroy(VkDevice device);
+
         void createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices);
 
         protected:
