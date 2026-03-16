@@ -31,6 +31,8 @@ namespace evan {
         Frame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend);
         ~Frame();
 
+        void destroy(VkDevice device);
+
         void createCommandBuffer(VkDevice device, VkCommandPool commandPool);
         void createSyncObjects(VkDevice device);
         void createUniformBuffer(const ADeviceBackend &deviceBackend);

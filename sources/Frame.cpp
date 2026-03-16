@@ -18,6 +18,15 @@ evan::Frame::~Frame()
 {
 }
 
+void evan::Frame::destroy(VkDevice device)
+{
+    vkDestroyBuffer(device, _uniformBuffer, nullptr);
+    vkFreeMemory(device, _uniformBufferMemory, nullptr);
+    vkDestroySemaphore(device, _render, nullptr);
+    vkDestroySemaphore(device, _image, nullptr);
+    vkDestroyFence(device, _inFlight, nullptr);
+}
+
 void evan::Frame::createCommandBuffer(VkDevice device, VkCommandPool commandPool)
 {
     VkCommandBufferAllocateInfo allocInfo{};
