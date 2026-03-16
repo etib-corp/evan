@@ -27,6 +27,8 @@ namespace evan
 			   const std::vector<uint32_t> &fragmentCode, VkDevice device);
 		~Shader();
 
+		void destroy(VkDevice device);
+
 		VkShaderModule getVertexShaderModule() const;
 		VkShaderModule getFragmentShaderModule() const;
 

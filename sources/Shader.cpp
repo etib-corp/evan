@@ -40,6 +40,12 @@ evan::Shader::~Shader()
 {
 }
 
+void evan::Shader::destroy(VkDevice device)
+{
+	vkDestroyShaderModule(device, _vertexShaderModule, nullptr);
+	vkDestroyShaderModule(device, _fragmentShaderModule, nullptr);
+}
+
 VkShaderModule evan::Shader::getVertexShaderModule() const
 {
 	return _vertexShaderModule;
