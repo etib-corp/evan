@@ -19,6 +19,8 @@ namespace evan {
 
         VkSwapchainKHR _swapchain;
 
+        void destroy(VkDevice device) override;
+
         private:
 
             VkSurfaceFormatKHR chooseSwapSurfaceFormat(

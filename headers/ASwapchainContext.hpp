@@ -65,6 +65,8 @@ namespace evan
 			std::vector<VkPresentModeKHR> presentModes;
 		};
 
+		virtual void destroy(VkDevice device) = 0;
+
 		VkRenderPass getRenderPass() const;
 
 		virtual VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) = 0;

@@ -17,6 +17,12 @@ evan::DesktopSwapchainContext::~DesktopSwapchainContext()
 {
 }
 
+void evan::DesktopSwapchainContext::destroy(VkDevice device)
+{
+    vkDestroyRenderPass(device, _renderPass, nullptr);
+    _swapchainImage->destroy(device);
+}
+
 VkResult evan::DesktopSwapchainContext::aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
 {
     return vkAcquireNextImageKHR(device, _swapchainImage->_swapchain, UINT64_MAX, imageAvailableSemaphore, inFlightFence, &imageIndex);

@@ -35,6 +35,8 @@ namespace evan
 		public:
 		virtual ~ASwapchainImage();
 
+		virtual void destroy(VkDevice device) = 0;
+
 		/**
 		 * @brief Creates image views for the swapchain images.
 		 *
