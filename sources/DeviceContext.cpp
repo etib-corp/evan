@@ -60,6 +60,10 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 evan::DeviceContext::~DeviceContext()
 {
 	vkDestroyCommandPool(_deviceBackend->_device, _commandPool, nullptr);
+	if (enableValidationLayers) {
+		vkDestroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance, _debugMessenger,
+										nullptr);
+	}
 }
 
 VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
