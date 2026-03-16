@@ -32,6 +32,9 @@ evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
 
 evan::DesktopBackend::~DesktopBackend()
 {
+	vkDestroyDevice(_device, nullptr);
+	vkDestroySurfaceKHR(_VkInstance, _surface, nullptr);
+	vkDestroyInstance(_VkInstance, nullptr);
 }
 
 VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
