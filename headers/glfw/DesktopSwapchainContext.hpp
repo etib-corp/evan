@@ -21,10 +21,7 @@ namespace evan {
 
         void destroy(VkDevice device) override;
 
-        VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
-
-        private:
-        std::shared_ptr<DesktopSwapchainImage> _swapchainImage;
+        VkResult aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
 
     };
 }
