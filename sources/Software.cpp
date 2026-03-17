@@ -48,6 +48,14 @@ evan::Software::Software(const std::string &windowName, const uint32_t width, co
 
 evan::Software::~Software()
 {
+    auto deviceBackend = _deviceContext->getDeviceBackend();
+    auto device = deviceBackend->_device;
+
+    _renderer->destroy(device);
+    for (auto &scene : _scenes) {
+        scene.destroy(device);
+    }
+    _swapchainContext->destroy(device);
 }
 
 void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData)

@@ -84,13 +84,6 @@ void evan::DesktopSwapchainImage::destroy(VkDevice device)
 	for (auto framebuffer: _framebuffers) {
 		vkDestroyFramebuffer(device, framebuffer, nullptr);
 	}
-	vkDestroyImageView(device, _colorView, nullptr);
-	vkDestroyImage(device, _colorImage, nullptr);
-	vkFreeMemory(device, _colorMemory, nullptr);
-
-	vkDestroyImageView(device, _depthView, nullptr);
-	vkDestroyImage(device, _depthImage, nullptr);
-	vkFreeMemory(device, _depthMemory, nullptr);
 
 	for (auto imageView: _imageViews) {
 		vkDestroyImageView(device, imageView, nullptr);
@@ -101,6 +94,14 @@ void evan::DesktopSwapchainImage::destroy(VkDevice device)
 	}
 
 	vkDestroySwapchainKHR(device, _swapchain, nullptr);
+
+	vkDestroyImageView(device, _colorView, nullptr);
+	vkDestroyImage(device, _colorImage, nullptr);
+	vkFreeMemory(device, _colorMemory, nullptr);
+
+	vkDestroyImageView(device, _depthView, nullptr);
+	vkDestroyImage(device, _depthImage, nullptr);
+	vkFreeMemory(device, _depthMemory, nullptr);
 }
 
 /////////////////////
