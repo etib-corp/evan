@@ -27,8 +27,10 @@ namespace evan
 
         VkResult aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
 
-    private:
-        std::vector<XrViewConfigurationView> _viewsConfigurations;
+        void waitForImage(uint32_t index) override;
+
         std::vector<XrView> _views; // Vector of XrView structures for each view configuration
+        std::vector<XrViewConfigurationView> _viewsConfigurations;
+    private:
     };
 } // namespace evan

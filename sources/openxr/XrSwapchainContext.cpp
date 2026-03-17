@@ -69,3 +69,15 @@ VkResult evan::XrSwapchainContext::aquireImage(uint32_t index, VkDevice device, 
     }
     return VK_SUCCESS;
 }
+
+void evan::XrSwapchainContext::waitForImage(uint32_t index)
+{
+    XrSwapchain swapchain = dynamic_cast<XrSwapchainImage *>(_swapchainImages[index].get())->_swapchain;
+    XrSwapchainImageWaitInfo wait_info{};
+    wait_info.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
+    wait_info.timeout = XR_INFINITE_DURATION;
+    XrResult result = xrWaitSwapchainImage(swapchain, &wait_info);
+    if (result != XR_SUCCESS) {
+        std::cerr << "Failed to wait for swapchain image with error code: " << result << std::endl;
+    }
+}

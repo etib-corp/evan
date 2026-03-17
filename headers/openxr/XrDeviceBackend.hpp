@@ -32,6 +32,8 @@ namespace evan
 
 		void pickPhysicalDevice() override;
 
+		void createVisualizedSpace();
+
 		QueueFamilyIndices findQueueFamilies() override;
 
 		uint32_t countSwapchainFormats() const override;
@@ -55,6 +57,11 @@ namespace evan
 						 /// connection to the XR system. It is used to manage
 						 /// the lifecycle of the XR experience and to submit
 						 /// rendering commands for display on the XR device.
+		XrSpace _space = XR_NULL_HANDLE;	 /// The OpenXR space, which defines a coordinate system
+						 /// for the application. It is used to track the
+						 /// position and orientation of the XR device and to
+						 /// render content in the correct location within the
+						 /// XR environment.
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with platform-specific extensions
@@ -95,6 +102,8 @@ namespace evan
 		void getSystem();
 
 		void createSession();
+
+		bool preprocessFrame(ASwapchainContext &swapchainContext) override;
 
 		/**
 		 * Retrieves the list of Vulkan instance extensions available for the

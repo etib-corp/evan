@@ -72,6 +72,8 @@ namespace evan
 
 		virtual VkResult aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) = 0;
 
+		virtual void waitForImage(uint32_t index) = 0;
+
 		protected:
 		VkRenderPass _renderPass;
 

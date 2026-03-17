@@ -6,6 +6,7 @@
 */
 
 #include "openxr/XrDeviceBackend.hpp"
+#include "openxr/XrSwapchainContext.hpp"
 
 evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 {
@@ -17,6 +18,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
 	this->createSession();
+	this->createVisualizedSpace();
 }
 
 evan::XrDeviceBackend::~XrDeviceBackend()
@@ -200,6 +202,21 @@ void evan::XrDeviceBackend::pickPhysicalDevice()
 	return;
 }
 
+void evan::XrDeviceBackend::createVisualizedSpace()
+{
+	XrReferenceSpaceCreateInfo spaceCreateInfo { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
+	spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
+	spaceCreateInfo.poseInReferenceSpace =  { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+
+	XrResult result =
+		xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space);
+	if (result != XR_SUCCESS) {
+		std::cerr << "Failed to create OpenXR reference space: " << result
+				  << std::endl;
+		return;
+	}
+}
+
 void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 {
 	std::vector<std::string> requiredExtensions =
@@ -272,6 +289,44 @@ void evan::XrDeviceBackend::createSession()
 		std::cerr << "Failed to create OpenXR session." << std::endl;
 		return;
 	}
+}
+
+bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
+{
+	XrFrameState frameState { XR_TYPE_FRAME_STATE };
+	XrResult result = xrWaitFrame(_session, nullptr, &frameState);
+	if (result != XR_SUCCESS) {
+		std::cerr << "Failed to wait for OpenXR frame: " << result << std::endl;
+		return false;
+	}
+	XrFrameBeginInfo frameBeginInfo { XR_TYPE_FRAME_BEGIN_INFO };
+	result = xrBeginFrame(_session, &frameBeginInfo);
+	if (result != XR_SUCCESS) {
+		std::cerr << "Failed to begin OpenXR frame: " << result << std::endl;
+		return false;
+	}
+	if (frameState.shouldRender == XR_FALSE) {
+		XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
+		frameEndInfo.displayTime = frameState.predictedDisplayTime;
+		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+		frameEndInfo.layerCount = 0;
+		frameEndInfo.layers = nullptr;
+		xrEndFrame(_session, &frameEndInfo);
+		return false;
+	}
+	XrViewState viewState { XR_TYPE_VIEW_STATE };
+	uint32_t viewCount = 0;
+	XrViewLocateInfo viewLocateInfo { XR_TYPE_VIEW_LOCATE_INFO };
+	viewLocateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	viewLocateInfo.displayTime = frameState.predictedDisplayTime;
+	viewLocateInfo.space = _space;
+	std::vector<XrView> &views = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)._views;
+	XrResult locateResult = xrLocateViews(_session, &viewLocateInfo, &viewState, static_cast<uint32_t>(views.size()), &viewCount, views.data());
+	if (locateResult != XR_SUCCESS) {
+		std::cerr << "Failed to locate OpenXR views: " << locateResult << std::endl;
+		return false;
+	}
+	return true;
 }
 
 std::vector<VkExtensionProperties>

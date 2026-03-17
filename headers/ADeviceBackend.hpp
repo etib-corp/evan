@@ -18,6 +18,7 @@
 
 namespace evan
 {
+	class ASwapchainContext;
 	class ADeviceBackend
 	{
 		public:
@@ -320,6 +321,8 @@ namespace evan
 								VkMemoryPropertyFlags properties) const;
 
 		void createImage(const CreateImageProperties &properties) const;
+
+		virtual bool preprocessFrame(ASwapchainContext &swapchainContext) = 0;
 
 		/**
 		 * @brief Creates a Vulkan image view for a given image.
