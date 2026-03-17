@@ -106,7 +106,17 @@ namespace evan
 		 */
 		void createPresentQueue();
 
+		bool preprocessFrame(ASwapchainContext &swapchainContext) override {
+			// No specific preprocessing needed for Desktop backend
+			return true;
+		}
+
 		bool processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage) override;
+
+		bool postprocessFrame(ASwapchainContext &swapchainContext) override {
+			// No specific postprocessing needed for Desktop backend
+			return true;
+		}
 
 		uint32_t countSwapchainFormats() const override;
 		std::vector<int64_t> enumerateSwapchainFormats(
