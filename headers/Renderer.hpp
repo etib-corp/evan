@@ -50,12 +50,6 @@ namespace evan {
         VkDescriptorSetLayout _descriptorSetLayout;
         VkDescriptorPool _descriptorPool;
 
-        void createDescriptorSetLayout(VkDevice device);
-
-        void createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
-
-        void createDescriptorPool(VkDevice device, uint32_t materialCount);
-
         private:
         void resetCommandBuffers();
 
