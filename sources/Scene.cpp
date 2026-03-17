@@ -46,12 +46,12 @@ void evan::Scene::destroy(VkDevice device)
 // Getters //
 /////////////
 
-std::vector<evan::GPUMesh> evan::Scene::getMeshes() const
+const std::vector<evan::GPUMesh> &evan::Scene::getMeshes() const
 {
     return _meshes;
 }
 
-std::map<uint32_t, evan::Material> evan::Scene::getMaterials() const
+const std::map<uint32_t, evan::Material> &evan::Scene::getMaterials() const
 {
     return _materials;
 }

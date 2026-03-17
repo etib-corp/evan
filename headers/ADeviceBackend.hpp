@@ -19,6 +19,7 @@
 namespace evan
 {
 	class ASwapchainContext;
+	class ASwapchainImage;
 	class ADeviceBackend
 	{
 		public:
