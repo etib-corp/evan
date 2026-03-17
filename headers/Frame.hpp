@@ -44,9 +44,9 @@ namespace evan {
         VkFence _inFlight;
         VkSemaphore _image;
         VkCommandBuffer _commandBuffer;
+        VkSemaphore _render;
 
         protected:
-        VkSemaphore _render;
         VkBuffer _uniformBuffer;
         VkDeviceMemory _uniformBufferMemory;
         void * _uniformBufferMapped;
