@@ -285,6 +285,7 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		}
 	}
 	_currentFrameIndex = (_currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
 }
 
 

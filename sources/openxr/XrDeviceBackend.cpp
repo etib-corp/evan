@@ -305,9 +305,10 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 		std::cerr << "Failed to begin OpenXR frame: " << result << std::endl;
 		return false;
 	}
+	_predictedDisplayTime = frameState.predictedDisplayTime;
 	if (frameState.shouldRender == XR_FALSE) {
 		XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
-		frameEndInfo.displayTime = frameState.predictedDisplayTime;
+		frameEndInfo.displayTime = _predictedDisplayTime;
 		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 		frameEndInfo.layerCount = 0;
 		frameEndInfo.layers = nullptr;
@@ -318,12 +319,44 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 	uint32_t viewCount = 0;
 	XrViewLocateInfo viewLocateInfo { XR_TYPE_VIEW_LOCATE_INFO };
 	viewLocateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-	viewLocateInfo.displayTime = frameState.predictedDisplayTime;
+	viewLocateInfo.displayTime = _predictedDisplayTime;
 	viewLocateInfo.space = _space;
 	std::vector<XrView> &views = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)._views;
 	XrResult locateResult = xrLocateViews(_session, &viewLocateInfo, &viewState, static_cast<uint32_t>(views.size()), &viewCount, views.data());
 	if (locateResult != XR_SUCCESS) {
 		std::cerr << "Failed to locate OpenXR views: " << locateResult << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
+{
+	return true;
+}
+
+bool evan::XrDeviceBackend::postprocessFrame(ASwapchainContext &swapchainContext)
+{
+	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).updateProjectionLayerViews();
+	auto &projectionLayerViews = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).getProjectionLayerViews();
+	std::vector<XrCompositionLayerBaseHeader *> layerViews = {};
+
+	for (size_t i = 0; i < projectionLayerViews.size(); ++i) {
+		XrCompositionLayerProjection layer = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+		layer.space = _space;
+		layer.viewCount = 1;
+		layer.views = &projectionLayerViews[i];
+		layerViews.push_back((XrCompositionLayerBaseHeader *)(&layer));
+	}
+	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
+	frameEndInfo.displayTime = _predictedDisplayTime;
+	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+	frameEndInfo.layerCount = static_cast<uint32_t>(layerViews.size());
+	frameEndInfo.layers = layerViews.data();
+
+	XrResult result = xrEndFrame(_session, &frameEndInfo);
+	if (result != XR_SUCCESS) {
+		std::cerr << "Failed to end OpenXR frame: " << result << std::endl;
 		return false;
 	}
 	return true;

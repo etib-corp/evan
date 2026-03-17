@@ -7,6 +7,8 @@
 
 #include "openxr/XrSwapchainContext.hpp"
 
+#include <algorithm>
+
 evan::XrSwapchainContext::XrSwapchainContext(
     const DeviceContext &deviceContext)
 {
@@ -80,4 +82,34 @@ void evan::XrSwapchainContext::waitForImage(uint32_t index)
     if (result != XR_SUCCESS) {
         std::cerr << "Failed to wait for swapchain image with error code: " << result << std::endl;
     }
+}
+
+void evan::XrSwapchainContext::updateProjectionLayerViews()
+{
+    const size_t count = std::min(_views.size(), _swapchainImages.size());
+
+    _projectionLayerViews.resize(count);
+    for (size_t i = 0; i < count; ++i) {
+        auto *viewSwapchain = dynamic_cast<XrSwapchainImage *>(_swapchainImages[i].get());
+
+        if (viewSwapchain == nullptr) {
+            continue;
+        }
+
+        _projectionLayerViews[i] = {};
+        _projectionLayerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+        _projectionLayerViews[i].pose = _views[i].pose;
+        _projectionLayerViews[i].fov = _views[i].fov;
+        _projectionLayerViews[i].subImage.swapchain = viewSwapchain->_swapchain;
+        _projectionLayerViews[i].subImage.imageRect.offset = { 0, 0 };
+        _projectionLayerViews[i].subImage.imageRect.extent = {
+            static_cast<int32_t>(viewSwapchain->_width),
+            static_cast<int32_t>(viewSwapchain->_height)
+        };
+    }
+}
+
+const std::vector<XrCompositionLayerProjectionView> &evan::XrSwapchainContext::getProjectionLayerViews() const
+{
+    return _projectionLayerViews;
 }

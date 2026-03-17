@@ -29,8 +29,13 @@ namespace evan
 
         void waitForImage(uint32_t index) override;
 
+        void updateProjectionLayerViews();
+
+        const std::vector<XrCompositionLayerProjectionView> &getProjectionLayerViews() const;
+
         std::vector<XrView> _views; // Vector of XrView structures for each view configuration
         std::vector<XrViewConfigurationView> _viewsConfigurations;
     private:
+        std::vector<XrCompositionLayerProjectionView> _projectionLayerViews;
     };
 } // namespace evan

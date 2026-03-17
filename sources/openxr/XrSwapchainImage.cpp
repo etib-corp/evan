@@ -12,6 +12,10 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
     uint32_t swapchainImageCount = 0;
     xrEnumerateSwapchainImages(properties.swapchain, 0, &swapchainImageCount, nullptr);
 
+    _swapchain = properties.swapchain;
+    _height = properties.createInfo.height;
+    _width = properties.createInfo.width;
+
     _format = static_cast<VkFormat>(properties.createInfo.format);
     _extent = { properties.createInfo.width, properties.createInfo.height };
 

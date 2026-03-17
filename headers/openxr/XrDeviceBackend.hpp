@@ -105,6 +105,10 @@ namespace evan
 
 		bool preprocessFrame(ASwapchainContext &swapchainContext) override;
 
+		bool processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage) override;
+
+		bool postprocessFrame(ASwapchainContext &swapchainContext) override;
+
 		/**
 		 * Retrieves the list of Vulkan instance extensions available for the
 		 * validation layer.
@@ -156,5 +160,10 @@ namespace evan
 		 *
 		 */
 		std::vector<const char *> getRequiredInstanceExtensionsAndroid();
+
+		XrTime _predictedDisplayTime = 0;	 /// The predicted display time for the next frame, used for
+						 /// synchronizing rendering with the XR device's display
+						 /// refresh cycle. It is updated each frame to ensure
+						 /// smooth and responsive rendering in the XR environment.
 	};
 }	 // namespace evan
