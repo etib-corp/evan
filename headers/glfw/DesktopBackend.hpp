@@ -11,6 +11,7 @@
 
 #include "ADeviceBackend.hpp"
 #include "DesktopPlatform.hpp"
+#include "ASwapchainImage.hpp"
 
 #include "Version.hpp"
 
@@ -104,6 +105,8 @@ namespace evan
 		 * and that the presentation queue family index has been determined.
 		 */
 		void createPresentQueue();
+
+		bool processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage) override;
 
 		uint32_t countSwapchainFormats() const override;
 		std::vector<int64_t> enumerateSwapchainFormats(

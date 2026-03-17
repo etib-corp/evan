@@ -161,6 +161,18 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	}
 }
 
+bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
+{
+	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		return false;
+	} else if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to present swap chain image!");
+	}
+	return true;
+}
+
 evan::SwapChainSupportDetails
 	evan::DesktopBackend::querySwapChainSupport(VkPhysicalDevice device,
 												VkSurfaceKHR surface)
