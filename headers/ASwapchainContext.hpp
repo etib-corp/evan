@@ -83,6 +83,9 @@ namespace evan
 			VkPhysicalDevice physicalDevice,
 			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
 			VkFormatFeatureFlags features);
+
+		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
+
 		private:
 	};
 }	 // namespace evan
