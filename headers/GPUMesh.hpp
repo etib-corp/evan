@@ -21,7 +21,10 @@ namespace evan {
 
         void destroy(VkDevice device);
 
-        void createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices);
+        VkBuffer getVertexBuffer() const;
+        VkBuffer getIndexBuffer() const;
+        uint32_t getIndexCount() const;
+        uint32_t getMaterialID() const;
 
         protected:
         VkBuffer _vertexBuffer;
@@ -31,5 +34,6 @@ namespace evan {
         uint32_t _indexCount;
         uint32_t _materialID;
 
+        void createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices);
     };
 }

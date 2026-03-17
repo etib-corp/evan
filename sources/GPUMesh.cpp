@@ -77,6 +77,34 @@ void evan::GPUMesh::destroy(VkDevice device)
 	vkFreeMemory(device, _indexBufferMemory, nullptr);
 }
 
+/////////////
+// Getters //
+/////////////
+
+VkBuffer evan::GPUMesh::getVertexBuffer() const
+{
+	return _vertexBuffer;
+}
+
+VkBuffer evan::GPUMesh::getIndexBuffer() const
+{
+	return _indexBuffer;
+}
+
+uint32_t evan::GPUMesh::getIndexCount() const
+{
+	return _indexCount;
+}
+
+uint32_t evan::GPUMesh::getMaterialID() const
+{
+	return _materialID;
+}
+
+///////////////////////
+// Protected methods //
+///////////////////////
+
 void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices)
 {
 	auto deviceBackend = deviceContext.getDeviceBackend();
