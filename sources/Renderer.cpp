@@ -377,7 +377,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer 
 
 		if (!materialBound[mesh.getMaterialID()]) {
 			materialBound[mesh.getMaterialID()] = true;
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &scene.getMaterials()[mesh.getMaterialID()].getDescriptorSets()[_currentFrameIndex], 0, nullptr);
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &scene.getMaterials().at(mesh.getMaterialID()).getDescriptorSets()[_currentFrameIndex], 0, nullptr);
 		}
 
 		vkCmdDrawIndexed(commandBuffer, mesh.getIndexCount(), 1, 0, 0, 0);
