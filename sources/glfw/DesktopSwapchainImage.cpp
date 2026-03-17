@@ -7,6 +7,8 @@
 
 #include "glfw/DesktopSwapchainImage.hpp"
 
+#include "DeviceContext.hpp"
+
 evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	const DeviceContext &deviceContext, GLFWwindow *window, VkRenderPass renderpass)
 {

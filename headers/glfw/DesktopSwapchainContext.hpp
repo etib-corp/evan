@@ -14,6 +14,8 @@
 #include <memory>
 
 namespace evan {
+    class DeviceContext;
+
     class DesktopSwapchainContext : public ASwapchainContext {
         public:
         DesktopSwapchainContext(const DeviceContext &deviceContext, GLFWwindow *window);
@@ -22,6 +24,9 @@ namespace evan {
         void destroy(VkDevice device) override;
 
         VkResult aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
+
+		void waitForImage(uint32_t index) override {}
+
 
     };
 }

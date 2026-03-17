@@ -8,13 +8,14 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
-#include "DeviceContext.hpp"
 
 #include "QueueFamilyIndices.hpp"
 #include "Version.hpp"
 
 namespace evan
 {
+	class DeviceContext;
+	class ADeviceBackend;
 	/**
 	 * @brief ASwapchainImage is a class that represents an image in the
 	 * swapchain of the Evan engine. It serves as a base class for specific

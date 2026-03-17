@@ -7,6 +7,8 @@
 
 #include "glfw/DesktopSwapchainContext.hpp"
 
+#include "DeviceContext.hpp"
+
 evan::DesktopSwapchainContext::DesktopSwapchainContext(const DeviceContext &deviceContext, GLFWwindow *window)
 {
     this->createRenderPass(deviceContext.getDeviceBackend(), deviceContext.getMsaaSamples());
