@@ -8,10 +8,14 @@
 #pragma once
 
 #include "ADeviceBackend.hpp"
+#include "DeviceContext.hpp"
+#include "ASwapchainContext.hpp"
 
 #include "Frame.hpp"
 #include "Shader.hpp"
 #include "Vertex.hpp"
+
+#include "Scene.hpp"
 
 #include <fstream>
 #include <algorithm>
@@ -30,6 +34,8 @@ namespace evan {
 
         void createDescriptorPool(VkDevice device, uint32_t materialCount);
 
+        void drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene);
+
         void createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend);
 
         VkDescriptorPool getDescriptorPool() const;
@@ -37,12 +43,23 @@ namespace evan {
         VkDescriptorSetLayout getDescriptorSetLayout() const;
 
         protected:
-            VkPipeline _pipeline;
-            VkPipelineLayout _pipelineLayout;
-            std::vector<Frame> _frames;
-            uint32_t _currentFrameIndex;
-            VkDescriptorSetLayout _descriptorSetLayout;
-            VkDescriptorPool _descriptorPool;
+        VkPipeline _pipeline;
+        VkPipelineLayout _pipelineLayout;
+        std::vector<Frame> _frames;
+        uint32_t _currentFrameIndex;
+        VkDescriptorSetLayout _descriptorSetLayout;
+        VkDescriptorPool _descriptorPool;
+
+        void createDescriptorSetLayout(VkDevice device);
+
+        void createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
+
+        void createDescriptorPool(VkDevice device, uint32_t materialCount);
+
+        private:
+        void resetCommandBuffers();
+
+        void recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer, VkExtent2D swapChainExtent, const Scene &scene);
 
     };
 }

@@ -28,6 +28,10 @@ void evan::Renderer::destroy(VkDevice device)
 	vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
 }
 
+///////////////////////
+// Protected methods //
+///////////////////////
+
 void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 {
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -252,4 +256,81 @@ const std::vector<VkBuffer>& evan::Renderer::getUniformBuffers() const
 VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
 {
 	return _descriptorSetLayout;
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
+
+void evan::Renderer::resetCommandBuffers()
+{
+	_frames[_currentFrameIndex].resetCommandBuffer();
+}
+
+void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer, VkExtent2D swapChainExtent, const Scene &scene)
+{
+	auto commandBuffer = _frames[_currentFrameIndex]._commandBuffer;
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChainFramebuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapChainExtent;
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) swapChainExtent.width;
+    viewport.height = (float) swapChainExtent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = swapChainExtent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+	std::map<uint32_t, bool> materialBound;
+
+	for (const auto &mesh : scene.getMeshes()) {
+		VkDeviceSize offsets[] = {0};
+		VkBuffer vertexBuffer = mesh.getVertexBuffer();
+
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
+
+		vkCmdBindIndexBuffer(commandBuffer, mesh.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+		if (!materialBound[mesh.getMaterialID()]) {
+			materialBound[mesh.getMaterialID()] = true;
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &scene.getMaterials()[mesh.getMaterialID()].getDescriptorSets()[_currentFrameIndex], 0, nullptr);
+		}
+
+		vkCmdDrawIndexed(commandBuffer, mesh.getIndexCount(), 1, 0, 0, 0);
+	}
+
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
 }
