@@ -26,6 +26,12 @@ namespace evan {
 
         void destroy(VkDevice device);
 
+        std::vector<GPUMesh> getMeshes() const;
+        std::map<uint32_t, Material> getMaterials() const;
+
+        VkBuffer * getVertexBuffers() const;
+        VkBuffer * getIndexBuffers() const;
+
         protected:
         std::vector<GPUMesh> _meshes;
         std::map<uint32_t, Material> _materials;

@@ -41,3 +41,38 @@ void evan::Scene::destroy(VkDevice device)
         material.destroy(device);
     }
 }
+
+/////////////
+// Getters //
+/////////////
+
+std::vector<evan::GPUMesh> evan::Scene::getMeshes() const
+{
+    return _meshes;
+}
+
+std::map<uint32_t, evan::Material> evan::Scene::getMaterials() const
+{
+    return _materials;
+}
+
+VkBuffer * evan::Scene::getVertexBuffers() const
+{
+    VkBuffer *vertexBuffers = new VkBuffer[_meshes.size()];
+
+    for (size_t i = 0; i < _meshes.size(); i++) {
+        vertexBuffers[i] = _meshes[i].getVertexBuffer();
+    }
+    return vertexBuffers;
+}
+
+VkBuffer * evan::Scene::getIndexBuffers() const
+{
+    VkBuffer *indexBuffers = new VkBuffer[_meshes.size()];
+
+    for (size_t i = 0; i < _meshes.size(); i++) {
+        indexBuffers[i] = _meshes[i].getIndexBuffer();
+    }
+    return indexBuffers;
+}
+
