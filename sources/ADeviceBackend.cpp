@@ -9,8 +9,6 @@
 
 evan::ADeviceBackend::~ADeviceBackend()
 {
-	vkDestroyDevice(_device, nullptr);
-	vkDestroyInstance(_VkInstance, nullptr);
 }
 
 std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
