@@ -21,9 +21,14 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 
 evan::XrDeviceBackend::~XrDeviceBackend()
 {
+	vkDeviceWaitIdle(_device);
+	if (_device != VK_NULL_HANDLE) {
+		vkDestroyDevice(_device, nullptr);
+	}
 	if (_session != XR_NULL_HANDLE) {
 		xrDestroySession(_session);
 	}
+	vkDestroyInstance(_VkInstance, nullptr);
 	if (_XrInstance != XR_NULL_HANDLE) {
 		xrDestroyInstance(_XrInstance);
 	}

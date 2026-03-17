@@ -49,6 +49,15 @@ evan::XrSwapchainContext::XrSwapchainContext(
     }
 }
 
+void evan::XrSwapchainContext::destroy(VkDevice device)
+{
+    for (const auto &[swapchain, image] : _swapchainImages) {
+        image->destroy(device);
+        xrDestroySwapchain(swapchain);
+    }
+    _swapchainImages.clear();
+}
+
 VkResult evan::XrSwapchainContext::aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
 {
     XrSwapchainImageAcquireInfo acquire_info{};

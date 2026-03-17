@@ -43,3 +43,19 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
     this->createDepthResources(properties.deviceContext);
     this->createFramebuffers(properties.deviceContext.getDeviceBackend()->_device, properties.renderPass);
 }
+
+void evan::XrSwapchainImage::destroy(VkDevice device)
+{
+    for (size_t i = 0; i < _swapchainImages.size(); ++i) {
+        vkDestroyImageView(device, _imageViews[i], nullptr);
+        vkDestroyFramebuffer(device, _framebuffers[i], nullptr);
+    }
+    _imageViews.clear();
+    _framebuffers.clear();
+    vkDestroyImage(device, _colorImage, nullptr);
+    vkFreeMemory(device, _colorMemory, nullptr);
+    vkDestroyImageView(device, _colorView, nullptr);
+    vkDestroyImage(device, _depthImage, nullptr);
+    vkFreeMemory(device, _depthMemory, nullptr);
+    vkDestroyImageView(device, _depthView, nullptr);
+}

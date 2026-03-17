@@ -45,6 +45,8 @@ operations needed for managing the swapchain images, such as creating image view
 
         XrSwapchainImage(const CreateXrSwapchainImageProperties &properties);
 
+        void destroy(VkDevice device) override;
+
     private:
         VkViewport _viewport = {
             0, 0, 0, 0, 0, 1.0

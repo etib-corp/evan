@@ -23,6 +23,8 @@ namespace evan
     public:
         XrSwapchainContext(const DeviceContext& deviceContext);
 
+        void destroy(VkDevice device) override;
+
         VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
 
     private:
