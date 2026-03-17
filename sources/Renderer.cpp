@@ -244,6 +244,8 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		uint32_t imageIndex;
 		auto result = swapchainContext.aquireImage(i, deviceContext.getDeviceBackend()->_device, _frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
 
+		swapchainContext.waitForImage(i);
+
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			 // The swapchain is out of date (e.g. the window was resized) and must be recreated.
 			continue;
