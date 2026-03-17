@@ -48,12 +48,6 @@ operations needed for managing the swapchain images, such as creating image view
         void destroy(VkDevice device) override;
 
     private:
-        VkViewport _viewport = {
-            0, 0, 0, 0, 0, 1.0
-        };	  // Viewport for rendering
-        VkRect2D _scissor = {
-            { 0, 0 }, { 0, 0 }
-        };	  // Scissor rectangle for rendering
         std::vector<XrSwapchainImageVulkan2KHR>
 				_swapchainImages;
         XrSwapchainImageBaseHeader *_swapchainImagesBase;	// Base pointer for swapchain images
