@@ -51,11 +51,14 @@ evan::Software::~Software()
     auto deviceBackend = _deviceContext->getDeviceBackend();
     auto device = deviceBackend->_device;
 
+    vkDeviceWaitIdle(device);
+
     _renderer->destroy(device);
+    _swapchainContext->destroy(device);
     for (auto &scene : _scenes) {
         scene.destroy(device);
     }
-    _swapchainContext->destroy(device);
+    _deviceContext.reset();
 }
 
 void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData)

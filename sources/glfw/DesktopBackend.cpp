@@ -87,13 +87,18 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	appInfo.applicationVersion = appVersion.to_uint32_t();
 	appInfo.pEngineName		   = "Evan";
 	appInfo.engineVersion	   = VK_MAKE_VERSION(0, 1, 0);
-	appInfo.apiVersion		   = VK_API_VERSION_1_0;
+	appInfo.apiVersion 		   = VK_API_VERSION_1_1;
 
 	VkInstanceCreateInfo createInfo {};
 	createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
 	auto extensions = this->getInstanceExtensions();
+
+	#ifdef __APPLE__
+		extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	#endif
+
 	// Because the extensions are stored as std::string, we need to convert them
 	// to const char* to pass them to the Vulkan API.
 	auto extensionsWrapped = std::vector<const char *>(extensions.size());
@@ -269,7 +274,6 @@ std::vector<std::string> evan::DesktopBackend::getInstanceExtensions()
 	std::vector<const char *> extensions(glfwExtensions,
 										 glfwExtensions + glfwExtensionCount);
 
-	extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 	if (enableValidationLayers == true) {
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
@@ -317,6 +321,8 @@ void evan::DesktopBackend::pickPhysicalDevice()
 
 void evan::DesktopBackend::createLogicalDevice()
 {
+	std::vector<const char *> desktopExtensions = deviceExtensions;
+
 	QueueFamilyIndices indices = this->findQueueFamilies();
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -334,8 +340,11 @@ void evan::DesktopBackend::createLogicalDevice()
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures {};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
-	deviceFeatures.sampleRateShading = VK_TRUE;
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(_physicalDevice, &supportedFeatures);
+
+	deviceFeatures.samplerAnisotropy = supportedFeatures.samplerAnisotropy;
+	deviceFeatures.sampleRateShading = supportedFeatures.sampleRateShading;
 
 	VkDeviceCreateInfo createInfo {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -347,8 +356,8 @@ void evan::DesktopBackend::createLogicalDevice()
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
 	createInfo.enabledExtensionCount =
-		static_cast<uint32_t>(deviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		static_cast<uint32_t>(desktopExtensions.size());
+	createInfo.ppEnabledExtensionNames = desktopExtensions.data();
 
 	if (enableValidationLayers) {
 		createInfo.enabledLayerCount =

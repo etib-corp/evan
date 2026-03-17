@@ -89,10 +89,6 @@ void evan::DesktopSwapchainImage::destroy(VkDevice device)
 		vkDestroyImageView(device, imageView, nullptr);
 	}
 
-	for (auto image: _images) {
-		vkDestroyImage(device, image, nullptr);
-	}
-
 	vkDestroySwapchainKHR(device, _swapchain, nullptr);
 
 	vkDestroyImageView(device, _colorView, nullptr);

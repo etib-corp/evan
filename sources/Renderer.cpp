@@ -204,6 +204,7 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline !");
 	}
+	shader.destroy(device);
 }
 
 void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCount)

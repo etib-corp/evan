@@ -64,6 +64,7 @@ evan::DeviceContext::~DeviceContext()
 		vkDestroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance, _debugMessenger,
 										nullptr);
 	}
+	_deviceBackend.reset();
 }
 
 VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
