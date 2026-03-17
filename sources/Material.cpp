@@ -248,6 +248,15 @@ void evan::Material::createDescriptorSets(
 	}
 }
 
+/////////////
+// Getters //
+/////////////
+
+std::vector<VkDescriptorSet> evan::Material::getDescriptorSets() const
+{
+	return _descriptorSets;
+}
+
 ///////////////////////
 // Protected methods //
 ///////////////////////

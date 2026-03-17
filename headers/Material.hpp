@@ -82,6 +82,8 @@ namespace evan
 								  VkDescriptorPool descriptorPool,
 								  const std::vector<VkBuffer> &uniformBuffers);
 
+		std::vector<VkDescriptorSet> getDescriptorSets() const;
+
 		protected:
 		VkImage _image;
 		VkDeviceMemory _memory;
