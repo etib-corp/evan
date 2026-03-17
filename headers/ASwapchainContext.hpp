@@ -74,6 +74,8 @@ namespace evan
 
 		virtual void waitForImage(uint32_t index) = 0;
 
+		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
+
 		protected:
 		VkRenderPass _renderPass;
 
@@ -87,7 +89,6 @@ namespace evan
 			const std::vector<VkFormat> &candidates, VkImageTiling tiling,
 			VkFormatFeatureFlags features);
 
-		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
 
 		private:
 	};

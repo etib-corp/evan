@@ -153,12 +153,6 @@ namespace evan
 							  /// is used during the rendering process to
 							  /// specify where the rendered output should be
 							  /// stored.
-		VkViewport _viewport = {
-            0, 0, 0, 0, 0, 1.0
-        };	  // Viewport for rendering
-        VkRect2D _scissor = {
-            { 0, 0 }, { 0, 0 }
-        };	  // Scissor rectangle for rendering
 		private:
 	};
 }	 // namespace evan

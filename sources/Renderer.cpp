@@ -234,6 +234,43 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 	}
 }
 
+void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene)
+{
+	deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
+
+	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
+		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight, VK_TRUE, UINT64_MAX);
+
+		uint32_t imageIndex;
+		auto result = swapchainContext.aquireImage(i, deviceContext.getDeviceBackend()->_device, _frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			continue;
+		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			throw std::runtime_error("Failed to acquire swap chain image!");
+		}
+		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
+		this->resetCommandBuffers();
+
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSubmitInfo submitInfo {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
+		submitInfo.signalSemaphoreCount = 0;
+
+		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to submit draw command buffer!");
+		}
+	}
+	_currentFrameIndex = (_currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	
+}
+
+
 void evan::Renderer::createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend)
 {
 	_frames.emplace_back(commandPool, deviceBackend);

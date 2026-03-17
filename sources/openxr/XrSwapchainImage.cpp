@@ -19,15 +19,6 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
     _imageViews.resize(swapchainImageCount);
     _framebuffers.resize(swapchainImageCount);
 
-    _viewport.x = 0.0f;
-    _viewport.y = static_cast<float>(_extent.height);
-    _viewport.width = static_cast<float>(_extent.width);
-    _viewport.height = static_cast<float>(_extent.height);
-    _viewport.minDepth = 0.0f;
-    _viewport.maxDepth = 1.0f;
-
-    _scissor.extent = _extent;
-
     _swapchainImagesBase = reinterpret_cast<XrSwapchainImageBaseHeader *>(&_swapchainImages[0]);
 
     xrEnumerateSwapchainImages(properties.swapchain, swapchainImageCount, &swapchainImageCount, _swapchainImagesBase);

@@ -324,6 +324,10 @@ namespace evan
 
 		virtual bool preprocessFrame(ASwapchainContext &swapchainContext) = 0;
 
+		virtual bool processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage) = 0;
+
+		virtual bool postprocessFrame(ASwapchainContext &swapchainContext) = 0;
+
 		/**
 		 * @brief Creates a Vulkan image view for a given image.
 		 *
