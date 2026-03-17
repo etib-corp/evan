@@ -96,28 +96,31 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 		physicalDeviceProperties.limits.framebufferColorSampleCounts
 		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 
-	switch (counts) {
-		case VK_SAMPLE_COUNT_64_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_64_BIT;
-			break;
-		case VK_SAMPLE_COUNT_32_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_32_BIT;
-			break;
-		case VK_SAMPLE_COUNT_16_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_16_BIT;
-			break;
-		case VK_SAMPLE_COUNT_8_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_8_BIT;
-			break;
-		case VK_SAMPLE_COUNT_4_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_4_BIT;
-			break;
-		case VK_SAMPLE_COUNT_2_BIT:
-			_msaaSamples = VK_SAMPLE_COUNT_2_BIT;
-			break;
-		default:
-			_msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	if (counts & VK_SAMPLE_COUNT_64_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_64_BIT;
+		return;
 	}
+    if (counts & VK_SAMPLE_COUNT_32_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_32_BIT;
+		return;
+	}
+	if (counts & VK_SAMPLE_COUNT_16_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_16_BIT;
+		return;
+	}
+    if (counts & VK_SAMPLE_COUNT_8_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_8_BIT;
+		return;
+	}
+    if (counts & VK_SAMPLE_COUNT_4_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+		return;
+	}
+    if (counts & VK_SAMPLE_COUNT_2_BIT) {
+		_msaaSamples = VK_SAMPLE_COUNT_2_BIT;
+		return;
+	}
+	_msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 }
 
 void evan::DeviceContext::createCommandPool()
