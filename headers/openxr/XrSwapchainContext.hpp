@@ -25,11 +25,10 @@ namespace evan
 
         void destroy(VkDevice device) override;
 
-        VkResult aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
+        VkResult aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex) override;
 
     private:
         std::vector<XrViewConfigurationView> _viewsConfigurations;
-        std::map<XrSwapchain, std::shared_ptr<ASwapchainImage>> _swapchainImages; // Map of swapchain to its images
         std::vector<XrView> _views; // Vector of XrView structures for each view configuration
     };
 } // namespace evan

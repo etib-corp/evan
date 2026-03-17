@@ -47,6 +47,7 @@ operations needed for managing the swapchain images, such as creating image view
 
         void destroy(VkDevice device) override;
 
+        XrSwapchain _swapchain; // The OpenXR swapchain handle associated with the swapchain images
     private:
         std::vector<XrSwapchainImageVulkan2KHR>
 				_swapchainImages;

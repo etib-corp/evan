@@ -45,24 +45,24 @@ evan::XrSwapchainContext::XrSwapchainContext(
             .renderPass = _renderPass,
             .deviceContext = deviceContext
         };
-        _swapchainImages[swapchain] = std::make_shared<XrSwapchainImage>(properties);
+        _swapchainImages.push_back(std::make_shared<XrSwapchainImage>(properties));
     }
 }
 
 void evan::XrSwapchainContext::destroy(VkDevice device)
 {
-    for (const auto &[swapchain, image] : _swapchainImages) {
-        image->destroy(device);
-        xrDestroySwapchain(swapchain);
+    for (const auto &swapchainImage : _swapchainImages) {
+        swapchainImage->destroy(device);
     }
     _swapchainImages.clear();
 }
 
-VkResult evan::XrSwapchainContext::aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
+VkResult evan::XrSwapchainContext::aquireImage(uint32_t index, VkDevice device, VkSemaphore imageAvailableSemaphore, VkFence inFlightFence, uint32_t &imageIndex)
 {
+    XrSwapchain swapchain = dynamic_cast<XrSwapchainImage *>(_swapchainImages[index].get())->_swapchain;
     XrSwapchainImageAcquireInfo acquire_info{};
     acquire_info.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
-    XrResult result = xrAcquireSwapchainImage(_swapchainImages.begin()->first, &acquire_info, &imageIndex);
+    XrResult result = xrAcquireSwapchainImage(swapchain, &acquire_info, &imageIndex);
     if (result != XR_SUCCESS) {
         std::cerr << "Failed to acquire swapchain image with error code: " << result << std::endl;
         return VK_ERROR_OUT_OF_DATE_KHR;

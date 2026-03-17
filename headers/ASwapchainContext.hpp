@@ -9,6 +9,7 @@
 
 #include "EvanPlatform.hpp"
 #include "ADeviceBackend.hpp"
+#include "ASwapchainImage.hpp"
 
 #include <map>
 #include <memory>
