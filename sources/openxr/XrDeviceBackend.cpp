@@ -294,7 +294,10 @@ void evan::XrDeviceBackend::createSession()
 bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
 	XrFrameState frameState { XR_TYPE_FRAME_STATE };
-	XrResult result = xrWaitFrame(_session, nullptr, &frameState);
+	XrFrameWaitInfo frameWaitInfo{
+      .type = XR_TYPE_FRAME_WAIT_INFO,
+  	};
+	XrResult result = xrWaitFrame(_session, &frameWaitInfo, &frameState);
 	if (result != XR_SUCCESS) {
 		std::cerr << "Failed to wait for OpenXR frame: " << result << std::endl;
 		return false;

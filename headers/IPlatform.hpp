@@ -18,6 +18,8 @@ namespace evan {
      * Defines a common interface for platform implementations. Derived classes
      * must implement platform-specific behavior.
      */
+    class ADeviceBackend;
+
     class IPlatform {
         public:
             /**
@@ -46,7 +48,7 @@ namespace evan {
              * 
              * This method should be called regularly to process platform events.
              */
-            virtual void pollEvents() = 0;
+            virtual void pollEvents(ADeviceBackend &deviceBackend) = 0;
 
         protected:
 

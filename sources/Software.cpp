@@ -85,7 +85,7 @@ void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<st
 void evan::Software::run()
 {
     while (!_platform->shouldClose()) {
-        _platform->pollEvents();
+        _platform->pollEvents(*_deviceContext->getDeviceBackend());
 
         this->update();
         this->render();

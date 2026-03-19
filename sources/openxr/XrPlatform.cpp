@@ -52,9 +52,27 @@ bool evan::XrPlatform::shouldClose() const
     return _shouldClose;
 }
 
-void evan::XrPlatform::pollEvents()
+void evan::XrPlatform::pollEvents(ADeviceBackend &deviceBackend)
 {
-    // TODO: Implement event polling for OpenXR, such as handling session state changes, input events, etc.
+    XrEventDataBuffer eventDataBuffer{XR_TYPE_EVENT_DATA_BUFFER};
+    XrInstance instance = dynamic_cast<XrDeviceBackend&>(deviceBackend)._XrInstance;
+    XrSession session = dynamic_cast<XrDeviceBackend&>(deviceBackend)._session;
+    while (xrPollEvent(instance, &eventDataBuffer) == XR_SUCCESS) {
+        switch (eventDataBuffer.type) {
+            case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
+                auto sessionStateChangedEvent = *reinterpret_cast<XrEventDataSessionStateChanged*>(&eventDataBuffer);
+                processSessionStateChangedEvent(sessionStateChangedEvent, session);
+            }
+            case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
+                _shouldClose = true;
+                break;
+            }
+            default:
+                break;
+        }
+        eventDataBuffer = {XR_TYPE_EVENT_DATA_BUFFER};
+    }
+
 }
 
 const XrBaseInStructure* evan::XrPlatform::getInstanceCreateInfoAndroid() const
@@ -64,4 +82,30 @@ const XrBaseInStructure* evan::XrPlatform::getInstanceCreateInfoAndroid() const
     #else
         return nullptr;
     #endif
+}
+
+void evan::XrPlatform::processSessionStateChangedEvent(const XrEventDataSessionStateChanged &eventData, XrSession session)
+{
+    switch (eventData.state) {
+        case XR_SESSION_STATE_READY: {
+            XrSessionBeginInfo sessionBeginInfo;
+            sessionBeginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
+            sessionBeginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+            xrBeginSession(session, &sessionBeginInfo);
+            _sessionRunning = true;
+            break;
+        }
+        case XR_SESSION_STATE_STOPPING:
+            xrEndSession(session);
+            _sessionRunning = false;
+            break;
+        case XR_SESSION_STATE_EXITING:
+            _shouldClose = true;
+            break;
+        case XR_SESSION_STATE_LOSS_PENDING:
+            _shouldClose = true;
+            break;
+        default:
+            break;
+    }
 }

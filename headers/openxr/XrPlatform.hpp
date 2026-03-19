@@ -8,6 +8,7 @@
 #pragma once
 
 #include "IPlatform.hpp"
+#include "openxr/XrDeviceBackend.hpp"
 
 #include <iostream>
 
@@ -45,7 +46,7 @@ namespace evan {
 
             bool shouldClose() const override;
 
-            void pollEvents() override;
+            void pollEvents(ADeviceBackend &deviceBackend) override;
 
             /**
 			 * @brief Retrieves the Android-specific instance creation
@@ -62,8 +63,12 @@ namespace evan {
 			const XrBaseInStructure *getInstanceCreateInfoAndroid() const;
 
         protected:
+
+            void processSessionStateChangedEvent(const XrEventDataSessionStateChanged &eventData, XrSession session);
+
             bool _shouldClose = false; // Flag to indicate if the platform should close
 
+            bool _sessionRunning = false; // Flag to track if the session is currently running
             #ifdef __ANDROID__
                   XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid{};
             #endif
