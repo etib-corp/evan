@@ -257,15 +257,14 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			throw std::runtime_error("Failed to acquire swap chain image!");
 		}
+
+		this->updateUniformBuffer(scene);
+
 		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
 		this->resetCommandBuffers();
 
-		Frame::UniformBufferObject ubo{};
-		ubo.model = glm::mat4(1.0f);
-		ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
 		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
-		ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(swapchainExtent.width) / static_cast<float>(swapchainExtent.height), 0.1f, 10.0f);
-		ubo.proj[1][1] *= -1;
 
 		this->recordCommandBuffer(
 			swapchainContext.getRenderPass(),
@@ -340,6 +339,17 @@ VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
 void evan::Renderer::resetCommandBuffers()
 {
 	_frames[_currentFrameIndex].resetCommandBuffer();
+}
+
+void evan::Renderer::updateUniformBuffer(const Scene &scene)
+{
+	Frame::UniformBufferObject ubo{};
+	ubo.model = glm::mat4(1.0f);
+	ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f);
+	ubo.proj[1][1] *= -1;
+
+	memcpy(_frames[_currentFrameIndex]._uniformBufferMapped, &ubo, sizeof(ubo));
 }
 
 void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer, VkExtent2D swapChainExtent, const Scene &scene)

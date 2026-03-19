@@ -51,6 +51,8 @@ namespace evan {
         VkDescriptorPool _descriptorPool;
 
         private:
+        void updateUniformBuffer(const Scene &scene);
+
         void resetCommandBuffers();
 
         void recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer, VkExtent2D swapChainExtent, const Scene &scene);
