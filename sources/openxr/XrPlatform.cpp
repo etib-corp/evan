@@ -62,6 +62,7 @@ void evan::XrPlatform::pollEvents(ADeviceBackend &deviceBackend)
             case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
                 auto sessionStateChangedEvent = *reinterpret_cast<XrEventDataSessionStateChanged*>(&eventDataBuffer);
                 processSessionStateChangedEvent(sessionStateChangedEvent, session);
+                break;
             }
             case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
                 _shouldClose = true;

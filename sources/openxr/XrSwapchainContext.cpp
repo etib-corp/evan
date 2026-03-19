@@ -113,3 +113,40 @@ const std::vector<XrCompositionLayerProjectionView> &evan::XrSwapchainContext::g
 {
     return _projectionLayerViews;
 }
+
+glm::mat4 evan::XrSwapchainContext::getView(int index) const
+{
+    const auto &pose = _views[index].pose;
+    const glm::quat orientation(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
+    const glm::vec3 position(pose.position.x, pose.position.y, pose.position.z);
+
+    const glm::mat4 rotation = glm::mat4_cast(glm::conjugate(orientation));
+    const glm::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
+    return rotation * translation;
+}
+
+glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
+{
+    const XrFovf &fov = _views[index].fov;
+    float nearZ = 0.1f;
+    float farZ = 10.0f;
+
+    float tanLeft = tanf(fov.angleLeft);
+    float tanRight = tanf(fov.angleRight);
+    float tanUp = tanf(fov.angleUp);
+    float tanDown = tanf(fov.angleDown);
+
+    float width = tanRight - tanLeft;
+    float height = tanUp - tanDown;
+
+    glm::mat4 projection(0.0f);
+    projection[0][0] = 2.0f / width;
+    projection[1][1] = 2.0f / height;
+    projection[2][0] = (tanRight + tanLeft) / width;
+    projection[2][1] = (tanUp + tanDown) / height;
+    projection[2][2] = -farZ / (farZ - nearZ);
+    projection[2][3] = -1.0f;
+    projection[3][2] = -(farZ * nearZ) / (farZ - nearZ);
+
+    return projection;
+}

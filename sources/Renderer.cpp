@@ -241,7 +241,9 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 
 void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene)
 {
-	deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
+	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
+		return;
+	}
 
 	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
 		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight, VK_TRUE, UINT64_MAX);
@@ -258,7 +260,7 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 			throw std::runtime_error("Failed to acquire swap chain image!");
 		}
 
-		this->updateUniformBuffer(scene);
+		this->updateUniformBuffer(scene, swapchainContext, i);
 
 		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
 		this->resetCommandBuffers();
@@ -341,13 +343,13 @@ void evan::Renderer::resetCommandBuffers()
 	_frames[_currentFrameIndex].resetCommandBuffer();
 }
 
-void evan::Renderer::updateUniformBuffer(const Scene &scene)
+void evan::Renderer::updateUniformBuffer(const Scene &scene, ASwapchainContext &swapchainContext, int currentIndex)
 {
 	Frame::UniformBufferObject ubo{};
 	ubo.model = glm::mat4(1.0f);
-	ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f);
-	ubo.proj[1][1] *= -1;
+	ubo.view = swapchainContext.getView(currentIndex);
+	ubo.proj = swapchainContext.getProjection(currentIndex);
+	// ubo.proj[1][1] *= -1;
 
 	memcpy(_frames[_currentFrameIndex]._uniformBufferMapped, &ubo, sizeof(ubo));
 }
@@ -358,6 +360,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer 
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
@@ -371,7 +374,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer 
     renderPassInfo.renderArea.extent = swapChainExtent;
 
     std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[0].color = {{0.184313729f, 0.309803933f, 0.309803933f, 1.0f}};
     clearValues[1].depthStencil = {1.0f, 0};
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());

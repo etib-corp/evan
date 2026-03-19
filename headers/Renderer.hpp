@@ -51,7 +51,7 @@ namespace evan {
         VkDescriptorPool _descriptorPool;
 
         private:
-        void updateUniformBuffer(const Scene &scene);
+        void updateUniformBuffer(const Scene &scene, ASwapchainContext &swapchainContext, int currentIndex);
 
         void resetCommandBuffers();
 

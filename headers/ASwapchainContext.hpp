@@ -123,6 +123,9 @@ namespace evan
 		 */
 		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
 
+		virtual glm::mat4 getView(int index) const = 0;
+
+		virtual glm::mat4 getProjection(int index) const = 0;
 		protected:
 		/**
 		 * The Vulkan render pass associated with the swapchain context.

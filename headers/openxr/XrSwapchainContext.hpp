@@ -33,6 +33,9 @@ namespace evan
 
         const std::vector<XrCompositionLayerProjectionView> &getProjectionLayerViews() const;
 
+        glm::mat4 getProjection(int index) const override;
+        glm::mat4 getView(int index) const override;
+
         std::vector<XrView> _views; // Vector of XrView structures for each view configuration
         std::vector<XrViewConfigurationView> _viewsConfigurations;
     private:

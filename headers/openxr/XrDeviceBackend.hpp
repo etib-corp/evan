@@ -14,6 +14,7 @@
 #include <cstring>
 #include <iostream>
 #include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
 #include <vector>
 
 namespace evan

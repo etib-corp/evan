@@ -8,6 +8,8 @@
 #include "openxr/XrDeviceBackend.hpp"
 #include "openxr/XrSwapchainContext.hpp"
 
+#include <array>
+
 evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 {
 	Version appVersion(0, 1, 0);
@@ -211,9 +213,13 @@ void evan::XrDeviceBackend::createVisualizedSpace()
 	XrResult result =
 		xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space);
 	if (result != XR_SUCCESS) {
-		std::cerr << "Failed to create OpenXR reference space: " << result
-				  << std::endl;
-		return;
+		spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+		result = xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space);
+		if (result != XR_SUCCESS) {
+			std::cerr << "Failed to create OpenXR reference space: " << result
+					  << std::endl;
+			return;
+		}
 	}
 }
 
@@ -335,6 +341,13 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 
 bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
 {
+	XrSwapchain swapchain = dynamic_cast<evan::XrSwapchainImage &>(swapchainImage)._swapchain;
+	XrSwapchainImageReleaseInfo releaseInfo { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
+	XrResult result = xrReleaseSwapchainImage(swapchain, &releaseInfo);
+	if (result != XR_SUCCESS) {
+		std::cerr << "Failed to release OpenXR swapchain image: " << result << std::endl;
+		return false;
+	}
 	return true;
 }
 
@@ -342,20 +355,18 @@ bool evan::XrDeviceBackend::postprocessFrame(ASwapchainContext &swapchainContext
 {
 	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).updateProjectionLayerViews();
 	auto &projectionLayerViews = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).getProjectionLayerViews();
-	std::vector<XrCompositionLayerBaseHeader *> layerViews = {};
-
-	for (size_t i = 0; i < projectionLayerViews.size(); ++i) {
-		XrCompositionLayerProjection layer = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-		layer.space = _space;
-		layer.viewCount = 1;
-		layer.views = &projectionLayerViews[i];
-		layerViews.push_back((XrCompositionLayerBaseHeader *)(&layer));
-	}
+	XrCompositionLayerProjection layer { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+	layer.space = _space;
+	layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
+	layer.views = projectionLayerViews.data();
+	std::array<XrCompositionLayerBaseHeader *, 1> layers = {
+		reinterpret_cast<XrCompositionLayerBaseHeader *>(&layer)
+	};
 	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 	frameEndInfo.displayTime = _predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-	frameEndInfo.layerCount = static_cast<uint32_t>(layerViews.size());
-	frameEndInfo.layers = layerViews.data();
+	frameEndInfo.layerCount = (layer.viewCount > 0) ? 1u : 0u;
+	frameEndInfo.layers = (frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
 
 	XrResult result = xrEndFrame(_session, &frameEndInfo);
 	if (result != XR_SUCCESS) {

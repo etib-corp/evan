@@ -27,6 +27,8 @@ namespace evan {
 
 		void waitForImage(uint32_t index) override {}
 
+        glm::mat4 getProjection(int index) const override;
 
+        glm::mat4 getView(int index) const override;
     };
 }
