@@ -54,3 +54,9 @@ void evan::XrSwapchainImage::destroy(VkDevice device)
     vkFreeMemory(device, _depthMemory, nullptr);
     vkDestroyImageView(device, _depthView, nullptr);
 }
+
+void evan::XrSwapchainImage::fillPresentInfo(VkPresentInfoKHR &presentInfo) const
+{
+	presentInfo.swapchainCount = 0;
+	presentInfo.pSwapchains = nullptr;
+}

@@ -21,6 +21,8 @@ namespace evan {
 
         void destroy(VkDevice device) override;
 
+		void fillPresentInfo(VkPresentInfoKHR &presentInfo) const override;
+
         private:
 
             VkSurfaceFormatKHR chooseSwapSurfaceFormat(

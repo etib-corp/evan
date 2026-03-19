@@ -11,7 +11,9 @@ std::unique_ptr<utility::AssetManager> g_assetManager = std::make_unique<utility
 
 evan::Software::Software()
 {
+    g_assetManager = std::make_unique<utility::DefaultAssetManager>();
     g_assetManager->loadDirectory(std::string("./shaders"));
+    g_assetManager->add(std::string("./texture1.png"));
     #ifdef __OPENXR__
         _platform = std::make_shared<XrPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
@@ -24,13 +26,19 @@ evan::Software::Software()
         throw std::runtime_error("Unsupported platform");
     #endif
     auto deviceBackend = _deviceContext->getDeviceBackend();
-    _renderer = std::make_shared<Renderer>(deviceBackend->_device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
+    _renderer = std::make_shared<Renderer>(*_deviceContext, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
+    _currentScene = 0;
+
+    for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
+        _renderer->createFrame(_deviceContext->getCommandPool(), *deviceBackend);
+    }
 }
 
 evan::Software::Software(const std::string &windowName, const uint32_t width, const uint32_t height)
 {
     g_assetManager = std::make_unique<utility::DefaultAssetManager>();
     g_assetManager->loadDirectory(std::string("./shaders"));
+    g_assetManager->add(std::string("./texture1.png"));
     #ifdef __OPENXR__
         _platform = std::make_shared<XrPlatform>(); // TODO: Pass the platform data
         _deviceContext = std::make_shared<DeviceContext>(*_platform);
@@ -43,7 +51,12 @@ evan::Software::Software(const std::string &windowName, const uint32_t width, co
         throw std::runtime_error("Unsupported platform");
     #endif
     auto deviceBackend = _deviceContext->getDeviceBackend();
-    _renderer = std::make_shared<Renderer>(deviceBackend->_device, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
+    _renderer = std::make_shared<Renderer>(*_deviceContext, _swapchainContext->getRenderPass(), _deviceContext->getMsaaSamples());
+    _currentScene = 0;
+
+    for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
+        _renderer->createFrame(_deviceContext->getCommandPool(), *deviceBackend);
+    }
 }
 
 evan::Software::~Software()
@@ -64,6 +77,9 @@ evan::Software::~Software()
 void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData)
 {
     _scenes.emplace_back(*_deviceContext, *_renderer, texturePaths, meshData);
+    if (_scenes.size() == 1) {
+        _currentScene = 0;
+    }
 }
 
 void evan::Software::run()
@@ -84,5 +100,9 @@ void evan::Software::update()
 
 void evan::Software::render()
 {
-    // Render the current scene.
+    if (_scenes.empty()) {
+        return;
+    }
+
+    _renderer->drawFrame(*_deviceContext, *_swapchainContext, _scenes[_currentScene]);
 }

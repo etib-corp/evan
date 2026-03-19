@@ -38,6 +38,8 @@ namespace evan
 
 		virtual void destroy(VkDevice device) = 0;
 
+		virtual void fillPresentInfo(VkPresentInfoKHR &presentInfo) const = 0;
+
 		/**
 		 * @brief Creates image views for the swapchain images.
 		 *
@@ -73,6 +75,10 @@ namespace evan
 								VkRenderPass renderPass);
 
 		void createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain);
+
+		VkFramebuffer getFramebuffer(uint32_t index) const;
+		VkExtent2D getExtent() const;
+		uint32_t getFramebufferCount() const;
 
 		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
 		VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice,

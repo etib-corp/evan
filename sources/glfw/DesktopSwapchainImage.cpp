@@ -102,6 +102,12 @@ void evan::DesktopSwapchainImage::destroy(VkDevice device)
 	vkFreeMemory(device, _depthMemory, nullptr);
 }
 
+void evan::DesktopSwapchainImage::fillPresentInfo(VkPresentInfoKHR &presentInfo) const
+{
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &_swapchain;
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////

@@ -129,6 +129,21 @@ void evan::ASwapchainImage::createImages(VkDevice logicalDevice, VkSwapchainKHR 
 							_images.data());
 }
 
+VkFramebuffer evan::ASwapchainImage::getFramebuffer(uint32_t index) const
+{
+	return _framebuffers[index];
+}
+
+VkExtent2D evan::ASwapchainImage::getExtent() const
+{
+	return _extent;
+}
+
+uint32_t evan::ASwapchainImage::getFramebufferCount() const
+{
+	return static_cast<uint32_t>(_framebuffers.size());
+}
+
 ///////////////////////
 // Private functions //
 ///////////////////////

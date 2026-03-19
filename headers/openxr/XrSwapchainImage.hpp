@@ -47,6 +47,8 @@ operations needed for managing the swapchain images, such as creating image view
 
         void destroy(VkDevice device) override;
 
+		void fillPresentInfo(VkPresentInfoKHR &presentInfo) const override;
+
         XrSwapchain _swapchain; // The OpenXR swapchain handle associated with the swapchain images
         uint32_t _width = 0;
         uint32_t _height = 0;

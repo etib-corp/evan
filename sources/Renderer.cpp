@@ -7,13 +7,18 @@
 
 #include "Renderer.hpp"
 
-evan::Renderer::Renderer(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
+#include <glm/gtc/matrix_transform.hpp>
+
+evan::Renderer::Renderer(DeviceContext& deviceContext, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
 {
 	this->_currentFrameIndex = 0;
 
-	this->createDescriptorSetLayout(device);
-	this->createGraphicsPipeline(device, renderPass, msaaSamples);
-	this->createDescriptorPool(device, 1000); // TODO: Change this with the AssetManager when it will be implemented
+	this->createDescriptorSetLayout(deviceContext.getDeviceBackend()->_device);
+	this->createGraphicsPipeline(deviceContext.getDeviceBackend()->_device, renderPass, msaaSamples);
+	this->createDescriptorPool(deviceContext.getDeviceBackend()->_device, 1000); // TODO: Change this with the AssetManager when it will be implemented
+	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
+		_frames.emplace_back(deviceContext.getCommandPool(), *deviceContext.getDeviceBackend());
+	}
 }
 
 evan::Renderer::~Renderer()
@@ -255,7 +260,22 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
 		this->resetCommandBuffers();
 
+		Frame::UniformBufferObject ubo{};
+		ubo.model = glm::mat4(1.0f);
+		ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
+		ubo.proj = glm::perspective(glm::radians(45.0f), static_cast<float>(swapchainExtent.width) / static_cast<float>(swapchainExtent.height), 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+
+		this->recordCommandBuffer(
+			swapchainContext.getRenderPass(),
+			swapchainContext._swapchainImages[i]->getFramebuffer(imageIndex),
+			swapchainExtent,
+			scene
+		);
+
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
 		VkSubmitInfo submitInfo {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.waitSemaphoreCount = 1;
@@ -263,22 +283,20 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		submitInfo.pWaitDstStageMask = waitStages;
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
-		submitInfo.signalSemaphoreCount = 0;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
 
 
 		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to submit draw command buffer!");
 		}
 
-		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
+		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &imageIndex;
 
 		if (!deviceContext.getDeviceBackend()->processFrame(presentInfo, *swapchainContext._swapchainImages[i].get())) {
@@ -301,7 +319,7 @@ VkDescriptorPool evan::Renderer::getDescriptorPool() const
 	return _descriptorPool;
 }
 
-const std::vector<VkBuffer>& evan::Renderer::getUniformBuffers() const
+const std::vector<VkBuffer> evan::Renderer::getUniformBuffers() const
 {
 	std::vector<VkBuffer> uniformBuffers;
 	for (const Frame& frame: _frames) {

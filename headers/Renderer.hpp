@@ -23,7 +23,7 @@
 namespace evan {
     class Renderer {
         public:
-        Renderer(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
+        Renderer(DeviceContext& deviceContext, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples);
         ~Renderer();
 
         void destroy(VkDevice device);
@@ -39,7 +39,7 @@ namespace evan {
         void createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend);
 
         VkDescriptorPool getDescriptorPool() const;
-        const std::vector<VkBuffer>& getUniformBuffers() const;
+        const std::vector<VkBuffer> getUniformBuffers() const;
         VkDescriptorSetLayout getDescriptorSetLayout() const;
 
         protected:

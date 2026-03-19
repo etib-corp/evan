@@ -15,7 +15,7 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> v
 
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
+	VkDeviceMemory stagingBufferMemory = VK_NULL_HANDLE;
 
 	if (bufferSize == 0) {
 		return;
@@ -32,7 +32,7 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> v
 		._bufferMemory = stagingBufferMemory
 	};
 
-	void *data;
+	void *data = nullptr;
 	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
