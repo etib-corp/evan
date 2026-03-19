@@ -32,6 +32,8 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> v
 		._bufferMemory = stagingBufferMemory
 	};
 
+	deviceBackend->createBuffer(stagingBufferProperties);
+
 	void *data = nullptr;
 	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
