@@ -7,17 +7,12 @@
 
 #include "ADeviceBackend.hpp"
 
+////////////////////
+// Public Methods //
+////////////////////
+
 evan::ADeviceBackend::~ADeviceBackend()
 {
-}
-
-std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
-{
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-	return availableLayers;
 }
 
 void evan::ADeviceBackend::createBuffer(
@@ -54,95 +49,6 @@ void evan::ADeviceBackend::createBuffer(
 
 	vkBindBufferMemory(properties._logicalDevice, properties._buffer,
 					   properties._bufferMemory, 0);
-}
-
-uint32_t
-	evan::ADeviceBackend::findMemoryType(VkPhysicalDevice physicalDevice,
-										 uint32_t typeFilter,
-										 VkMemoryPropertyFlags properties) const
-{
-	VkPhysicalDeviceMemoryProperties memProperties;
-
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-		if ((typeFilter & (1 << i))
-			&& (memProperties.memoryTypes[i].propertyFlags & properties)
-				== properties) {
-			return i;
-		}
-	}
-
-	throw std::runtime_error("Failed to find suitable memory type!");
-}
-
-void evan::ADeviceBackend::createImage(
-	const CreateImageProperties &properties) const
-{
-	VkImageCreateInfo imageInfo {};
-	imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageInfo.imageType		= VK_IMAGE_TYPE_2D;
-	imageInfo.extent.width	= properties._width;
-	imageInfo.extent.height = properties._height;
-	imageInfo.extent.depth	= 1;
-	imageInfo.mipLevels		= 1;
-	imageInfo.arrayLayers	= 1;
-	imageInfo.format		= properties._format;
-	imageInfo.tiling		= properties._tiling;
-	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	imageInfo.usage			= properties._usage;
-	imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
-	imageInfo.mipLevels		= properties._mipLevels;
-	imageInfo.samples		= properties._numSamples;
-
-	if (vkCreateImage(properties._logicalDevice, &imageInfo, nullptr,
-					  &properties._image)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("failed to create image!");
-	}
-
-	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(properties._logicalDevice, properties._image,
-								 &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize  = memRequirements.size;
-	allocInfo.memoryTypeIndex = this->findMemoryType(
-		properties._physicalDevice, memRequirements.memoryTypeBits,
-		properties._properties);
-
-	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
-						 &properties._imageMemory)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to allocate image memory!");
-	}
-
-	vkBindImageMemory(properties._logicalDevice, properties._image,
-					  properties._imageMemory, 0);
-}
-
-VkImageView evan::ADeviceBackend::createImageView(
-	VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) const
-{
-	VkImageViewCreateInfo viewInfo {};
-	viewInfo.sType	  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	viewInfo.image	  = image;
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	viewInfo.format	  = format;
-	viewInfo.subresourceRange.aspectMask	 = aspectFlags;
-	viewInfo.subresourceRange.baseMipLevel	 = 0;
-	viewInfo.subresourceRange.levelCount	 = 1;
-	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount	 = 1;
-	viewInfo.subresourceRange.levelCount	 = mipLevels;
-
-	VkImageView imageView;
-	if (vkCreateImageView(_device, &viewInfo, nullptr, &imageView)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("failed to create texture image view!");
-	}
-
-	return imageView;
 }
 
 void evan::ADeviceBackend::transitionImageLayout(
@@ -240,12 +146,6 @@ VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(
 	return commandBuffer;
 }
 
-bool evan::ADeviceBackend::hasStencilComponent(VkFormat format) const
-{
-	return format == VK_FORMAT_D32_SFLOAT_S8_UINT
-		|| format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
 void evan::ADeviceBackend::endSingleTimeCommands(
 	VkDevice logicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
 	VkCommandBuffer commandBuffer) const
@@ -261,6 +161,52 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 	vkQueueWaitIdle(graphicsQueue);
 
 	vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
+}
+
+void evan::ADeviceBackend::createImage(
+	const CreateImageProperties &properties) const
+{
+	VkImageCreateInfo imageInfo {};
+	imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType		= VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width	= properties._width;
+	imageInfo.extent.height = properties._height;
+	imageInfo.extent.depth	= 1;
+	imageInfo.mipLevels		= 1;
+	imageInfo.arrayLayers	= 1;
+	imageInfo.format		= properties._format;
+	imageInfo.tiling		= properties._tiling;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageInfo.usage			= properties._usage;
+	imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.mipLevels		= properties._mipLevels;
+	imageInfo.samples		= properties._numSamples;
+
+	if (vkCreateImage(properties._logicalDevice, &imageInfo, nullptr,
+					  &properties._image)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create image!");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetImageMemoryRequirements(properties._logicalDevice, properties._image,
+								 &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo {};
+	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize  = memRequirements.size;
+	allocInfo.memoryTypeIndex = this->findMemoryType(
+		properties._physicalDevice, memRequirements.memoryTypeBits,
+		properties._properties);
+
+	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
+						 &properties._imageMemory)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate image memory!");
+	}
+
+	vkBindImageMemory(properties._logicalDevice, properties._image,
+					  properties._imageMemory, 0);
 }
 
 void evan::ADeviceBackend::copyBufferToImage(
@@ -301,4 +247,70 @@ void evan::ADeviceBackend::copyBuffer(const CopyBufferProperties &properties) co
 	this->endSingleTimeCommands(properties._logicalDevice,
 								 properties._commandPool,
 								 properties._graphicsQueue, commandBuffer);
+}
+
+VkImageView evan::ADeviceBackend::createImageView(
+	VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) const
+{
+	VkImageViewCreateInfo viewInfo {};
+	viewInfo.sType	  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image	  = image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format	  = format;
+	viewInfo.subresourceRange.aspectMask	 = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel	 = 0;
+	viewInfo.subresourceRange.levelCount	 = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount	 = 1;
+	viewInfo.subresourceRange.levelCount	 = mipLevels;
+
+	VkImageView imageView;
+	if (vkCreateImageView(_device, &viewInfo, nullptr, &imageView)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+
+	return imageView;
+}
+
+///////////////////////
+// Protected methods //
+///////////////////////
+
+std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
+{
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+	return availableLayers;
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
+
+bool evan::ADeviceBackend::hasStencilComponent(VkFormat format) const
+{
+	return format == VK_FORMAT_D32_SFLOAT_S8_UINT
+		|| format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+uint32_t
+	evan::ADeviceBackend::findMemoryType(VkPhysicalDevice physicalDevice,
+										 uint32_t typeFilter,
+										 VkMemoryPropertyFlags properties) const
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i))
+			&& (memProperties.memoryTypes[i].propertyFlags & properties)
+				== properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("Failed to find suitable memory type!");
 }
