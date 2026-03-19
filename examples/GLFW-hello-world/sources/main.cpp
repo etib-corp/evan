@@ -23,7 +23,7 @@ int main(void)
 
 	mySoftware.addScene(texturePaths, meshData);
 	while (true) {
-		mySoftware.render();
+		mySoftware.run();
 	}
 	return 0;
 }
