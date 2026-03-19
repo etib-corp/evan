@@ -40,7 +40,7 @@ namespace evan {
 
             bool shouldClose() const override;
 
-            void pollEvents() override;
+            void pollEvents(ADeviceBackend &deviceBackend) override;
 
             GLFWwindow *_window = nullptr; // Pointer to the GLFW window
     };

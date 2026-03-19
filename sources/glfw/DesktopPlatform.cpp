@@ -29,6 +29,11 @@ evan::DesktopPlatform::~DesktopPlatform()
 	glfwTerminate();
 }
 
+void evan::DesktopPlatform::pollEvents(ADeviceBackend &deviceBackend)
+{
+	glfwPollEvents();
+}
+
 std::vector<std::string> evan::DesktopPlatform::getRequiredInstanceExtensions() const
 {
 	uint32_t glfwExtensionCount = 0;
@@ -47,9 +52,4 @@ std::vector<std::string> evan::DesktopPlatform::getRequiredInstanceExtensions() 
 bool evan::DesktopPlatform::shouldClose() const
 {
     return glfwWindowShouldClose(_window);
-}
-
-void evan::DesktopPlatform::pollEvents()
-{
-    glfwPollEvents();
 }
