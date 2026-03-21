@@ -12,6 +12,16 @@
 #include "ADeviceBackend.hpp"
 
 namespace evan {
+    /**
+     * @brief Frame class representing a single frame of rendering in the Vulkan application.
+     *
+     * This class encapsulates the Vulkan resources and synchronization objects needed for rendering a single frame,
+     * such as command buffers, fences, semaphores, and uniform buffers. It provides
+     * functions to create and manage these resources, as well as to reset the command buffer for recording new commands each frame.
+     * The Frame class is designed to be used in a multi-frame rendering loop, where each frame has its own set of resources to ensure proper synchronization and efficient rendering.
+     *
+     * @note The Frame class is closely tied to the ADeviceBackend class, which provides access to Vulkan resources and functions needed for creating buffers and synchronization objects. It is important to ensure that the Frame class is properly integrated with the device backend to manage Vulkan resources effectively.
+     */
     class Frame {
         public:
         /**
