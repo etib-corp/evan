@@ -71,6 +71,10 @@ evan::GPUMesh::~GPUMesh()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::GPUMesh::destroy(VkDevice device)
 {
 	vkDestroyBuffer(device, _vertexBuffer, nullptr);
