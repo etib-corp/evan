@@ -18,6 +18,10 @@ evan::Frame::~Frame()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::Frame::destroy(VkDevice device)
 {
     vkDestroyBuffer(device, _uniformBuffer, nullptr);
@@ -26,6 +30,24 @@ void evan::Frame::destroy(VkDevice device)
     vkDestroySemaphore(device, _image, nullptr);
     vkDestroyFence(device, _inFlight, nullptr);
 }
+
+void evan::Frame::resetCommandBuffer()
+{
+    vkResetCommandBuffer(_commandBuffer, /*VkCommandBufferResetFlagBits*/ 0);
+}
+
+/////////////
+// Getters //
+/////////////
+
+VkBuffer evan::Frame::getUniformBuffer() const
+{
+    return _uniformBuffer;
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
 
 void evan::Frame::createCommandBuffer(VkDevice device, VkCommandPool commandPool)
 {
@@ -74,14 +96,4 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
     deviceBackend.createBuffer(bufferProperties);
     vkMapMemory(deviceBackend._device, _uniformBufferMemory, 0, bufferSize, 0,
                 &_uniformBufferMapped);
-}
-
-VkBuffer evan::Frame::getUniformBuffer() const
-{
-    return _uniformBuffer;
-}
-
-void evan::Frame::resetCommandBuffer()
-{
-    vkResetCommandBuffer(_commandBuffer, /*VkCommandBufferResetFlagBits*/ 0);
 }
