@@ -31,6 +31,10 @@ evan::Scene::~Scene()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::Scene::destroy(VkDevice device)
 {
     for (auto &mesh : _meshes) {
