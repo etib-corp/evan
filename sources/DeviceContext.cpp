@@ -67,6 +67,10 @@ evan::DeviceContext::~DeviceContext()
 	_deviceBackend.reset();
 }
 
+/////////////
+// Getters //
+/////////////
+
 VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 {
 	return _msaaSamples;
@@ -122,6 +126,10 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 	}
 	_msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 }
+
+/////////////////////
+// Private methods //
+/////////////////////
 
 void evan::DeviceContext::createCommandPool()
 {
