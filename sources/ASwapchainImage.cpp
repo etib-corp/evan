@@ -13,6 +13,29 @@ evan::ASwapchainImage::~ASwapchainImage()
 {
 }
 
+/////////////
+// Getters //
+/////////////
+
+VkFramebuffer evan::ASwapchainImage::getFramebuffer(uint32_t index) const
+{
+	return _framebuffers[index];
+}
+
+VkExtent2D evan::ASwapchainImage::getExtent() const
+{
+	return _extent;
+}
+
+uint32_t evan::ASwapchainImage::getFramebufferCount() const
+{
+	return static_cast<uint32_t>(_framebuffers.size());
+}
+
+///////////////////////
+// Protected methods //
+///////////////////////
+
 void evan::ASwapchainImage::createImageViews(const ADeviceBackend &deviceBackend)
 {
 	_imageViews.resize(_images.size());
@@ -22,6 +45,7 @@ void evan::ASwapchainImage::createImageViews(const ADeviceBackend &deviceBackend
 			_images[i], _format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 }
+
 void evan::ASwapchainImage::createColorResources(const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples)
 {
 	VkFormat colorFormat				  = _format;
@@ -127,21 +151,6 @@ void evan::ASwapchainImage::createImages(VkDevice logicalDevice, VkSwapchainKHR 
 	_images.resize(imageCount);
 	vkGetSwapchainImagesKHR(logicalDevice, swapchain, &imageCount,
 							_images.data());
-}
-
-VkFramebuffer evan::ASwapchainImage::getFramebuffer(uint32_t index) const
-{
-	return _framebuffers[index];
-}
-
-VkExtent2D evan::ASwapchainImage::getExtent() const
-{
-	return _extent;
-}
-
-uint32_t evan::ASwapchainImage::getFramebufferCount() const
-{
-	return static_cast<uint32_t>(_framebuffers.size());
 }
 
 ///////////////////////
