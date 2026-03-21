@@ -56,12 +56,29 @@ evan::Material::~Material()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::Material::destroy(VkDevice device)
 {
 	vkDestroyImage(device, _image, nullptr);
 	vkFreeMemory(device, _memory, nullptr);
 	vkDestroySampler(device, _sampler, nullptr);
 }
+
+/////////////
+// Getters //
+/////////////
+
+std::vector<VkDescriptorSet> evan::Material::getDescriptorSets() const
+{
+	return _descriptorSets;
+}
+
+///////////////////////
+// Protected methods //
+///////////////////////
 
 void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 								 const std::string &texturePath,
@@ -247,19 +264,6 @@ void evan::Material::createDescriptorSets(
 							   descriptorWrites.data(), 0, nullptr);
 	}
 }
-
-/////////////
-// Getters //
-/////////////
-
-std::vector<VkDescriptorSet> evan::Material::getDescriptorSets() const
-{
-	return _descriptorSets;
-}
-
-///////////////////////
-// Protected methods //
-///////////////////////
 
 VkSamplerCreateInfo evan::Material::getDefaultSamplerInfo(
 	const VkPhysicalDeviceProperties &properties)
