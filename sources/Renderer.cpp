@@ -33,9 +33,106 @@ void evan::Renderer::destroy(VkDevice device)
 	vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
 }
 
-///////////////////////
-// Protected methods //
-///////////////////////
+void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene)
+{
+	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
+		return;
+	}
+
+	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
+		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight, VK_TRUE, UINT64_MAX);
+
+		uint32_t imageIndex;
+		auto result = swapchainContext.aquireImage(i, deviceContext.getDeviceBackend()->_device, _frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
+
+		swapchainContext.waitForImage(i);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			 // The swapchain is out of date (e.g. the window was resized) and must be recreated.
+			continue;
+		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			throw std::runtime_error("Failed to acquire swap chain image!");
+		}
+
+		this->updateUniformBuffer(scene, swapchainContext, i);
+
+		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
+		this->resetCommandBuffers();
+
+		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
+
+		this->recordCommandBuffer(
+			swapchainContext.getRenderPass(),
+			swapchainContext._swapchainImages[i]->getFramebuffer(imageIndex),
+			swapchainExtent,
+			scene
+		);
+
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
+		VkSubmitInfo submitInfo {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		// submitInfo.waitSemaphoreCount = 1;
+		// submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
+		// submitInfo.signalSemaphoreCount = 1;
+		// submitInfo.pSignalSemaphores = signalSemaphores;
+
+
+		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to submit draw command buffer!");
+		}
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+		// presentInfo.waitSemaphoreCount = 1;
+		// presentInfo.pWaitSemaphores = signalSemaphores;
+		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
+		presentInfo.pImageIndices = &imageIndex;
+
+		if (!deviceContext.getDeviceBackend()->processFrame(presentInfo, *swapchainContext._swapchainImages[i].get())) {
+			// The swapchain is out of date (e.g. the window was resized) and must be recreated.
+			continue;
+		}
+	}
+	_currentFrameIndex = (_currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
+}
+
+void evan::Renderer::createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend)
+{
+	_frames.emplace_back(commandPool, deviceBackend);
+}
+
+/////////////
+// Getters //
+/////////////
+
+VkDescriptorPool evan::Renderer::getDescriptorPool() const
+{
+	return _descriptorPool;
+}
+
+const std::vector<VkBuffer> evan::Renderer::getUniformBuffers() const
+{
+	std::vector<VkBuffer> uniformBuffers;
+	for (const Frame& frame: _frames) {
+		uniformBuffers.push_back(frame.getUniformBuffer());
+	}
+	return uniformBuffers;
+}
+
+VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
+{
+	return _descriptorSetLayout;
+}
+
+/////////////////////
+// Private methods //
+/////////////////////
 
 void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 {
@@ -240,104 +337,6 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 		throw std::runtime_error("Failed to create descriptor pool!");
 	}
 }
-
-void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene)
-{
-	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
-		return;
-	}
-
-	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
-		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight, VK_TRUE, UINT64_MAX);
-
-		uint32_t imageIndex;
-		auto result = swapchainContext.aquireImage(i, deviceContext.getDeviceBackend()->_device, _frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
-
-		swapchainContext.waitForImage(i);
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			 // The swapchain is out of date (e.g. the window was resized) and must be recreated.
-			continue;
-		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-			throw std::runtime_error("Failed to acquire swap chain image!");
-		}
-
-		this->updateUniformBuffer(scene, swapchainContext, i);
-
-		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
-		this->resetCommandBuffers();
-
-		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
-
-		this->recordCommandBuffer(
-			swapchainContext.getRenderPass(),
-			swapchainContext._swapchainImages[i]->getFramebuffer(imageIndex),
-			swapchainExtent,
-			scene
-		);
-
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
-		VkSubmitInfo submitInfo {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		// submitInfo.waitSemaphoreCount = 1;
-		// submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
-		// submitInfo.signalSemaphoreCount = 1;
-		// submitInfo.pSignalSemaphores = signalSemaphores;
-
-
-		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to submit draw command buffer!");
-		}
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-		// presentInfo.waitSemaphoreCount = 1;
-		// presentInfo.pWaitSemaphores = signalSemaphores;
-		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
-		presentInfo.pImageIndices = &imageIndex;
-
-		if (!deviceContext.getDeviceBackend()->processFrame(presentInfo, *swapchainContext._swapchainImages[i].get())) {
-			// The swapchain is out of date (e.g. the window was resized) and must be recreated.
-			continue;
-		}
-	}
-	_currentFrameIndex = (_currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
-	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
-}
-
-
-void evan::Renderer::createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend)
-{
-	_frames.emplace_back(commandPool, deviceBackend);
-}
-
-VkDescriptorPool evan::Renderer::getDescriptorPool() const
-{
-	return _descriptorPool;
-}
-
-const std::vector<VkBuffer> evan::Renderer::getUniformBuffers() const
-{
-	std::vector<VkBuffer> uniformBuffers;
-	for (const Frame& frame: _frames) {
-		uniformBuffers.push_back(frame.getUniformBuffer());
-	}
-	return uniformBuffers;
-}
-
-VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
-{
-	return _descriptorSetLayout;
-}
-
-/////////////////////
-// Private Methods //
-/////////////////////
 
 void evan::Renderer::resetCommandBuffers()
 {
