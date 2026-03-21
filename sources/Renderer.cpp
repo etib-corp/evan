@@ -159,7 +159,9 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 	colorBlending.blendConstants[3] = 0.0f;
 
 	std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT,
-												  VK_DYNAMIC_STATE_SCISSOR };
+												  VK_DYNAMIC_STATE_SCISSOR,
+												  VK_DYNAMIC_STATE_CULL_MODE
+												 };
 	VkPipelineDynamicStateCreateInfo dynamicState {};
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.dynamicStateCount =
@@ -265,7 +267,6 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
 		this->resetCommandBuffers();
 
-
 		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
 
 		this->recordCommandBuffer(
@@ -279,13 +280,13 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
 		VkSubmitInfo submitInfo {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
+		// submitInfo.waitSemaphoreCount = 1;
+		// submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
 		submitInfo.pWaitDstStageMask = waitStages;
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		// submitInfo.signalSemaphoreCount = 1;
+		// submitInfo.pSignalSemaphores = signalSemaphores;
 
 
 		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
@@ -295,8 +296,8 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
+		// presentInfo.waitSemaphoreCount = 1;
+		// presentInfo.pWaitSemaphores = signalSemaphores;
 		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &imageIndex;
 
