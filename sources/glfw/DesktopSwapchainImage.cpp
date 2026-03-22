@@ -81,6 +81,10 @@ evan::DesktopSwapchainImage::~DesktopSwapchainImage()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::DesktopSwapchainImage::destroy(VkDevice device)
 {
 	for (auto framebuffer: _framebuffers) {
