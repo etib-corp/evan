@@ -29,6 +29,10 @@ evan::DesktopPlatform::~DesktopPlatform()
 	glfwTerminate();
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::DesktopPlatform::pollEvents(ADeviceBackend &deviceBackend)
 {
 	glfwPollEvents();
