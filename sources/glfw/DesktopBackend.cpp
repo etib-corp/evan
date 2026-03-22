@@ -7,6 +7,20 @@
 
 #include "glfw/DesktopBackend.hpp"
 
+/**
+ * @brief Default debug callback function for Vulkan validation layers.
+ *
+ * This function is called by the Vulkan validation layers when a validation message is generated. It receives the severity and type of the message, as well as the callback data containing details about the message. The function simply prints the validation message to the standard error stream and returns VK_FALSE to indicate that the application should not be aborted.
+ *
+ * @param messageSeverity The severity of the validation message (e.g., error, warning, info).
+ * @param messageType The type of the validation message (e.g., general, performance,
+ * validation).
+ * @param pCallbackData A pointer to a structure containing details about the validation message, such as the message string and any associated objects or data.
+ * @param pUserData A pointer to user-defined data that can be passed to the callback function. This parameter is not used in this default
+ * implementation, but it can be utilized to provide additional context or information when handling validation messages.
+ *
+ * @return VK_FALSE to indicate that the application should not be aborted, allowing the validation layers to continue processing and reporting messages as needed.
+ */
 static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -37,31 +51,107 @@ evan::DesktopBackend::~DesktopBackend()
 	vkDestroyInstance(_VkInstance, nullptr);
 }
 
-VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
-												 GLFWwindow *window)
+////////////////////
+// Public Methods //
+////////////////////
+
+bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
 {
-#ifdef _WIN32
-	VkWin32SurfaceCreateInfoKHR createInfo {};
+	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
 
-	createInfo.sType	 = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	createInfo.hwnd		 = glfwGetWin32Window(window);
-	createInfo.hinstance = GetModuleHandle(nullptr);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		return false;
+	} else if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to present swap chain image!");
+	}
+	return true;
+}
 
-	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &_surface)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to create window surface!");
-	}
-#else
-	if (instance == VK_NULL_HANDLE) {
-		throw std::runtime_error("Vulkan instance is NULL!");
-	}
-	if (glfwCreateWindowSurface(instance, window, nullptr, &_surface)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to create window surface!");
-	}
-#endif
+uint32_t evan::DesktopBackend::countSwapchainFormats() const
+{
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
+										 nullptr);
+	return formatCount;
+}
 
-	return _surface;
+std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount) const
+{
+	std::vector<int32_t> swapchainFormats(swapchainFormatCount);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &swapchainFormatCount,
+										 reinterpret_cast<VkSurfaceFormatKHR *>(swapchainFormats.data()));
+
+	std::vector<int64_t> swapchainFormats64(swapchainFormatCount);
+	std::transform(swapchainFormats.begin(), swapchainFormats.end(),
+				   swapchainFormats64.begin(), [](int32_t format) {
+					   return static_cast<int64_t>(format);
+				   });
+	return swapchainFormats64;
+}
+
+evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
+											 nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
+											 queueFamilies.data());
+
+	for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface,
+											 &presentSupport);
+
+		if (presentSupport) {
+			indices.presentFamily = i;
+		}
+
+		if (indices.isComplete()) {
+			break;
+		}
+	}
+
+	return indices;
+}
+
+evan::SwapChainSupportDetails
+	evan::DesktopBackend::querySwapChainSupport(VkPhysicalDevice device,
+												VkSurfaceKHR surface)
+{
+	SwapChainSupportDetails details;
+	uint32_t formatCount;
+	uint32_t presentModeCount;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+											  &details.capabilities);
+	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 nullptr)
+		!= VK_SUCCESS)
+		return details;
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+											 details.formats.data());
+	}
+
+	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+												  &presentModeCount, nullptr)
+		!= VK_SUCCESS)
+		return details;
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			device, surface, &presentModeCount, details.presentModes.data());
+	}
+	return details;
 }
 
 void evan::DesktopBackend::createPresentQueue()
@@ -71,6 +161,10 @@ void evan::DesktopBackend::createPresentQueue()
 	vkGetDeviceQueue(_device, indices.presentFamily.value(), 0,
 					 &_presentQueue);
 }
+
+///////////////////////
+// Protected methods //
+///////////////////////
 
 void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 										  const std::string &appName,
@@ -161,50 +255,114 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	}
 }
 
-bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
+void evan::DesktopBackend::createLogicalDevice()
 {
-	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
+	std::vector<const char *> desktopExtensions = deviceExtensions;
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-		return false;
-	} else if (result != VK_SUCCESS) {
-		throw std::runtime_error("Failed to present swap chain image!");
+	QueueFamilyIndices indices = this->findQueueFamilies();
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(),
+											   indices.presentFamily.value() };
+
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily: uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount		 = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
 	}
-	return true;
+
+	VkPhysicalDeviceFeatures deviceFeatures {};
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(_physicalDevice, &supportedFeatures);
+
+	deviceFeatures.samplerAnisotropy = supportedFeatures.samplerAnisotropy;
+	deviceFeatures.sampleRateShading = supportedFeatures.sampleRateShading;
+
+	VkDeviceCreateInfo createInfo {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	createInfo.queueCreateInfoCount =
+		static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+
+	createInfo.pEnabledFeatures = &deviceFeatures;
+
+	createInfo.enabledExtensionCount =
+		static_cast<uint32_t>(desktopExtensions.size());
+	createInfo.ppEnabledExtensionNames = desktopExtensions.data();
+
+	if (enableValidationLayers) {
+		createInfo.enabledLayerCount =
+			static_cast<uint32_t>(validationLayers.size());
+		createInfo.ppEnabledLayerNames = validationLayers.data();
+	} else {
+		createInfo.enabledLayerCount = 0;
+	}
+
+	if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create logical device!");
+	}
 }
 
-evan::SwapChainSupportDetails
-	evan::DesktopBackend::querySwapChainSupport(VkPhysicalDevice device,
-												VkSurfaceKHR surface)
+void evan::DesktopBackend::pickPhysicalDevice()
 {
-	SwapChainSupportDetails details;
-	uint32_t formatCount;
-	uint32_t presentModeCount;
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, nullptr);
 
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
-											  &details.capabilities);
-	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-											 nullptr)
-		!= VK_SUCCESS)
-		return details;
-	if (formatCount != 0) {
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-											 details.formats.data());
+	if (deviceCount == 0) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
-	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-												  &presentModeCount, nullptr)
-		!= VK_SUCCESS)
-		return details;
-	if (presentModeCount != 0) {
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(
-			device, surface, &presentModeCount, details.presentModes.data());
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, devices.data());
+
+	for (const auto &device: devices) {
+		if (this->isDeviceSuitable(device, _surface, deviceExtensions)) {
+			_physicalDevice = device;
+			break;
+		}
 	}
-	return details;
+
+	if (_physicalDevice == VK_NULL_HANDLE) {
+		throw std::runtime_error("Failed to find a suitable GPU!");
+	}
 }
 
+VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
+												 GLFWwindow *window)
+{
+#ifdef _WIN32
+	VkWin32SurfaceCreateInfoKHR createInfo {};
+
+	createInfo.sType	 = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	createInfo.hwnd		 = glfwGetWin32Window(window);
+	createInfo.hinstance = GetModuleHandle(nullptr);
+
+	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &_surface)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("Failed to create window surface!");
+	}
+#else
+	if (instance == VK_NULL_HANDLE) {
+		throw std::runtime_error("Vulkan instance is NULL!");
+	}
+	if (glfwCreateWindowSurface(instance, window, nullptr, &_surface)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("Failed to create window surface!");
+	}
+#endif
+
+	return _surface;
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
 
 bool evan::DesktopBackend::isDeviceSuitable(
 	VkPhysicalDevice device, VkSurfaceKHR surface,
@@ -305,137 +463,4 @@ void evan::DesktopBackend::populateDebugMessengerCreateInfo(
 		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
 		| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
-}
-
-void evan::DesktopBackend::pickPhysicalDevice()
-{
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, nullptr);
-
-	if (deviceCount == 0) {
-		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
-	}
-
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, devices.data());
-
-	for (const auto &device: devices) {
-		if (this->isDeviceSuitable(device, _surface, deviceExtensions)) {
-			_physicalDevice = device;
-			break;
-		}
-	}
-
-	if (_physicalDevice == VK_NULL_HANDLE) {
-		throw std::runtime_error("Failed to find a suitable GPU!");
-	}
-}
-
-void evan::DesktopBackend::createLogicalDevice()
-{
-	std::vector<const char *> desktopExtensions = deviceExtensions;
-
-	QueueFamilyIndices indices = this->findQueueFamilies();
-
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(),
-											   indices.presentFamily.value() };
-
-	float queuePriority = 1.0f;
-	for (uint32_t queueFamily: uniqueQueueFamilies) {
-		VkDeviceQueueCreateInfo queueCreateInfo {};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
-		queueCreateInfo.queueCount		 = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-		queueCreateInfos.push_back(queueCreateInfo);
-	}
-
-	VkPhysicalDeviceFeatures deviceFeatures {};
-	VkPhysicalDeviceFeatures supportedFeatures;
-	vkGetPhysicalDeviceFeatures(_physicalDevice, &supportedFeatures);
-
-	deviceFeatures.samplerAnisotropy = supportedFeatures.samplerAnisotropy;
-	deviceFeatures.sampleRateShading = supportedFeatures.sampleRateShading;
-
-	VkDeviceCreateInfo createInfo {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-	createInfo.queueCreateInfoCount =
-		static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
-	createInfo.pEnabledFeatures = &deviceFeatures;
-
-	createInfo.enabledExtensionCount =
-		static_cast<uint32_t>(desktopExtensions.size());
-	createInfo.ppEnabledExtensionNames = desktopExtensions.data();
-
-	if (enableValidationLayers) {
-		createInfo.enabledLayerCount =
-			static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	} else {
-		createInfo.enabledLayerCount = 0;
-	}
-
-	if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("failed to create logical device!");
-	}
-}
-
-evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
-{
-	QueueFamilyIndices indices;
-
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
-											 nullptr);
-
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
-											 queueFamilies.data());
-
-	for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = i;
-		}
-
-		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface,
-											 &presentSupport);
-
-		if (presentSupport) {
-			indices.presentFamily = i;
-		}
-
-		if (indices.isComplete()) {
-			break;
-		}
-	}
-
-	return indices;
-}
-
-uint32_t evan::DesktopBackend::countSwapchainFormats() const
-{
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-										 nullptr);
-	return formatCount;
-}
-
-std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount) const
-{
-	std::vector<int32_t> swapchainFormats(swapchainFormatCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &swapchainFormatCount,
-										 reinterpret_cast<VkSurfaceFormatKHR *>(swapchainFormats.data()));
-
-	std::vector<int64_t> swapchainFormats64(swapchainFormatCount);
-	std::transform(swapchainFormats.begin(), swapchainFormats.end(),
-				   swapchainFormats64.begin(), [](int32_t format) {
-					   return static_cast<int64_t>(format);
-				   });
-	return swapchainFormats64;
 }
