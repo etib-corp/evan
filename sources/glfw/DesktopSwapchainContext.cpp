@@ -19,6 +19,10 @@ evan::DesktopSwapchainContext::~DesktopSwapchainContext()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::DesktopSwapchainContext::destroy(VkDevice device)
 {
     vkDestroyRenderPass(device, _renderPass, nullptr);
