@@ -74,6 +74,10 @@ evan::Software::~Software()
     _deviceContext.reset();
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::Software::addScene(std::vector<std::string> texturePaths, std::map<std::string, std::vector<Mesh>> meshData)
 {
     _scenes.emplace_back(*_deviceContext, *_renderer, texturePaths, meshData);
