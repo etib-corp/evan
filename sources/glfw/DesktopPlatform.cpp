@@ -7,17 +7,18 @@
 
 #include "glfw/DesktopPlatform.hpp"
 
-evan::DesktopPlatform::DesktopPlatform(const std::string &name, const uint32_t width, const uint32_t height)
+evan::DesktopPlatform::DesktopPlatform(const std::string &name,
+									   const uint32_t width,
+									   const uint32_t height)
 {
-    if (!glfwInit()) {
+	if (!glfwInit()) {
 		throw std::runtime_error("Failed to initialize GLFW");
 	}
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-	_window =
-		glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
+	_window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
 	if (!_window) {
 		throw std::runtime_error("Failed to create GLFW window");
 	}
@@ -38,7 +39,8 @@ void evan::DesktopPlatform::pollEvents(ADeviceBackend &deviceBackend)
 	glfwPollEvents();
 }
 
-std::vector<std::string> evan::DesktopPlatform::getRequiredInstanceExtensions() const
+std::vector<std::string>
+	evan::DesktopPlatform::getRequiredInstanceExtensions() const
 {
 	uint32_t glfwExtensionCount = 0;
 	const char **glfwExtensions =
@@ -55,5 +57,5 @@ std::vector<std::string> evan::DesktopPlatform::getRequiredInstanceExtensions() 
 
 bool evan::DesktopPlatform::shouldClose() const
 {
-    return glfwWindowShouldClose(_window);
+	return glfwWindowShouldClose(_window);
 }

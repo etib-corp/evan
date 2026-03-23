@@ -40,20 +40,24 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 
 evan::DeviceContext::DeviceContext(const IPlatform &platform)
 {
-    #ifdef __OPENXR__
-        _deviceBackend = std::make_shared<XrDeviceBackend>(platform);
-    #elif defined(__GLFW__)
-        _deviceBackend = std::make_shared<DesktopBackend>((DesktopPlatform&)platform);
-    #else
-        std::cerr << "No platform defined. Please define either __OPENXR__ or __GLFW__." << std::endl;
-        throw std::runtime_error("No platform defined for DeviceContext.");
-    #endif
+#ifdef __OPENXR__
+	_deviceBackend = std::make_shared<XrDeviceBackend>(platform);
+#elif defined(__GLFW__)
+	_deviceBackend =
+		std::make_shared<DesktopBackend>((DesktopPlatform &)platform);
+#else
+	std::cerr
+		<< "No platform defined. Please define either __OPENXR__ or __GLFW__."
+		<< std::endl;
+	throw std::runtime_error("No platform defined for DeviceContext.");
+#endif
 	this->getMaxUsableSampleCount();
 	this->setupDebugMessenger();
 	this->createGraphicsQueue();
-	#if defined(__GLFW__)
-		dynamic_cast<evan::DesktopBackend*>(_deviceBackend.get())->createPresentQueue();
-	#endif
+#if defined(__GLFW__)
+	dynamic_cast<evan::DesktopBackend *>(_deviceBackend.get())
+		->createPresentQueue();
+#endif
 	this->createCommandPool();
 }
 
@@ -61,8 +65,8 @@ evan::DeviceContext::~DeviceContext()
 {
 	vkDestroyCommandPool(_deviceBackend->_device, _commandPool, nullptr);
 	// if (enableValidationLayers) {
-	// 	vkDestroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance, _debugMessenger,
-	// 									nullptr);
+	// 	vkDestroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance,
+	// _debugMessenger, 									nullptr);
 	// }
 	_deviceBackend.reset();
 }
@@ -76,7 +80,8 @@ VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 	return _msaaSamples;
 }
 
-std::shared_ptr<evan::ADeviceBackend> evan::DeviceContext::getDeviceBackend() const
+std::shared_ptr<evan::ADeviceBackend>
+	evan::DeviceContext::getDeviceBackend() const
 {
 	return _deviceBackend;
 }
@@ -104,7 +109,7 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 		_msaaSamples = VK_SAMPLE_COUNT_64_BIT;
 		return;
 	}
-    if (counts & VK_SAMPLE_COUNT_32_BIT) {
+	if (counts & VK_SAMPLE_COUNT_32_BIT) {
 		_msaaSamples = VK_SAMPLE_COUNT_32_BIT;
 		return;
 	}
@@ -112,15 +117,15 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 		_msaaSamples = VK_SAMPLE_COUNT_16_BIT;
 		return;
 	}
-    if (counts & VK_SAMPLE_COUNT_8_BIT) {
+	if (counts & VK_SAMPLE_COUNT_8_BIT) {
 		_msaaSamples = VK_SAMPLE_COUNT_8_BIT;
 		return;
 	}
-    if (counts & VK_SAMPLE_COUNT_4_BIT) {
+	if (counts & VK_SAMPLE_COUNT_4_BIT) {
 		_msaaSamples = VK_SAMPLE_COUNT_4_BIT;
 		return;
 	}
-    if (counts & VK_SAMPLE_COUNT_2_BIT) {
+	if (counts & VK_SAMPLE_COUNT_2_BIT) {
 		_msaaSamples = VK_SAMPLE_COUNT_2_BIT;
 		return;
 	}

@@ -8,7 +8,8 @@
 #include "ASwapchainContext.hpp"
 
 void evan::ASwapchainContext::createRenderPass(
-	const std::shared_ptr<ADeviceBackend> &deviceBackend, VkSampleCountFlagBits msaaSamples)
+	const std::shared_ptr<ADeviceBackend> &deviceBackend,
+	VkSampleCountFlagBits msaaSamples)
 {
 	auto swapchainFormatCount = deviceBackend->countSwapchainFormats();
 	auto swapchainFormats =
@@ -26,7 +27,8 @@ void evan::ASwapchainContext::createRenderPass(
 	colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment {};
-	depthAttachment.format = this->findDepthFormat(deviceBackend->_physicalDevice);
+	depthAttachment.format =
+		this->findDepthFormat(deviceBackend->_physicalDevice);
 	depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;

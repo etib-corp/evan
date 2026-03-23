@@ -10,16 +10,27 @@
 /**
  * @brief Default debug callback function for Vulkan validation layers.
  *
- * This function is called by the Vulkan validation layers when a validation message is generated. It receives the severity and type of the message, as well as the callback data containing details about the message. The function simply prints the validation message to the standard error stream and returns VK_FALSE to indicate that the application should not be aborted.
+ * This function is called by the Vulkan validation layers when a validation
+ * message is generated. It receives the severity and type of the message, as
+ * well as the callback data containing details about the message. The function
+ * simply prints the validation message to the standard error stream and returns
+ * VK_FALSE to indicate that the application should not be aborted.
  *
- * @param messageSeverity The severity of the validation message (e.g., error, warning, info).
- * @param messageType The type of the validation message (e.g., general, performance,
- * validation).
- * @param pCallbackData A pointer to a structure containing details about the validation message, such as the message string and any associated objects or data.
- * @param pUserData A pointer to user-defined data that can be passed to the callback function. This parameter is not used in this default
- * implementation, but it can be utilized to provide additional context or information when handling validation messages.
+ * @param messageSeverity The severity of the validation message (e.g., error,
+ * warning, info).
+ * @param messageType The type of the validation message (e.g., general,
+ * performance, validation).
+ * @param pCallbackData A pointer to a structure containing details about the
+ * validation message, such as the message string and any associated objects or
+ * data.
+ * @param pUserData A pointer to user-defined data that can be passed to the
+ * callback function. This parameter is not used in this default implementation,
+ * but it can be utilized to provide additional context or information when
+ * handling validation messages.
  *
- * @return VK_FALSE to indicate that the application should not be aborted, allowing the validation layers to continue processing and reporting messages as needed.
+ * @return VK_FALSE to indicate that the application should not be aborted,
+ * allowing the validation layers to continue processing and reporting messages
+ * as needed.
  */
 static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -55,7 +66,8 @@ evan::DesktopBackend::~DesktopBackend()
 // Public Methods //
 ////////////////////
 
-bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
+bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo,
+										ASwapchainImage &swapchainImage)
 {
 	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
 
@@ -70,16 +82,18 @@ bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchain
 uint32_t evan::DesktopBackend::countSwapchainFormats() const
 {
 	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-										 nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface,
+										 &formatCount, nullptr);
 	return formatCount;
 }
 
-std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount) const
+std::vector<int64_t> evan::DesktopBackend::enumerateSwapchainFormats(
+	uint32_t swapchainFormatCount) const
 {
 	std::vector<int32_t> swapchainFormats(swapchainFormatCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &swapchainFormatCount,
-										 reinterpret_cast<VkSurfaceFormatKHR *>(swapchainFormats.data()));
+	vkGetPhysicalDeviceSurfaceFormatsKHR(
+		_physicalDevice, _surface, &swapchainFormatCount,
+		reinterpret_cast<VkSurfaceFormatKHR *>(swapchainFormats.data()));
 
 	std::vector<int64_t> swapchainFormats64(swapchainFormatCount);
 	std::transform(swapchainFormats.begin(), swapchainFormats.end(),
@@ -158,8 +172,7 @@ void evan::DesktopBackend::createPresentQueue()
 {
 	QueueFamilyIndices indices = this->findQueueFamilies();
 
-	vkGetDeviceQueue(_device, indices.presentFamily.value(), 0,
-					 &_presentQueue);
+	vkGetDeviceQueue(_device, indices.presentFamily.value(), 0, &_presentQueue);
 }
 
 ///////////////////////
@@ -181,7 +194,7 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	appInfo.applicationVersion = appVersion.to_uint32_t();
 	appInfo.pEngineName		   = "Evan";
 	appInfo.engineVersion	   = VK_MAKE_VERSION(0, 1, 0);
-	appInfo.apiVersion 		   = VK_API_VERSION_1_1;
+	appInfo.apiVersion		   = VK_API_VERSION_1_1;
 
 	VkInstanceCreateInfo createInfo {};
 	createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -189,9 +202,9 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 
 	auto extensions = this->getInstanceExtensions();
 
-	#ifdef __APPLE__
-		extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-	#endif
+#ifdef __APPLE__
+	extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
 
 	// Because the extensions are stored as std::string, we need to convert them
 	// to const char* to pass them to the Vulkan API.
@@ -368,8 +381,9 @@ bool evan::DesktopBackend::isDeviceSuitable(
 	VkPhysicalDevice device, VkSurfaceKHR surface,
 	std::vector<const char *> deviceExtensions)
 {
-	// Temporary assignment to check device properties and features before picking the device.
-	// This will be reset to VK_NULL_HANDLE if the device is not suitable.
+	// Temporary assignment to check device properties and features before
+	// picking the device. This will be reset to VK_NULL_HANDLE if the device is
+	// not suitable.
 	_physicalDevice = device;
 
 	QueueFamilyIndices indices = this->findQueueFamilies();

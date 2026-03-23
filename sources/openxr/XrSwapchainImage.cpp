@@ -7,36 +7,47 @@
 
 #include "openxr/XrSwapchainImage.hpp"
 
-evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties &properties)
+evan::XrSwapchainImage::XrSwapchainImage(
+	const CreateXrSwapchainImageProperties &properties)
 {
-    uint32_t swapchainImageCount = 0;
-    xrEnumerateSwapchainImages(properties.swapchain, 0, &swapchainImageCount, nullptr);
+	uint32_t swapchainImageCount = 0;
+	xrEnumerateSwapchainImages(properties.swapchain, 0, &swapchainImageCount,
+							   nullptr);
 
-    _swapchain = properties.swapchain;
-    _height = properties.createInfo.height;
-    _width = properties.createInfo.width;
+	_swapchain = properties.swapchain;
+	_height	   = properties.createInfo.height;
+	_width	   = properties.createInfo.width;
 
-    _format = static_cast<VkFormat>(properties.createInfo.format);
-    _extent = { properties.createInfo.width, properties.createInfo.height };
+	_format = static_cast<VkFormat>(properties.createInfo.format);
+	_extent = { properties.createInfo.width, properties.createInfo.height };
 
-    _swapchainImages.resize(swapchainImageCount, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR });
-    _imageViews.resize(swapchainImageCount);
-    _framebuffers.resize(swapchainImageCount);
+	_swapchainImages.resize(swapchainImageCount,
+							{ XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR });
+	_imageViews.resize(swapchainImageCount);
+	_framebuffers.resize(swapchainImageCount);
 
-    _swapchainImagesBase = reinterpret_cast<XrSwapchainImageBaseHeader *>(&_swapchainImages[0]);
+	_swapchainImagesBase =
+		reinterpret_cast<XrSwapchainImageBaseHeader *>(&_swapchainImages[0]);
 
-    xrEnumerateSwapchainImages(properties.swapchain, swapchainImageCount, &swapchainImageCount, _swapchainImagesBase);
+	xrEnumerateSwapchainImages(properties.swapchain, swapchainImageCount,
+							   &swapchainImageCount, _swapchainImagesBase);
 
-    for (auto &image : _swapchainImages) {
-        image.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
-    }
-    for (size_t i = 0; i < _swapchainImages.size(); ++i) {
-         _imageViews[i] = properties.deviceContext.getDeviceBackend()->createImageView(_swapchainImages[i].image, _format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-    }
+	for (auto &image: _swapchainImages) {
+		image.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
+	}
+	for (size_t i = 0; i < _swapchainImages.size(); ++i) {
+		_imageViews[i] =
+			properties.deviceContext.getDeviceBackend()->createImageView(
+				_swapchainImages[i].image, _format, VK_IMAGE_ASPECT_COLOR_BIT,
+				1);
+	}
 
-    this->createColorResources(*properties.deviceContext.getDeviceBackend(), properties.deviceContext.getMsaaSamples());
-    this->createDepthResources(properties.deviceContext);
-    this->createFramebuffers(properties.deviceContext.getDeviceBackend()->_device, properties.renderPass);
+	this->createColorResources(*properties.deviceContext.getDeviceBackend(),
+							   properties.deviceContext.getMsaaSamples());
+	this->createDepthResources(properties.deviceContext);
+	this->createFramebuffers(
+		properties.deviceContext.getDeviceBackend()->_device,
+		properties.renderPass);
 }
 
 ////////////////////
@@ -45,22 +56,23 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
 
 void evan::XrSwapchainImage::destroy(VkDevice device)
 {
-    for (size_t i = 0; i < _swapchainImages.size(); ++i) {
-        vkDestroyImageView(device, _imageViews[i], nullptr);
-        vkDestroyFramebuffer(device, _framebuffers[i], nullptr);
-    }
-    _imageViews.clear();
-    _framebuffers.clear();
-    vkDestroyImage(device, _colorImage, nullptr);
-    vkFreeMemory(device, _colorMemory, nullptr);
-    vkDestroyImageView(device, _colorView, nullptr);
-    vkDestroyImage(device, _depthImage, nullptr);
-    vkFreeMemory(device, _depthMemory, nullptr);
-    vkDestroyImageView(device, _depthView, nullptr);
+	for (size_t i = 0; i < _swapchainImages.size(); ++i) {
+		vkDestroyImageView(device, _imageViews[i], nullptr);
+		vkDestroyFramebuffer(device, _framebuffers[i], nullptr);
+	}
+	_imageViews.clear();
+	_framebuffers.clear();
+	vkDestroyImage(device, _colorImage, nullptr);
+	vkFreeMemory(device, _colorMemory, nullptr);
+	vkDestroyImageView(device, _colorView, nullptr);
+	vkDestroyImage(device, _depthImage, nullptr);
+	vkFreeMemory(device, _depthMemory, nullptr);
+	vkDestroyImageView(device, _depthView, nullptr);
 }
 
-void evan::XrSwapchainImage::fillPresentInfo(VkPresentInfoKHR &presentInfo) const
+void evan::XrSwapchainImage::fillPresentInfo(
+	VkPresentInfoKHR &presentInfo) const
 {
 	presentInfo.swapchainCount = 0;
-	presentInfo.pSwapchains = nullptr;
+	presentInfo.pSwapchains	   = nullptr;
 }

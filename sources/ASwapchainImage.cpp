@@ -36,7 +36,8 @@ uint32_t evan::ASwapchainImage::getFramebufferCount() const
 // Protected methods //
 ///////////////////////
 
-void evan::ASwapchainImage::createImageViews(const ADeviceBackend &deviceBackend)
+void evan::ASwapchainImage::createImageViews(
+	const ADeviceBackend &deviceBackend)
 {
 	_imageViews.resize(_images.size());
 
@@ -46,9 +47,10 @@ void evan::ASwapchainImage::createImageViews(const ADeviceBackend &deviceBackend
 	}
 }
 
-void evan::ASwapchainImage::createColorResources(const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples)
+void evan::ASwapchainImage::createColorResources(
+	const ADeviceBackend &deviceBackend, VkSampleCountFlagBits msaaSamples)
 {
-	VkFormat colorFormat				  = _format;
+	VkFormat colorFormat								  = _format;
 	ADeviceBackend::CreateImageProperties imageProperties = {
 		._logicalDevice	 = deviceBackend._device,
 		._physicalDevice = deviceBackend._physicalDevice,
@@ -66,8 +68,8 @@ void evan::ASwapchainImage::createColorResources(const ADeviceBackend &deviceBac
 	};
 
 	deviceBackend.createImage(imageProperties);
-	_colorView = deviceBackend.createImageView(
-		_colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	_colorView = deviceBackend.createImageView(_colorImage, colorFormat,
+											   VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 
 void evan::ASwapchainImage::createDepthResources(
@@ -112,7 +114,8 @@ void evan::ASwapchainImage::createDepthResources(
 		._mipLevels		= 1	   // No mipmaps for depth attachment
 	};
 
-	deviceContext.getDeviceBackend()->transitionImageLayout(transitionProperties);
+	deviceContext.getDeviceBackend()->transitionImageLayout(
+		transitionProperties);
 }
 
 void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
@@ -121,8 +124,7 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 	_framebuffers.resize(_imageViews.size());
 
 	for (size_t i = 0; i < _imageViews.size(); i++) {
-		std::array<VkImageView, 3> attachments = { _colorView,
-												   _depthView,
+		std::array<VkImageView, 3> attachments = { _colorView, _depthView,
 												   _imageViews[i] };
 
 		VkFramebufferCreateInfo framebufferInfo {};
@@ -143,7 +145,8 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 	}
 }
 
-void evan::ASwapchainImage::createImages(VkDevice logicalDevice, VkSwapchainKHR swapchain)
+void evan::ASwapchainImage::createImages(VkDevice logicalDevice,
+										 VkSwapchainKHR swapchain)
 {
 	uint32_t imageCount;
 

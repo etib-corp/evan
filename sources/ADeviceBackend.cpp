@@ -234,7 +234,8 @@ void evan::ADeviceBackend::copyBufferToImage(
 								properties._graphicsQueue, commandBuffer);
 }
 
-void evan::ADeviceBackend::copyBuffer(const CopyBufferProperties &properties) const
+void evan::ADeviceBackend::copyBuffer(
+	const CopyBufferProperties &properties) const
 {
 	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(
 		properties._logicalDevice, properties._commandPool);
@@ -245,12 +246,14 @@ void evan::ADeviceBackend::copyBuffer(const CopyBufferProperties &properties) co
 					1, &copyRegion);
 
 	this->endSingleTimeCommands(properties._logicalDevice,
-								 properties._commandPool,
-								 properties._graphicsQueue, commandBuffer);
+								properties._commandPool,
+								properties._graphicsQueue, commandBuffer);
 }
 
-VkImageView evan::ADeviceBackend::createImageView(
-	VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) const
+VkImageView
+	evan::ADeviceBackend::createImageView(VkImage image, VkFormat format,
+										  VkImageAspectFlags aspectFlags,
+										  uint32_t mipLevels) const
 {
 	VkImageViewCreateInfo viewInfo {};
 	viewInfo.sType	  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

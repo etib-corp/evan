@@ -10,7 +10,8 @@
 #include "DeviceContext.hpp"
 
 evan::DesktopSwapchainImage::DesktopSwapchainImage(
-	const DeviceContext &deviceContext, GLFWwindow *window, VkRenderPass renderpass)
+	const DeviceContext &deviceContext, GLFWwindow *window,
+	VkRenderPass renderpass)
 {
 	auto backend =
 		(evan::DesktopBackend *)(deviceContext.getDeviceBackend().get());
@@ -68,13 +69,13 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	}
 
 	_extent = extent;
-    _format = surfaceFormat.format;
+	_format = surfaceFormat.format;
 
-    this->createImages(backend->_device, _swapchain);
-    this->createImageViews(*backend);
-    this->createColorResources(*backend, deviceContext.getMsaaSamples());
-    this->createDepthResources(deviceContext);
-    this->createFramebuffers(backend->_device, renderpass);
+	this->createImages(backend->_device, _swapchain);
+	this->createImageViews(*backend);
+	this->createColorResources(*backend, deviceContext.getMsaaSamples());
+	this->createDepthResources(deviceContext);
+	this->createFramebuffers(backend->_device, renderpass);
 }
 
 evan::DesktopSwapchainImage::~DesktopSwapchainImage()
@@ -106,10 +107,11 @@ void evan::DesktopSwapchainImage::destroy(VkDevice device)
 	vkFreeMemory(device, _depthMemory, nullptr);
 }
 
-void evan::DesktopSwapchainImage::fillPresentInfo(VkPresentInfoKHR &presentInfo) const
+void evan::DesktopSwapchainImage::fillPresentInfo(
+	VkPresentInfoKHR &presentInfo) const
 {
 	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &_swapchain;
+	presentInfo.pSwapchains	   = &_swapchain;
 }
 
 /////////////////////

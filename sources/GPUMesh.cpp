@@ -7,11 +7,13 @@
 
 #include "GPUMesh.hpp"
 
-evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> vertices, std::vector<uint32_t> indices, uint32_t materialID)
+evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext,
+					   std::vector<Vertex> vertices,
+					   std::vector<uint32_t> indices, uint32_t materialID)
 {
-    auto deviceBackend = deviceContext.getDeviceBackend();
-	_indexCount = indices.size();
-	_materialID = materialID;
+	auto deviceBackend = deviceContext.getDeviceBackend();
+	_indexCount		   = indices.size();
+	_materialID		   = materialID;
 
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 	VkBuffer stagingBuffer;
@@ -35,7 +37,8 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> v
 	deviceBackend->createBuffer(stagingBufferProperties);
 
 	void *data = nullptr;
-	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0,
+				&data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
 
@@ -64,7 +67,7 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext, std::vector<Vertex> v
 	vkDestroyBuffer(deviceBackend->_device, stagingBuffer, nullptr);
 	vkFreeMemory(deviceBackend->_device, stagingBufferMemory, nullptr);
 
-    this->createIndexBuffer(deviceContext, indices);
+	this->createIndexBuffer(deviceContext, indices);
 }
 
 evan::GPUMesh::~GPUMesh()
@@ -111,7 +114,8 @@ uint32_t evan::GPUMesh::getMaterialID() const
 // Protected methods //
 ///////////////////////
 
-void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext, std::vector<uint32_t> indices)
+void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext,
+									  std::vector<uint32_t> indices)
 {
 	auto deviceBackend = deviceContext.getDeviceBackend();
 
@@ -136,7 +140,8 @@ void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext, std::v
 	deviceBackend->createBuffer(stagingBufferProperties);
 
 	void *data;
-	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0,
+				&data);
 	memcpy(data, indices.data(), (size_t)bufferSize);
 	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
 

@@ -9,15 +9,21 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-evan::Renderer::Renderer(DeviceContext& deviceContext, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
+evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
+						 VkSampleCountFlagBits msaaSamples)
 {
 	this->_currentFrameIndex = 0;
 
 	this->createDescriptorSetLayout(deviceContext.getDeviceBackend()->_device);
-	this->createGraphicsPipeline(deviceContext.getDeviceBackend()->_device, renderPass, msaaSamples);
-	this->createDescriptorPool(deviceContext.getDeviceBackend()->_device, 1000); // TODO: Change this with the AssetManager when it will be implemented
+	this->createGraphicsPipeline(deviceContext.getDeviceBackend()->_device,
+								 renderPass, msaaSamples);
+	this->createDescriptorPool(
+		deviceContext.getDeviceBackend()->_device,
+		1000);	  // TODO: Change this with the AssetManager when it will be
+				  // implemented
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_frames.emplace_back(deviceContext.getCommandPool(), *deviceContext.getDeviceBackend());
+		_frames.emplace_back(deviceContext.getCommandPool(),
+							 *deviceContext.getDeviceBackend());
 	}
 }
 
@@ -33,22 +39,29 @@ void evan::Renderer::destroy(VkDevice device)
 	vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
 }
 
-void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainContext &swapchainContext, const Scene &scene)
+void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
+							   ASwapchainContext &swapchainContext,
+							   const Scene &scene)
 {
 	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
 		return;
 	}
 
 	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
-		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight, VK_TRUE, UINT64_MAX);
+		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1,
+						&_frames[_currentFrameIndex]._inFlight, VK_TRUE,
+						UINT64_MAX);
 
 		uint32_t imageIndex;
-		auto result = swapchainContext.aquireImage(i, deviceContext.getDeviceBackend()->_device, _frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
+		auto result = swapchainContext.aquireImage(
+			i, deviceContext.getDeviceBackend()->_device,
+			_frames[_currentFrameIndex]._image, VK_NULL_HANDLE, imageIndex);
 
 		swapchainContext.waitForImage(i);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			 // The swapchain is out of date (e.g. the window was resized) and must be recreated.
+			// The swapchain is out of date (e.g. the window was resized) and
+			// must be recreated.
 			continue;
 		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			throw std::runtime_error("Failed to acquire swap chain image!");
@@ -56,36 +69,42 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 
 		this->updateUniformBuffer(scene, swapchainContext, i);
 
-		vkResetFences(deviceContext.getDeviceBackend()->_device, 1, &_frames[_currentFrameIndex]._inFlight);
+		vkResetFences(deviceContext.getDeviceBackend()->_device, 1,
+					  &_frames[_currentFrameIndex]._inFlight);
 		this->resetCommandBuffers();
 
-		auto swapchainExtent = swapchainContext._swapchainImages[i]->getExtent();
+		auto swapchainExtent =
+			swapchainContext._swapchainImages[i]->getExtent();
 
 		this->recordCommandBuffer(
 			swapchainContext.getRenderPass(),
 			swapchainContext._swapchainImages[i]->getFramebuffer(imageIndex),
-			swapchainExtent,
-			scene
-		);
+			swapchainExtent, scene);
 
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSemaphore signalSemaphores[] = {_frames[_currentFrameIndex]._render};
+		VkPipelineStageFlags waitStages[] = {
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+		};
+		VkSemaphore signalSemaphores[] = {
+			_frames[_currentFrameIndex]._render
+		};
 		VkSubmitInfo submitInfo {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		// submitInfo.waitSemaphoreCount = 1;
 		// submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
-		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.pWaitDstStageMask  = waitStages;
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &_frames[_currentFrameIndex]._commandBuffer;
+		submitInfo.pCommandBuffers =
+			&_frames[_currentFrameIndex]._commandBuffer;
 		// submitInfo.signalSemaphoreCount = 1;
 		// submitInfo.pSignalSemaphores = signalSemaphores;
 
-
-		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo, _frames[_currentFrameIndex]._inFlight) != VK_SUCCESS) {
+		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo,
+						  _frames[_currentFrameIndex]._inFlight)
+			!= VK_SUCCESS) {
 			throw std::runtime_error("Failed to submit draw command buffer!");
 		}
 
-		VkPresentInfoKHR presentInfo{};
+		VkPresentInfoKHR presentInfo {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		// presentInfo.waitSemaphoreCount = 1;
@@ -93,8 +112,10 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &imageIndex;
 
-		if (!deviceContext.getDeviceBackend()->processFrame(presentInfo, *swapchainContext._swapchainImages[i].get())) {
-			// The swapchain is out of date (e.g. the window was resized) and must be recreated.
+		if (!deviceContext.getDeviceBackend()->processFrame(
+				presentInfo, *swapchainContext._swapchainImages[i].get())) {
+			// The swapchain is out of date (e.g. the window was resized) and
+			// must be recreated.
 			continue;
 		}
 	}
@@ -102,7 +123,8 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext, ASwapchainCon
 	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
 }
 
-void evan::Renderer::createFrame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend)
+void evan::Renderer::createFrame(VkCommandPool commandPool,
+								 const ADeviceBackend &deviceBackend)
 {
 	_frames.emplace_back(commandPool, deviceBackend);
 }
@@ -119,7 +141,7 @@ VkDescriptorPool evan::Renderer::getDescriptorPool() const
 const std::vector<VkBuffer> evan::Renderer::getUniformBuffers() const
 {
 	std::vector<VkBuffer> uniformBuffers;
-	for (const Frame& frame: _frames) {
+	for (const Frame &frame: _frames) {
 		uniformBuffers.push_back(frame.getUniformBuffer());
 	}
 	return uniformBuffers;
@@ -136,46 +158,59 @@ VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
 
 void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 {
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
+	VkDescriptorSetLayoutBinding uboLayoutBinding {};
+	uboLayoutBinding.binding			= 0;
+	uboLayoutBinding.descriptorType		= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount	= 1;
+	uboLayoutBinding.stageFlags			= VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.pImmutableSamplers = nullptr;
 
-    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
+	samplerLayoutBinding.binding		 = 1;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType =
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+		uboLayoutBinding, samplerLayoutBinding
+	};
+	VkDescriptorSetLayoutCreateInfo layoutInfo {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+	layoutInfo.pBindings	= bindings.data();
 
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout!");
-    }
+	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
+									&_descriptorSetLayout)
+		!= VK_SUCCESS) {
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
 }
 
-void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples)
+void evan::Renderer::createGraphicsPipeline(VkDevice device,
+											VkRenderPass renderPass,
+											VkSampleCountFlagBits msaaSamples)
 {
-	auto fragShaderFile = g_assetManager->open(std::string("./shaders/frag.spv"));
-	auto vertShaderFile = g_assetManager->open(std::string("./shaders/vert.spv"));
+	auto fragShaderFile =
+		g_assetManager->open(std::string("./shaders/frag.spv"));
+	auto vertShaderFile =
+		g_assetManager->open(std::string("./shaders/vert.spv"));
 
 	std::string vertShaderString = vertShaderFile->content();
 	std::string fragShaderString = fragShaderFile->content();
 
-	std::vector<uint32_t> vertShaderCode(vertShaderString.size() / sizeof(uint32_t));
-	std::memcpy(vertShaderCode.data(), vertShaderString.data(), vertShaderString.size());
+	std::vector<uint32_t> vertShaderCode(vertShaderString.size()
+										 / sizeof(uint32_t));
+	std::memcpy(vertShaderCode.data(), vertShaderString.data(),
+				vertShaderString.size());
 
-	std::vector<uint32_t> fragShaderCode(fragShaderString.size() / sizeof(uint32_t));
-	std::memcpy(fragShaderCode.data(), fragShaderString.data(), fragShaderString.size());
+	std::vector<uint32_t> fragShaderCode(fragShaderString.size()
+										 / sizeof(uint32_t));
+	std::memcpy(fragShaderCode.data(), fragShaderString.data(),
+				fragShaderString.size());
 
-    Shader shader(vertShaderCode, fragShaderCode, device);
+	Shader shader(vertShaderCode, fragShaderCode, device);
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo {};
 	vertShaderStageInfo.sType =
@@ -257,8 +292,7 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 
 	std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT,
 												  VK_DYNAMIC_STATE_SCISSOR,
-												  VK_DYNAMIC_STATE_CULL_MODE
-												 };
+												  VK_DYNAMIC_STATE_CULL_MODE };
 	VkPipelineDynamicStateCreateInfo dynamicState {};
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.dynamicStateCount =
@@ -270,8 +304,8 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts	  = &_descriptorSetLayout;
 
-	if (vkCreatePipelineLayout(device,
-							   &pipelineLayoutInfo, nullptr, &_pipelineLayout)
+	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+							   &_pipelineLayout)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create pipeline layout !");
 	}
@@ -306,18 +340,18 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device, VkRenderPass render
 	pipelineInfo.basePipelineHandle	 = VK_NULL_HANDLE;
 	pipelineInfo.pDepthStencilState	 = &depthStencil;
 
-	if (vkCreateGraphicsPipelines(device,
-								  VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
-								  &_pipeline)
+	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+								  nullptr, &_pipeline)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline !");
 	}
 	shader.destroy(device);
 }
 
-void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCount)
+void evan::Renderer::createDescriptorPool(VkDevice device,
+										  uint32_t materialCount)
 {
-    uint32_t descriptorCount = materialCount * MAX_FRAMES_IN_FLIGHT;
+	uint32_t descriptorCount = materialCount * MAX_FRAMES_IN_FLIGHT;
 
 	std::array<VkDescriptorPoolSize, 2> poolSizes {};
 	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -331,8 +365,7 @@ void evan::Renderer::createDescriptorPool(VkDevice device, uint32_t materialCoun
 	poolInfo.pPoolSizes	   = poolSizes.data();
 	poolInfo.maxSets	   = descriptorCount;
 
-	if (vkCreateDescriptorPool(device, &poolInfo, nullptr,
-							   &_descriptorPool)
+	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &_descriptorPool)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create descriptor pool!");
 	}
@@ -343,82 +376,97 @@ void evan::Renderer::resetCommandBuffers()
 	_frames[_currentFrameIndex].resetCommandBuffer();
 }
 
-void evan::Renderer::updateUniformBuffer(const Scene &scene, ASwapchainContext &swapchainContext, int currentIndex)
+void evan::Renderer::updateUniformBuffer(const Scene &scene,
+										 ASwapchainContext &swapchainContext,
+										 int currentIndex)
 {
-	Frame::UniformBufferObject ubo{};
+	Frame::UniformBufferObject ubo {};
 	ubo.model = glm::mat4(1.0f);
-	ubo.view = swapchainContext.getView(currentIndex);
-	ubo.proj = swapchainContext.getProjection(currentIndex);
+	ubo.view  = swapchainContext.getView(currentIndex);
+	ubo.proj  = swapchainContext.getProjection(currentIndex);
 	// ubo.proj[1][1] *= -1;
 
 	memcpy(_frames[_currentFrameIndex]._uniformBufferMapped, &ubo, sizeof(ubo));
 }
 
-void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer, VkExtent2D swapChainExtent, const Scene &scene)
+void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
+										 VkFramebuffer swapChainFramebuffer,
+										 VkExtent2D swapChainExtent,
+										 const Scene &scene)
 {
 	auto commandBuffer = _frames[_currentFrameIndex]._commandBuffer;
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	VkCommandBufferBeginInfo beginInfo {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!");
-    }
+	if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+		throw std::runtime_error("failed to begin recording command buffer!");
+	}
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = swapChainFramebuffer;
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapChainExtent;
+	VkRenderPassBeginInfo renderPassInfo {};
+	renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass		 = renderPass;
+	renderPassInfo.framebuffer		 = swapChainFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = swapChainExtent;
 
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.184313729f, 0.309803933f, 0.309803933f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
+	std::array<VkClearValue, 2> clearValues {};
+	clearValues[0].color		= { { 0.184313729f, 0.309803933f, 0.309803933f,
+									  1.0f } };
+	clearValues[1].depthStencil = { 1.0f, 0 };
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues	   = clearValues.data();
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,
+						 VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+					  _pipeline);
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float) swapChainExtent.width;
-    viewport.height = (float) swapChainExtent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	VkViewport viewport {};
+	viewport.x		  = 0.0f;
+	viewport.y		  = 0.0f;
+	viewport.width	  = (float)swapChainExtent.width;
+	viewport.height	  = (float)swapChainExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = swapChainExtent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+	VkRect2D scissor {};
+	scissor.offset = { 0, 0 };
+	scissor.extent = swapChainExtent;
+	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 	std::map<uint32_t, bool> materialBound;
 
-	for (const auto &mesh : scene.getMeshes()) {
-		VkDeviceSize offsets[] = {0};
-		VkBuffer vertexBuffer = mesh.getVertexBuffer();
+	for (const auto &mesh: scene.getMeshes()) {
+		VkDeviceSize offsets[] = { 0 };
+		VkBuffer vertexBuffer  = mesh.getVertexBuffer();
 
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
 
-		vkCmdBindIndexBuffer(commandBuffer, mesh.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(commandBuffer, mesh.getIndexBuffer(), 0,
+							 VK_INDEX_TYPE_UINT32);
 
 		if (!materialBound[mesh.getMaterialID()]) {
 			materialBound[mesh.getMaterialID()] = true;
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &scene.getMaterials().at(mesh.getMaterialID()).getDescriptorSets()[_currentFrameIndex], 0, nullptr);
+			vkCmdBindDescriptorSets(
+				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout,
+				0, 1,
+				&scene.getMaterials()
+					 .at(mesh.getMaterialID())
+					 .getDescriptorSets()[_currentFrameIndex],
+				0, nullptr);
 		}
 
 		vkCmdDrawIndexed(commandBuffer, mesh.getIndexCount(), 1, 0, 0, 0);
 	}
 
-    vkCmdEndRenderPass(commandBuffer);
+	vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record command buffer!");
-    }
+	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to record command buffer!");
+	}
 }

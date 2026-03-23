@@ -45,9 +45,9 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
 	XrFrameState frameState { XR_TYPE_FRAME_STATE };
-	XrFrameWaitInfo frameWaitInfo{
-      .type = XR_TYPE_FRAME_WAIT_INFO,
-  	};
+	XrFrameWaitInfo frameWaitInfo {
+		.type = XR_TYPE_FRAME_WAIT_INFO,
+	};
 	XrResult result = xrWaitFrame(_session, &frameWaitInfo, &frameState);
 	if (result != XR_SUCCESS) {
 		std::cerr << "Failed to wait for OpenXR frame: " << result << std::endl;
@@ -62,56 +62,71 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 	_predictedDisplayTime = frameState.predictedDisplayTime;
 	if (frameState.shouldRender == XR_FALSE) {
 		XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
-		frameEndInfo.displayTime = _predictedDisplayTime;
+		frameEndInfo.displayTime		  = _predictedDisplayTime;
 		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-		frameEndInfo.layerCount = 0;
-		frameEndInfo.layers = nullptr;
+		frameEndInfo.layerCount			  = 0;
+		frameEndInfo.layers				  = nullptr;
 		xrEndFrame(_session, &frameEndInfo);
 		return false;
 	}
 	XrViewState viewState { XR_TYPE_VIEW_STATE };
 	uint32_t viewCount = 0;
 	XrViewLocateInfo viewLocateInfo { XR_TYPE_VIEW_LOCATE_INFO };
-	viewLocateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	viewLocateInfo.viewConfigurationType =
+		XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 	viewLocateInfo.displayTime = _predictedDisplayTime;
-	viewLocateInfo.space = _space;
-	std::vector<XrView> &views = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)._views;
-	XrResult locateResult = xrLocateViews(_session, &viewLocateInfo, &viewState, static_cast<uint32_t>(views.size()), &viewCount, views.data());
+	viewLocateInfo.space	   = _space;
+	std::vector<XrView> &views =
+		dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)._views;
+	XrResult locateResult = xrLocateViews(_session, &viewLocateInfo, &viewState,
+										  static_cast<uint32_t>(views.size()),
+										  &viewCount, views.data());
 	if (locateResult != XR_SUCCESS) {
-		std::cerr << "Failed to locate OpenXR views: " << locateResult << std::endl;
+		std::cerr << "Failed to locate OpenXR views: " << locateResult
+				  << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo, ASwapchainImage &swapchainImage)
+bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
+										 ASwapchainImage &swapchainImage)
 {
-	XrSwapchain swapchain = dynamic_cast<evan::XrSwapchainImage &>(swapchainImage)._swapchain;
-	XrSwapchainImageReleaseInfo releaseInfo { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
+	XrSwapchain swapchain =
+		dynamic_cast<evan::XrSwapchainImage &>(swapchainImage)._swapchain;
+	XrSwapchainImageReleaseInfo releaseInfo {
+		XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO
+	};
 	XrResult result = xrReleaseSwapchainImage(swapchain, &releaseInfo);
 	if (result != XR_SUCCESS) {
-		std::cerr << "Failed to release OpenXR swapchain image: " << result << std::endl;
+		std::cerr << "Failed to release OpenXR swapchain image: " << result
+				  << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool evan::XrDeviceBackend::postprocessFrame(ASwapchainContext &swapchainContext)
+bool evan::XrDeviceBackend::postprocessFrame(
+	ASwapchainContext &swapchainContext)
 {
-	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).updateProjectionLayerViews();
-	auto &projectionLayerViews = dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).getProjectionLayerViews();
+	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)
+		.updateProjectionLayerViews();
+	auto &projectionLayerViews =
+		dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)
+			.getProjectionLayerViews();
 	XrCompositionLayerProjection layer { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-	layer.space = _space;
+	layer.space		= _space;
 	layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
-	layer.views = projectionLayerViews.data();
+	layer.views		= projectionLayerViews.data();
 	std::array<XrCompositionLayerBaseHeader *, 1> layers = {
 		reinterpret_cast<XrCompositionLayerBaseHeader *>(&layer)
 	};
 	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
-	frameEndInfo.displayTime = _predictedDisplayTime;
+	frameEndInfo.displayTime		  = _predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-	frameEndInfo.layerCount = (layer.viewCount > 0) ? 1u : 0u;
-	frameEndInfo.layers = (frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
+	frameEndInfo.layerCount			  = (layer.viewCount > 0) ? 1u : 0u;
+	frameEndInfo.layers =
+		(frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
 
 	XrResult result = xrEndFrame(_session, &frameEndInfo);
 	if (result != XR_SUCCESS) {
@@ -124,7 +139,7 @@ bool evan::XrDeviceBackend::postprocessFrame(ASwapchainContext &swapchainContext
 evan::QueueFamilyIndices evan::XrDeviceBackend::findQueueFamilies()
 {
 	QueueFamilyIndices indices = {};
-	uint32_t queueFamilyCount = 0;
+	uint32_t queueFamilyCount  = 0;
 
 	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount,
 											 nullptr);
@@ -151,24 +166,34 @@ uint32_t evan::XrDeviceBackend::countSwapchainFormats() const
 	return swapchainFormatCount;
 }
 
-std::vector<int64_t> evan::XrDeviceBackend::enumerateSwapchainFormats(uint32_t swapchainFormatCount) const
+std::vector<int64_t> evan::XrDeviceBackend::enumerateSwapchainFormats(
+	uint32_t swapchainFormatCount) const
 {
 	std::vector<int64_t> swapchainFormats(swapchainFormatCount);
-	xrEnumerateSwapchainFormats(_session, swapchainFormatCount, &swapchainFormatCount, swapchainFormats.data());
+	xrEnumerateSwapchainFormats(_session, swapchainFormatCount,
+								&swapchainFormatCount, swapchainFormats.data());
 	return swapchainFormats;
 }
 
-std::vector<XrViewConfigurationView> evan::XrDeviceBackend::enumerateViewConfigurations() const
+std::vector<XrViewConfigurationView>
+	evan::XrDeviceBackend::enumerateViewConfigurations() const
 {
 	uint32_t viewConfigurationCount = 0;
-	xrEnumerateViewConfigurationViews(_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &viewConfigurationCount, nullptr);
+	xrEnumerateViewConfigurationViews(_XrInstance, _systemId,
+									  XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+									  0, &viewConfigurationCount, nullptr);
 
 	if (viewConfigurationCount == 0) {
-		std::cerr << "No view configurations found for the OpenXR system." << std::endl;
+		std::cerr << "No view configurations found for the OpenXR system."
+				  << std::endl;
 		return {};
 	}
-	std::vector<XrViewConfigurationView> viewConfigurations(viewConfigurationCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
-	xrEnumerateViewConfigurationViews(_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, viewConfigurationCount, &viewConfigurationCount, viewConfigurations.data());
+	std::vector<XrViewConfigurationView> viewConfigurations(
+		viewConfigurationCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
+	xrEnumerateViewConfigurationViews(
+		_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+		viewConfigurationCount, &viewConfigurationCount,
+		viewConfigurations.data());
 	return viewConfigurations;
 }
 
@@ -198,9 +223,8 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 				  << std::endl;
 		return;
 	}
-	XrResult xrResult =
-		getVulkanGraphicsRequirements2KHR(_XrInstance, _systemId,
-									  &graphicsRequirements);
+	XrResult xrResult = getVulkanGraphicsRequirements2KHR(
+		_XrInstance, _systemId, &graphicsRequirements);
 	if (xrResult != XR_SUCCESS) {
 		std::cerr
 			<< "Failed to query Vulkan graphics requirements through OpenXR."
@@ -246,7 +270,8 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 	vulkanCreateInfoKHR.pfnGetInstanceProcAddr = &vkGetInstanceProcAddr;
 
 	VkResult result = VK_SUCCESS;
-	createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance, &result);
+	createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance,
+							&result);
 	if (result != VK_SUCCESS) {
 		std::cerr << "Failed to create Vulkan instance through OpenXR."
 				  << std::endl;
@@ -302,7 +327,8 @@ void evan::XrDeviceBackend::createLogicalDevice()
 	vulkanDeviceCreateInfoKHR.vulkanPhysicalDevice	 = _physicalDevice;
 
 	VkResult result = VK_SUCCESS;
-	createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &_device, &result);
+	createVulkanDeviceKHR(_XrInstance, &vulkanDeviceCreateInfoKHR, &_device,
+						  &result);
 	if (result != VK_SUCCESS) {
 		std::cerr << "Failed to create Vulkan device through OpenXR."
 				  << std::endl;
@@ -344,9 +370,11 @@ void evan::XrDeviceBackend::pickPhysicalDevice()
 
 void evan::XrDeviceBackend::createVisualizedSpace()
 {
-	XrReferenceSpaceCreateInfo spaceCreateInfo { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
-	spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
-	spaceCreateInfo.poseInReferenceSpace =  { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+	XrReferenceSpaceCreateInfo spaceCreateInfo {
+		XR_TYPE_REFERENCE_SPACE_CREATE_INFO
+	};
+	spaceCreateInfo.referenceSpaceType	 = XR_REFERENCE_SPACE_TYPE_STAGE;
+	spaceCreateInfo.poseInReferenceSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
 
 	XrResult result =
 		xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space);
@@ -406,8 +434,8 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 	XrInstanceCreateInfo createInfo { XR_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.enabledExtensionNames = extensions.data();
-	createInfo.enabledApiLayerCount = 0;
-	createInfo.enabledApiLayerNames = nullptr;
+	createInfo.enabledApiLayerCount	 = 0;
+	createInfo.enabledApiLayerNames	 = nullptr;
 	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
@@ -441,10 +469,11 @@ void evan::XrDeviceBackend::createSession()
 {
 	XrSessionCreateInfo sessionCreateInfo			  = {};
 	XrGraphicsBindingVulkan2KHR graphicsBindingVulkan = {};
-	QueueFamilyIndices indices = findQueueFamilies();
+	QueueFamilyIndices indices						  = findQueueFamilies();
 
 	if (indices.graphicsFamily == std::nullopt) {
-		std::cerr << "Failed to create OpenXR session: no graphics queue family found."
+		std::cerr << "Failed to create OpenXR session: no graphics queue "
+					 "family found."
 				  << std::endl;
 		return;
 	}
