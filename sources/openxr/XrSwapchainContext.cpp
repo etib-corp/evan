@@ -51,6 +51,10 @@ evan::XrSwapchainContext::XrSwapchainContext(
     }
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::XrSwapchainContext::destroy(VkDevice device)
 {
     for (const auto &swapchainImage : _swapchainImages) {
@@ -109,20 +113,13 @@ void evan::XrSwapchainContext::updateProjectionLayerViews()
     }
 }
 
+/////////////
+// Getters //
+/////////////
+
 const std::vector<XrCompositionLayerProjectionView> &evan::XrSwapchainContext::getProjectionLayerViews() const
 {
     return _projectionLayerViews;
-}
-
-glm::mat4 evan::XrSwapchainContext::getView(int index) const
-{
-    const auto &pose = _views[index].pose;
-    const glm::quat orientation(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-    const glm::vec3 position(pose.position.x, pose.position.y, pose.position.z);
-
-    const glm::mat4 rotation = glm::mat4_cast(glm::conjugate(orientation));
-    const glm::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
-    return rotation * translation;
 }
 
 glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
@@ -149,4 +146,15 @@ glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
     projection[3][2] = -(farZ * nearZ) / (farZ - nearZ);
 
     return projection;
+}
+
+glm::mat4 evan::XrSwapchainContext::getView(int index) const
+{
+    const auto &pose = _views[index].pose;
+    const glm::quat orientation(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
+    const glm::vec3 position(pose.position.x, pose.position.y, pose.position.z);
+
+    const glm::mat4 rotation = glm::mat4_cast(glm::conjugate(orientation));
+    const glm::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
+    return rotation * translation;
 }
