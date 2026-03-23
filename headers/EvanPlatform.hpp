@@ -22,15 +22,50 @@
 
 #pragma once
 
+#include <utility/asset_manager/android_asset_manager.hpp>
+#include <utility/asset_manager/default_asset_manager.hpp>
+
 // GLM configuration
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
+#include <array>
+
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+
+/*
+ * @brief Validation layers for Vulkan debugging.
+ *
+ * This constant defines the validation layers used for debugging Vulkan
+ * applications. These layers provide additional checks and validation
+ * during development to help identify issues and improve code quality.
+ *
+ */
+const std::vector<const char *> validationLayers = {
+	"VK_LAYER_KHRONOS_validation"	 // Khronos validation layer
+};
+
+/*
+ * @brief Maximum number of frames in flight.
+ *
+ * This constant defines the maximum number of frames that can be in flight
+ * at any given time. It is used to manage synchronization and resource
+ * allocation for rendering operations in Vulkan.
+ *
+ */
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>
 #endif
+
+#include <vulkan/vulkan.h>
 
 #ifdef __GLFW__
 	#include <vulkan/vulkan.hpp>
@@ -48,4 +83,30 @@
 		#include <jni.h>
 	#endif
 	#include <openxr/openxr_platform.h>
+#endif
+
+/*
+ ** @brief Callback type for the debug messenger.
+ **
+ ** This callback is used to handle debug messages from the Vulkan
+ * API.
+ ** It is used to log the debug messages from the Vulkan API.
+ **
+ ** @param severity the severity of the message
+ ** @param type the type of the message
+ ** @param pCallbackData the callback data
+ ** @param pUserData the user data
+ **
+ ** @return true if the message is handled, false otherwise
+ */
+typedef VkBool32 debugCallback_t(VkDebugUtilsMessageSeverityFlagBitsEXT,
+								 VkDebugUtilsMessageTypeFlagsEXT,
+								 const VkDebugUtilsMessengerCallbackDataEXT *,
+								 void *);
+
+#ifdef __ANDROID__
+const std::unique_ptr<utility::AssetManager> g_assetManager =
+	std::make_unique<utility::AndroidAssetManager>();
+#else
+extern std::unique_ptr<utility::AssetManager> g_assetManager;
 #endif
