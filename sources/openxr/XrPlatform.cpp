@@ -34,6 +34,10 @@ evan::XrPlatform::~XrPlatform()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::XrPlatform::getRequiredInstanceExtensions() const
 {
     std::vector<std::string> extensions = {
@@ -84,6 +88,10 @@ const XrBaseInStructure* evan::XrPlatform::getInstanceCreateInfoAndroid() const
         return nullptr;
     #endif
 }
+
+///////////////////////
+// Protected Methods //
+///////////////////////
 
 void evan::XrPlatform::processSessionStateChangedEvent(const XrEventDataSessionStateChanged &eventData, XrSession session)
 {
