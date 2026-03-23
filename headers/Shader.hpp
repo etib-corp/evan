@@ -83,5 +83,7 @@ namespace evan
 		 * SPIR-V code for the fragment shader
 		 */
 		std::vector<uint32_t> _fragmentCode;
+
+		VkDevice _logicalDevice;
 	};
 }	 // namespace evan

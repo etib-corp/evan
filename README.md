@@ -20,19 +20,51 @@ int main() {
 - **[Architecture Documentation](docs/ARCHITECTURE.md)** - Detailed overview of the system's design and components
 - **[Technical Choices Documentation](docs/TECHNICAL_CHOICES.md)** - Insights into design decisions and technologies
 
+## Prerequisites
+
+For Building Evan, you will need:
+
+- Vulkan SDK
+
+```
+# macOS
+brew install vulkan-loader vulkan-headers molten-vk glfw
+```
+```
+# Ubuntu/Debian
+sudo apt install libvulkan-dev libglfw3-dev
+```
+```
+# Fedora
+sudo dnf install vulkan-devel glfw-devel
+```
+
 ## Building
 
 Evan builds as a static library along with examples and tests:
 
 ```bash
 mkdir build && cd build
-cmake ..
-make
+
+# For desktop (GLFW)
+cmake .. -DBUILD_FOR_GLFW=ON
+
+# For XR (OpenXR)
+cmake .. -DBUILD_FOR_OPENXR=ON
+
+cmake --build .
 ```
 
 ### Running Examples
 
-After building, you can run the examples:
+You can also build and run the several examples included in the `examples/` directory to see Evan in action:
+
+```bash
+cmake .. -DBUILD_EXAMPLES=ON #-DBUILD_FOR_GLFW=ON or -DBUILD_FOR_OPENXR=ON depending on your target platform
+cmake --build .
+```
+
+Then you can find the compiled examples in the `./examples/` directory:
 
 ```bash
 # Hello World (minimal)
