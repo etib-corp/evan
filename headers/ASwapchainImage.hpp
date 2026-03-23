@@ -83,6 +83,76 @@ namespace evan
 		 */
 		virtual void fillPresentInfo(VkPresentInfoKHR &presentInfo) const = 0;
 
+				/**
+		 * @brief Finds a supported depth format for the swapchain context.
+		 *
+		 * This function is responsible for finding a supported depth format
+		 * that can be used in the swapchain context for depth buffering. The
+		 * function takes a Vulkan physical device as a parameter and queries
+		 * the available formats to determine which one is suitable for depth
+		 * buffering based on the requirements of the rendering system.
+		 * Implement this function to ensure that a compatible depth format is
+		 * selected for use in the swapchain context, which is essential for
+		 * proper depth testing and rendering of 3D scenes.
+		 *
+		 * @param physicalDevice The Vulkan physical device used to query the
+		 * available formats for depth buffering. This device should be properly
+		 * initialized and should support the necessary features for depth
+		 * buffering to ensure that a suitable depth format can be found.
+		 *
+		 * @return The selected VkFormat that is supported for depth buffering
+		 * in the swapchain context. This format should be compatible with the
+		 * rendering operations and provide optimal performance for depth
+		 * testing in 3D scenes.
+		 */
+		static VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+
+		/**
+		 * @brief Finds a supported format from a list of candidates based on
+		 * the specified tiling and features.
+		 *
+		 * This function is responsible for finding a supported format from a
+		 * list of candidate formats based on the specified tiling and feature
+		 * requirements. The function takes a Vulkan physical device, a vector
+		 * of candidate VkFormat values, the desired VkImageTiling, and the
+		 * required VkFormatFeatureFlags as parameters. It queries the Vulkan
+		 * physical device to determine which of the candidate formats is
+		 * supported with the specified tiling and features, and returns the
+		 * first suitable format found. Implement this function to ensure that a
+		 * compatible format is selected for use in the swapchain context or
+		 * other rendering operations that require specific format support.
+		 *
+		 * @param physicalDevice The Vulkan physical device used to query the
+		 * available formats and their support for the specified tiling and
+		 * feature requirements. This device should be properly initialized and
+		 * should support the necessary features to ensure that a suitable
+		 * format can be found.
+		 * @param candidates A vector of candidate VkFormat values that should
+		 * be evaluated to determine which format is supported with the
+		 * specified tiling and features. These candidates should be chosen
+		 * based on the requirements of the rendering system and the
+		 * capabilities of the Vulkan physical device.
+		 * @param tiling The desired VkImageTiling that the selected format
+		 * should support. This parameter specifies the tiling arrangement for
+		 * images using the selected format and should be chosen based on the
+		 * intended usage of the images in the rendering system.
+		 * @param features The required VkFormatFeatureFlags that the selected
+		 * format should support. This parameter specifies the features that the
+		 * format must support, such as sampling, filtering, or rendering
+		 * capabilities, and should be chosen based on the specific requirements
+		 * of the rendering operations that will utilize the selected format.
+		 *
+		 * @return The selected VkFormat that is supported with the specified
+		 * tiling and features from the list of candidates. This format should
+		 * be compatible with the rendering operations and provide optimal
+		 * performance for the intended usage in the swapchain context or other
+		 * rendering operations.
+		 */
+		static VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice,
+									 const std::vector<VkFormat> &candidates,
+									 VkImageTiling tiling,
+									 VkFormatFeatureFlags features);
+
 		/**
 		 * @brief Retrieves the Vulkan framebuffer associated with the swapchain
 		 * image at the specified index.
@@ -327,76 +397,5 @@ namespace evan
 		 * should be stored.
 		 */
 		std::vector<VkFramebuffer> _framebuffers;
-
-		private:
-		/**
-		 * @brief Finds a supported depth format for the swapchain context.
-		 *
-		 * This function is responsible for finding a supported depth format
-		 * that can be used in the swapchain context for depth buffering. The
-		 * function takes a Vulkan physical device as a parameter and queries
-		 * the available formats to determine which one is suitable for depth
-		 * buffering based on the requirements of the rendering system.
-		 * Implement this function to ensure that a compatible depth format is
-		 * selected for use in the swapchain context, which is essential for
-		 * proper depth testing and rendering of 3D scenes.
-		 *
-		 * @param physicalDevice The Vulkan physical device used to query the
-		 * available formats for depth buffering. This device should be properly
-		 * initialized and should support the necessary features for depth
-		 * buffering to ensure that a suitable depth format can be found.
-		 *
-		 * @return The selected VkFormat that is supported for depth buffering
-		 * in the swapchain context. This format should be compatible with the
-		 * rendering operations and provide optimal performance for depth
-		 * testing in 3D scenes.
-		 */
-		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
-
-		/**
-		 * @brief Finds a supported format from a list of candidates based on
-		 * the specified tiling and features.
-		 *
-		 * This function is responsible for finding a supported format from a
-		 * list of candidate formats based on the specified tiling and feature
-		 * requirements. The function takes a Vulkan physical device, a vector
-		 * of candidate VkFormat values, the desired VkImageTiling, and the
-		 * required VkFormatFeatureFlags as parameters. It queries the Vulkan
-		 * physical device to determine which of the candidate formats is
-		 * supported with the specified tiling and features, and returns the
-		 * first suitable format found. Implement this function to ensure that a
-		 * compatible format is selected for use in the swapchain context or
-		 * other rendering operations that require specific format support.
-		 *
-		 * @param physicalDevice The Vulkan physical device used to query the
-		 * available formats and their support for the specified tiling and
-		 * feature requirements. This device should be properly initialized and
-		 * should support the necessary features to ensure that a suitable
-		 * format can be found.
-		 * @param candidates A vector of candidate VkFormat values that should
-		 * be evaluated to determine which format is supported with the
-		 * specified tiling and features. These candidates should be chosen
-		 * based on the requirements of the rendering system and the
-		 * capabilities of the Vulkan physical device.
-		 * @param tiling The desired VkImageTiling that the selected format
-		 * should support. This parameter specifies the tiling arrangement for
-		 * images using the selected format and should be chosen based on the
-		 * intended usage of the images in the rendering system.
-		 * @param features The required VkFormatFeatureFlags that the selected
-		 * format should support. This parameter specifies the features that the
-		 * format must support, such as sampling, filtering, or rendering
-		 * capabilities, and should be chosen based on the specific requirements
-		 * of the rendering operations that will utilize the selected format.
-		 *
-		 * @return The selected VkFormat that is supported with the specified
-		 * tiling and features from the list of candidates. This format should
-		 * be compatible with the rendering operations and provide optimal
-		 * performance for the intended usage in the swapchain context or other
-		 * rendering operations.
-		 */
-		VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice,
-									 const std::vector<VkFormat> &candidates,
-									 VkImageTiling tiling,
-									 VkFormatFeatureFlags features);
 	};
 }	 // namespace evan
