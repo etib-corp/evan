@@ -39,6 +39,10 @@ evan::XrSwapchainImage::XrSwapchainImage(const CreateXrSwapchainImageProperties 
     this->createFramebuffers(properties.deviceContext.getDeviceBackend()->_device, properties.renderPass);
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 void evan::XrSwapchainImage::destroy(VkDevice device)
 {
     for (size_t i = 0; i < _swapchainImages.size(); ++i) {
