@@ -30,6 +30,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
+#include <array>
+
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
