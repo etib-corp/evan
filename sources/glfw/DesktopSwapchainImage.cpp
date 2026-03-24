@@ -16,8 +16,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	auto backend =
 		(evan::DesktopBackend *)(deviceContext.getDeviceBackend().get());
 	evan::SwapChainSupportDetails swapChainSupport =
-		backend->querySwapChainSupport(backend->_physicalDevice,
-									   backend->_surface);
+		backend->querySwapChainSupport();
 
 	VkSurfaceFormatKHR surfaceFormat =
 		this->chooseSwapSurfaceFormat(swapChainSupport.formats);

@@ -50,7 +50,7 @@ evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
 	Version appVersion(0, 1, 0);
 
 	this->createInstance(platform, "Evan", appVersion);
-	this->createSurface(_VkInstance, platform._window);
+	this->createSurface(platform._window);
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
 }
@@ -137,33 +137,32 @@ evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
 }
 
 evan::SwapChainSupportDetails
-	evan::DesktopBackend::querySwapChainSupport(VkPhysicalDevice device,
-												VkSurfaceKHR surface)
+	evan::DesktopBackend::querySwapChainSupport()
 {
 	SwapChainSupportDetails details;
 	uint32_t formatCount;
 	uint32_t presentModeCount;
 
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface,
 											  &details.capabilities);
-	if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+	if (vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
 											 nullptr)
 		!= VK_SUCCESS)
 		return details;
 	if (formatCount != 0) {
 		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+		vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
 											 details.formats.data());
 	}
 
-	if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+	if (vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
 												  &presentModeCount, nullptr)
 		!= VK_SUCCESS)
 		return details;
 	if (presentModeCount != 0) {
 		details.presentModes.resize(presentModeCount);
 		vkGetPhysicalDeviceSurfacePresentModesKHR(
-			device, surface, &presentModeCount, details.presentModes.data());
+			_physicalDevice, _surface, &presentModeCount, details.presentModes.data());
 	}
 	return details;
 }
@@ -335,7 +334,7 @@ void evan::DesktopBackend::pickPhysicalDevice()
 	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, devices.data());
 
 	for (const auto &device: devices) {
-		if (this->isDeviceSuitable(device, _surface, deviceExtensions)) {
+		if (this->isDeviceSuitable(device, deviceExtensions)) {
 			_physicalDevice = device;
 			break;
 		}
@@ -346,8 +345,7 @@ void evan::DesktopBackend::pickPhysicalDevice()
 	}
 }
 
-VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
-												 GLFWwindow *window)
+VkSurfaceKHR evan::DesktopBackend::createSurface(GLFWwindow *window)
 {
 #ifdef _WIN32
 	VkWin32SurfaceCreateInfoKHR createInfo {};
@@ -356,15 +354,15 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
 	createInfo.hwnd		 = glfwGetWin32Window(window);
 	createInfo.hinstance = GetModuleHandle(nullptr);
 
-	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &_surface)
+	if (vkCreateWin32SurfaceKHR(_VkInstance, &createInfo, nullptr, &_surface)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create window surface!");
 	}
 #else
-	if (instance == VK_NULL_HANDLE) {
+	if (_VkInstance == VK_NULL_HANDLE) {
 		throw std::runtime_error("Vulkan instance is NULL!");
 	}
-	if (glfwCreateWindowSurface(instance, window, nullptr, &_surface)
+	if (glfwCreateWindowSurface(_VkInstance, window, nullptr, &_surface)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create window surface!");
 	}
@@ -377,30 +375,25 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(VkInstance instance,
 // Private Methods //
 /////////////////////
 
-bool evan::DesktopBackend::isDeviceSuitable(
-	VkPhysicalDevice device, VkSurfaceKHR surface,
-	std::vector<const char *> deviceExtensions)
+bool evan::DesktopBackend::isDeviceSuitable(VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
 {
-	// Temporary assignment to check device properties and features before
-	// picking the device. This will be reset to VK_NULL_HANDLE if the device is
-	// not suitable.
 	_physicalDevice = device;
-
 	QueueFamilyIndices indices = this->findQueueFamilies();
 
-	_physicalDevice = VK_NULL_HANDLE;
 	bool extensionsSupported =
 		this->checkDeviceExtensionSupport(device, deviceExtensions);
 	bool swapChainAdequate = false;
 
 	if (extensionsSupported) {
 		SwapChainSupportDetails swapChainSupport =
-			this->querySwapChainSupport(device, surface);
+			this->querySwapChainSupport();
 		swapChainAdequate = !swapChainSupport.formats.empty()
 			&& !swapChainSupport.presentModes.empty();
 	}
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+	_physicalDevice = VK_NULL_HANDLE;
 
 	return indices.isComplete() && extensionsSupported && swapChainAdequate
 		&& supportedFeatures.samplerAnisotropy;

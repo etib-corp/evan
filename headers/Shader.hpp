@@ -42,12 +42,10 @@ namespace evan
 		 * @brief Destroys the shader modules associated with this Shader
 		 * object.
 		 *
-		 * @param device The Vulkan device used to destroy the shader modules.
-		 *
 		 * @note This method should be called when the shader modules are no
 		 * longer needed to free up resources.
 		 */
-		void destroy(VkDevice device);
+		void destroy();
 
 		/**
 		 * @brief Retrieves the vertex shader module.

@@ -24,30 +24,28 @@ void evan::ADeviceBackend::createBuffer(
 	bufferInfo.usage	   = properties._usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (vkCreateBuffer(properties._logicalDevice, &bufferInfo, nullptr,
+	if (vkCreateBuffer(_device, &bufferInfo, nullptr,
 					   &properties._buffer)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to create buffer!");
 	}
 
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(properties._logicalDevice, properties._buffer,
-								  &memRequirements);
+	vkGetBufferMemoryRequirements(_device, properties._buffer, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo {};
 	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize  = memRequirements.size;
-	allocInfo.memoryTypeIndex = this->findMemoryType(
-		properties._physicalDevice, memRequirements.memoryTypeBits,
+	allocInfo.memoryTypeIndex = this->findMemoryType(memRequirements.memoryTypeBits,
 		properties._properties);
 
-	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
+	if (vkAllocateMemory(_device, &allocInfo, nullptr,
 						 &properties._bufferMemory)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate buffer memory!");
 	}
 
-	vkBindBufferMemory(properties._logicalDevice, properties._buffer,
+	vkBindBufferMemory(_device, properties._buffer,
 					   properties._bufferMemory, 0);
 }
 
@@ -55,7 +53,7 @@ void evan::ADeviceBackend::transitionImageLayout(
 	const TransitionImageLayoutProperties &properties) const
 {
 	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(
-		properties._logicalDevice, properties._commandPool);
+		properties._commandPool);
 
 	VkImageMemoryBarrier barrier {};
 	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -116,13 +114,11 @@ void evan::ADeviceBackend::transitionImageLayout(
 	vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
 						 nullptr, 0, nullptr, 1, &barrier);
 
-	this->endSingleTimeCommands(properties._logicalDevice,
-								properties._commandPool,
+	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
 }
 
-VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(
-	VkDevice logicalDevice, VkCommandPool commandPool) const
+VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(VkCommandPool commandPool) const
 {
 	VkCommandBufferAllocateInfo allocInfo {};
 	allocInfo.sType		  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -131,7 +127,7 @@ VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
-	if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer)
+	if (vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer)
 		!= VK_SUCCESS) {
 		std::cerr << "Failed to allocate command buffer" << std::endl;
 		return VK_NULL_HANDLE;
@@ -146,9 +142,8 @@ VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(
 	return commandBuffer;
 }
 
-void evan::ADeviceBackend::endSingleTimeCommands(
-	VkDevice logicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
-	VkCommandBuffer commandBuffer) const
+void evan::ADeviceBackend::endSingleTimeCommands(VkCommandPool commandPool,
+	VkQueue graphicsQueue, VkCommandBuffer commandBuffer) const
 {
 	vkEndCommandBuffer(commandBuffer);
 
@@ -160,7 +155,7 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(graphicsQueue);
 
-	vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
+	vkFreeCommandBuffers(_device, commandPool, 1, &commandBuffer);
 }
 
 void evan::ADeviceBackend::createImage(
@@ -182,38 +177,36 @@ void evan::ADeviceBackend::createImage(
 	imageInfo.mipLevels		= properties._mipLevels;
 	imageInfo.samples		= properties._numSamples;
 
-	if (vkCreateImage(properties._logicalDevice, &imageInfo, nullptr,
+	if (vkCreateImage(_device, &imageInfo, nullptr,
 					  &properties._image)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("failed to create image!");
 	}
 
 	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(properties._logicalDevice, properties._image,
-								 &memRequirements);
+	vkGetImageMemoryRequirements(_device, properties._image, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo {};
 	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize  = memRequirements.size;
 	allocInfo.memoryTypeIndex = this->findMemoryType(
-		properties._physicalDevice, memRequirements.memoryTypeBits,
+		memRequirements.memoryTypeBits,
 		properties._properties);
 
-	if (vkAllocateMemory(properties._logicalDevice, &allocInfo, nullptr,
+	if (vkAllocateMemory(_device, &allocInfo, nullptr,
 						 &properties._imageMemory)
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to allocate image memory!");
 	}
 
-	vkBindImageMemory(properties._logicalDevice, properties._image,
+	vkBindImageMemory(_device, properties._image,
 					  properties._imageMemory, 0);
 }
 
 void evan::ADeviceBackend::copyBufferToImage(
 	const CopyBufferToImageProperties &properties) const
 {
-	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(
-		properties._logicalDevice, properties._commandPool);
+	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(properties._commandPool);
 
 	VkBufferImageCopy region {};
 	region.bufferOffset					   = 0;
@@ -229,24 +222,21 @@ void evan::ADeviceBackend::copyBufferToImage(
 	vkCmdCopyBufferToImage(commandBuffer, properties._buffer, properties._image,
 						   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-	this->endSingleTimeCommands(properties._logicalDevice,
-								properties._commandPool,
+	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
 }
 
 void evan::ADeviceBackend::copyBuffer(
 	const CopyBufferProperties &properties) const
 {
-	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(
-		properties._logicalDevice, properties._commandPool);
+	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands(properties._commandPool);
 
 	VkBufferCopy copyRegion {};
 	copyRegion.size = properties._size;
 	vkCmdCopyBuffer(commandBuffer, properties._srcBuffer, properties._dstBuffer,
 					1, &copyRegion);
 
-	this->endSingleTimeCommands(properties._logicalDevice,
-								properties._commandPool,
+	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
 }
 
@@ -300,13 +290,12 @@ bool evan::ADeviceBackend::hasStencilComponent(VkFormat format) const
 }
 
 uint32_t
-	evan::ADeviceBackend::findMemoryType(VkPhysicalDevice physicalDevice,
-										 uint32_t typeFilter,
+	evan::ADeviceBackend::findMemoryType(uint32_t typeFilter,
 										 VkMemoryPropertyFlags properties) const
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
 
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i))
 			&& (memProperties.memoryTypes[i].propertyFlags & properties)

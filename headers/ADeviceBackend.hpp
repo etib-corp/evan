@@ -96,11 +96,6 @@ namespace evan
 		 */
 		struct CopyBufferToImageProperties {
 			/*
-			 * @brief The Vulkan logical device used for command buffer
-			 * operations.
-			 */
-			VkDevice _logicalDevice;
-			/*
 			 * @brief The Vulkan command pool used to allocate command buffers
 			 * for the copy operation.
 			 */
@@ -142,11 +137,6 @@ namespace evan
 		 * which is already a member of the class).
 		 */
 		struct TransitionImageLayoutProperties {
-			/*
-			 * @brief The Vulkan logical device used for command buffer
-			 * operations.
-			 */
-			VkDevice _logicalDevice;
 			/*
 			 * @brief The Vulkan command pool used to allocate command buffers
 			 * for the layout transition.
@@ -193,16 +183,6 @@ namespace evan
 		 * which is already a member of the class).
 		 */
 		struct CreateImageProperties {
-			/*
-			 * @brief The Vulkan logical device used for image creation and
-			 * memory allocation.
-			 */
-			VkDevice _logicalDevice;
-			/*
-			 * @brief The Vulkan physical device used to determine memory
-			 * properties.
-			 */
-			VkPhysicalDevice _physicalDevice;
 			/*
 			 * @brief The width of the image in pixels.
 			 */
@@ -262,16 +242,6 @@ namespace evan
 		 * which is already a member of the class).
 		 */
 		struct CreateBufferProperties {
-			/*
-			 * @brief The Vulkan logical device used for buffer creation and
-			 * memory allocation.
-			 */
-			VkDevice _logicalDevice;
-			/*
-			 * @brief The Vulkan physical device used to determine memory
-			 * properties.
-			 */
-			VkPhysicalDevice _physicalDevice;
 			/*
 			 * @brief The size of the buffer in bytes.
 			 */
@@ -448,8 +418,6 @@ namespace evan
 		 * buffers or transitioning image layouts, and should be ended and
 		 * submitted for execution after recording.
 		 *
-		 * @param logicalDevice The Vulkan logical device used to allocate the
-		 * command buffer.
 		 * @param commandPool The Vulkan command pool from which to allocate the
 		 * command buffer.
 		 *
@@ -457,8 +425,7 @@ namespace evan
 		 * buffer ready for recording
 		 */
 		VkCommandBuffer
-			beginSingleTimeCommands(VkDevice logicalDevice,
-									VkCommandPool commandPool) const;
+			beginSingleTimeCommands(VkCommandPool commandPool) const;
 
 		/**
 		 * @brief Ends recording of a single-use command buffer and submits it
@@ -471,8 +438,6 @@ namespace evan
 		 * immediate execution, such as copying buffers or transitioning image
 		 * layouts.
 		 *
-		 * @param logicalDevice The Vulkan logical device used to end and submit
-		 * the command buffer.
 		 * @param commandPool The Vulkan command pool from which the command
 		 * buffer was allocated.
 		 * @param graphicsQueue The Vulkan graphics queue to which the command
@@ -483,8 +448,7 @@ namespace evan
 		 * @note TODO: Remove useless properties (such as the logical device
 		 * which is already a member of the class).
 		 */
-		void endSingleTimeCommands(VkDevice logicalDevice,
-								   VkCommandPool commandPool,
+		void endSingleTimeCommands(VkCommandPool commandPool,
 								   VkQueue graphicsQueue,
 								   VkCommandBuffer commandBuffer) const;
 
@@ -709,8 +673,7 @@ namespace evan
 		 * @note TODO: Remove useless properties (such as the logical device
 		 * which is already a member of the class).
 		 */
-		uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
-								uint32_t typeFilter,
+		uint32_t findMemoryType(uint32_t typeFilter,
 								VkMemoryPropertyFlags properties) const;
 	};
 }	 // namespace evan
