@@ -345,7 +345,7 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device,
 		!= VK_SUCCESS) {
 		throw std::runtime_error("Failed to create graphics pipeline !");
 	}
-	shader.destroy(device);
+	shader.destroy();
 }
 
 void evan::Renderer::createDescriptorPool(VkDevice device,

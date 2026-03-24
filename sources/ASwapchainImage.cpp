@@ -82,8 +82,6 @@ void evan::ASwapchainImage::createColorResources(
 {
 	VkFormat colorFormat								  = _format;
 	ADeviceBackend::CreateImageProperties imageProperties = {
-		._logicalDevice	 = deviceBackend._device,
-		._physicalDevice = deviceBackend._physicalDevice,
 		._width			 = _extent.width,
 		._height		 = _extent.height,
 		._mipLevels		 = 1,	 // No mipmaps for color attachment
@@ -107,7 +105,6 @@ void evan::ASwapchainImage::createDepthResources(
 {
 	VkPhysicalDevice physicalDevice =
 		deviceContext.getDeviceBackend()->_physicalDevice;
-	VkDevice logicalDevice = deviceContext.getDeviceBackend()->_device;
 
 	VkSampleCountFlagBits msaaSamples = deviceContext.getMsaaSamples();
 	VkCommandPool commandPool		  = deviceContext.getCommandPool();
@@ -115,8 +112,6 @@ void evan::ASwapchainImage::createDepthResources(
 
 	VkFormat depthFormat = this->findDepthFormat(physicalDevice);
 	ADeviceBackend::CreateImageProperties depthImageProperties = {
-		._logicalDevice	 = logicalDevice,
-		._physicalDevice = physicalDevice,
 		._width			 = _extent.width,
 		._height		 = _extent.height,
 		._mipLevels		 = 1,	 // No mipmaps for depth attachment
@@ -134,7 +129,6 @@ void evan::ASwapchainImage::createDepthResources(
 		_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 	ADeviceBackend::TransitionImageLayoutProperties transitionProperties = {
-		._logicalDevice = logicalDevice,
 		._commandPool	= commandPool,
 		._graphicsQueue = graphicsQueue,
 		._image			= _depthImage,

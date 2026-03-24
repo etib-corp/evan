@@ -219,16 +219,12 @@ namespace evan
 		 * capabilities, available surface formats, and present modes for the
 		 * specified Vulkan physical device and surface. It populates a
 		 * SwapChainSupportDetails structure with the retrieved information.
-		 * @param device The Vulkan physical device to query for swap chain
-		 * support.
-		 * @param surface The Vulkan surface to check for compatibility with the
-		 * device.
+		 *
 		 * @return A SwapChainSupportDetails structure containing the swap chain
 		 * support details for the specified device and surface.
 		 */
 		evan::SwapChainSupportDetails
-			querySwapChainSupport(VkPhysicalDevice device,
-								  VkSurfaceKHR surface);
+			querySwapChainSupport();
 
 		/**
 		 * @brief Creates the presentation queue for the device context.
@@ -327,11 +323,10 @@ namespace evan
 		/**
 		 * @brief Creates a Vulkan surface for rendering.
 		 *
-		 * @param instance The Vulkan instance to be used for surface creation.
 		 * @param window The GLFW window for which the surface will be created.
 		 * @return The created Vulkan surface.
 		 */
-		VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
+		VkSurfaceKHR createSurface(GLFWwindow *window);
 
 		private:
 		/**
@@ -350,8 +345,8 @@ namespace evan
 		 * must be supported by the device.
 		 * @return true if the device is suitable for use, false otherwise.
 		 */
-		bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
-							  std::vector<const char *> deviceExtensions);
+		bool isDeviceSuitable(VkPhysicalDevice physicalDevice,
+			std::vector<const char *> deviceExtensions);
 
 		/**
 		 * @brief Checks if the specified Vulkan physical device supports the

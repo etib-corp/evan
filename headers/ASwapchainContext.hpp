@@ -172,8 +172,35 @@ namespace evan
 		 */
 		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
 
+		/**
+		 * @brief Retrieves the view matrix for the specified image index in the
+		 * swapchain.
+		 *
+		 * This pure virtual function must be implemented by derived classes to
+		 * return the view matrix associated with the specified image index in
+		 * the swapchain. The view matrix is used in rendering operations to
+		 * transform world coordinates into view space for the corresponding image.
+		 *
+		 * @param index The index of the image in the swapchain for which to retrieve the view matrix.
+		 *
+		 * @return The view matrix as a glm::mat4 for the specified image index in the swapchain.
+		 */
 		virtual glm::mat4 getView(int index) const = 0;
 
+		/**
+		 * @brief Retrieves the projection matrix for the specified image index in
+		 * the swapchain.
+		 *
+		 * This pure virtual function must be implemented by derived classes to
+		 * return the projection matrix associated with the specified image index
+		 * in the swapchain. The projection matrix is used in rendering operations
+		 * to transform view space coordinates into clip space for the corresponding
+		 * image.
+		 *
+		 * @param index The index of the image in the swapchain for which to retrieve the projection matrix.
+		 *
+		 * @return The projection matrix as a glm::mat4 for the specified image index in the swapchain.
+		 */
 		virtual glm::mat4 getProjection(int index) const = 0;
 
 		protected:

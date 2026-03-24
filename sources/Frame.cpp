@@ -90,8 +90,6 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
 	ADeviceBackend::CreateBufferProperties bufferProperties = {
-		._logicalDevice	 = deviceBackend._device,
-		._physicalDevice = deviceBackend._physicalDevice,
 		._size			 = bufferSize,
 		._usage			 = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		._properties	 = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT

@@ -24,8 +24,6 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext,
 	}
 
 	ADeviceBackend::CreateBufferProperties stagingBufferProperties = {
-		._logicalDevice	 = deviceBackend->_device,
-		._physicalDevice = deviceBackend->_physicalDevice,
 		._size			 = bufferSize,
 		._usage			 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		._properties	 = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -43,8 +41,6 @@ evan::GPUMesh::GPUMesh(const DeviceContext &deviceContext,
 	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
 
 	ADeviceBackend::CreateBufferProperties vertexBufferProperties = {
-		._logicalDevice	 = deviceBackend->_device,
-		._physicalDevice = deviceBackend->_physicalDevice,
 		._size			 = bufferSize,
 		._usage			 = VK_BUFFER_USAGE_TRANSFER_DST_BIT
 			| VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -128,8 +124,6 @@ void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext,
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	ADeviceBackend::CreateBufferProperties stagingBufferProperties = {
-		._logicalDevice	 = deviceBackend->_device,
-		._physicalDevice = deviceBackend->_physicalDevice,
 		._size			 = bufferSize,
 		._usage			 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		._properties	 = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -146,8 +140,6 @@ void evan::GPUMesh::createIndexBuffer(const DeviceContext &deviceContext,
 	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
 
 	ADeviceBackend::CreateBufferProperties indexBufferProperties = {
-		._logicalDevice	 = deviceBackend->_device,
-		._physicalDevice = deviceBackend->_physicalDevice,
 		._size			 = bufferSize,
 		._usage =
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,

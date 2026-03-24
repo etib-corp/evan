@@ -39,18 +39,16 @@ evan::Shader::Shader(const std::vector<uint32_t> &vertexCode,
 
 evan::Shader::~Shader()
 {
-	vkDestroyShaderModule(_logicalDevice, _vertexShaderModule, nullptr);
-	vkDestroyShaderModule(_logicalDevice, _fragmentShaderModule, nullptr);
 }
 
 ////////////////////
 // Public Methods //
 ////////////////////
 
-void evan::Shader::destroy(VkDevice device)
+void evan::Shader::destroy()
 {
-	vkDestroyShaderModule(device, _vertexShaderModule, nullptr);
-	vkDestroyShaderModule(device, _fragmentShaderModule, nullptr);
+	vkDestroyShaderModule(_logicalDevice, _vertexShaderModule, nullptr);
+	vkDestroyShaderModule(_logicalDevice, _fragmentShaderModule, nullptr);
 }
 
 /////////////

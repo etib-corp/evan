@@ -109,8 +109,6 @@ void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 		+ 1;
 
 	ADeviceBackend::CreateBufferProperties stagingBufferProperties = {
-		._logicalDevice	 = deviceBackend._device,
-		._physicalDevice = deviceBackend._physicalDevice,
 		._size			 = imageSize,
 		._usage			 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		._properties	 = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -130,8 +128,6 @@ void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 	stbi_image_free(pixels);
 
 	ADeviceBackend::CreateImageProperties imageProperties = {
-		._logicalDevice	 = deviceBackend._device,
-		._physicalDevice = deviceBackend._physicalDevice,
 		._width			 = (uint32_t)texWidth,
 		._height		 = (uint32_t)texHeight,
 		._mipLevels		 = _mipLevel,
@@ -147,7 +143,6 @@ void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 	deviceBackend.createImage(imageProperties);
 
 	ADeviceBackend::TransitionImageLayoutProperties transitionProperties = {
-		._logicalDevice = deviceBackend._device,
 		._commandPool	= commandPool,
 		._graphicsQueue = graphicsQueue,
 		._image			= _image,
@@ -159,7 +154,6 @@ void evan::Material::createImage(const ADeviceBackend &deviceBackend,
 	deviceBackend.transitionImageLayout(transitionProperties);
 
 	ADeviceBackend::CopyBufferToImageProperties copyProperties = {
-		._logicalDevice = deviceBackend._device,
 		._commandPool	= commandPool,
 		._graphicsQueue = graphicsQueue,
 		._buffer		= stagingBuffer,
@@ -303,8 +297,7 @@ void evan::Material::generateMipmaps(
 			"texture image format does not support linear blitting!");
 	}
 
-	VkCommandBuffer commandBuffer = deviceBackend.beginSingleTimeCommands(
-		deviceBackend._device, properties._commandPool);
+	VkCommandBuffer commandBuffer = deviceBackend.beginSingleTimeCommands(properties._commandPool);
 
 	VkImageMemoryBarrier barrier {};
 	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -375,7 +368,6 @@ void evan::Material::generateMipmaps(
 						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
 						 0, nullptr, 1, &barrier);
 
-	deviceBackend.endSingleTimeCommands(
-		deviceBackend._device, properties._commandPool,
+	deviceBackend.endSingleTimeCommands(properties._commandPool,
 		properties._graphicsQueue, commandBuffer);
 }
