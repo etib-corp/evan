@@ -260,32 +260,6 @@ namespace evan
 			selectSwapchainFormat(const std::vector<int64_t> &swapchainFormats);
 
 		/**
-		 * @brief Finds a supported depth format for the swapchain context.
-		 *
-		 * This function is responsible for finding a supported depth format
-		 * that can be used in the swapchain context for depth buffering. The
-		 * function takes a Vulkan physical device as a parameter and queries
-		 * the available formats to determine which one is suitable for depth
-		 * buffering based on the requirements of the rendering system.
-		 * Implement this function to ensure that a compatible depth format is
-		 * selected for use in the swapchain context, which is essential for
-		 * proper depth testing and rendering of 3D scenes.
-		 * @param physicalDevice The Vulkan physical device used to query the
-		 * available formats for depth buffering. This device should be properly
-		 * initialized and should support the necessary features for depth
-		 * buffering to ensure that a suitable depth format can be found.
-		 *
-		 * @return The selected VkFormat that is supported for depth buffering
-		 * in the swapchain context. This format should be compatible with the
-		 * rendering operations and provide optimal performance for depth
-		 * testing in 3D scenes.
-		 *
-		 * @see VkFormat, Vulkan physical device formats, depth buffering in
-		 * Vulkan
-		 */
-		VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
-
-		/**
 		 * @brief Finds a supported format from a list of candidates based on
 		 * the specified tiling and feature requirements.
 		 *

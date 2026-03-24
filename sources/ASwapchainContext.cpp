@@ -28,7 +28,7 @@ void evan::ASwapchainContext::createRenderPass(
 
 	VkAttachmentDescription depthAttachment {};
 	depthAttachment.format =
-		this->findDepthFormat(deviceBackend->_physicalDevice);
+		ASwapchainImage::findDepthFormat(deviceBackend->_physicalDevice);
 	depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -124,17 +124,6 @@ VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 		return static_cast<VkFormat>(swapchainFormats[0]);
 	}
 	return static_cast<VkFormat>(*swapchainFormatIt);
-}
-
-VkFormat
-	evan::ASwapchainContext::findDepthFormat(VkPhysicalDevice physicalDevice)
-{
-	return findSupportedFormat(physicalDevice,
-							   { VK_FORMAT_D32_SFLOAT,
-								 VK_FORMAT_D32_SFLOAT_S8_UINT,
-								 VK_FORMAT_D24_UNORM_S8_UINT },
-							   VK_IMAGE_TILING_OPTIMAL,
-							   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 VkFormat evan::ASwapchainContext::findSupportedFormat(
