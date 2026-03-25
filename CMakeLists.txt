@@ -191,6 +191,14 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${stb_SOURCE_DIR}>
 )
 
+# Add OpenXR headers if OpenXR support is enabled
+if(BUILD_FOR_OPENXR)
+    target_include_directories(${PROJECT_NAME}
+        PUBLIC
+            $<BUILD_INTERFACE:${openxr-sdk_SOURCE_DIR}/include>
+    )
+endif()
+
 # Optional components
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_EXAMPLES "Build the examples" OFF)
