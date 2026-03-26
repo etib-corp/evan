@@ -7,8 +7,13 @@
 
 #include "Software.hpp"
 
+#ifdef __ANDROID__
+std::unique_ptr<utility::AndroidAssetManager> g_assetManager =
+	std::make_unique<utility::AndroidAssetManager>();
+#else
 std::unique_ptr<utility::AssetManager> g_assetManager =
 	std::make_unique<utility::DefaultAssetManager>();
+#endif
 
 evan::Software::Software()
 {
