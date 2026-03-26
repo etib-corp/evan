@@ -7,7 +7,11 @@
 
 #include "Engine.hpp"
 
-std::unique_ptr<utility::AssetManager> g_assetManager;
+#ifdef __ANDROID__
+extern std::unique_ptr<utility::AndroidAssetManager> g_assetManager;
+#else
+extern std::unique_ptr<utility::AssetManager> g_assetManager;
+#endif
 
 void evan::Engine::initializeAssetManager(void* platformAssetManager) {
     #ifdef __ANDROID__
