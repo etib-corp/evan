@@ -18,7 +18,6 @@ std::unique_ptr<utility::AssetManager> g_assetManager =
 evan::Engine::Engine(const std::shared_ptr<IPlatform> &platform)
 	: _platform(platform)
 {
-	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
 	g_assetManager->loadDirectory(std::string("./shaders"));
 
 	_deviceContext	   = std::make_shared<DeviceContext>(*platform);
