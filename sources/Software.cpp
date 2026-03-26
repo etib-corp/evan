@@ -17,7 +17,6 @@ std::unique_ptr<utility::AssetManager> g_assetManager =
 
 evan::Software::Software()
 {
-	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
 	g_assetManager->loadDirectory(std::string("./shaders"));
 	g_assetManager->add(std::string("./texture1.png"));
 #ifdef __OPENXR__
@@ -48,7 +47,6 @@ evan::Software::Software()
 evan::Software::Software(const std::string &windowName, const uint32_t width,
 						 const uint32_t height)
 {
-	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
 	g_assetManager->loadDirectory(std::string("./shaders"));
 	g_assetManager->add(std::string("./texture1.png"));
 #ifdef __OPENXR__
