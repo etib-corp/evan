@@ -21,6 +21,10 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->createLogicalDevice();
 	this->createSession();
 	this->createVisualizedSpace();
+
+	std::cout << _interactionProfile.getCurrentInteractionProfilePath(_XrInstance, _session,
+												  "/user/hand/left")
+			  << std::endl;
 }
 
 evan::XrDeviceBackend::~XrDeviceBackend()

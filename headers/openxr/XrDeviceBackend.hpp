@@ -189,6 +189,8 @@ namespace evan
 		 */
 		XrSpace _space = XR_NULL_HANDLE;
 
+		InteractionProfile _interactionProfile;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with the specified application name
