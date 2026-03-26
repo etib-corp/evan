@@ -7,8 +7,13 @@
 
 #include "Engine.hpp"
 
+#ifdef __ANDROID__
+std::unique_ptr<utility::AndroidAssetManager> g_assetManager =
+	std::make_unique<utility::AndroidAssetManager>();
+#else
 std::unique_ptr<utility::AssetManager> g_assetManager =
 	std::make_unique<utility::DefaultAssetManager>();
+#endif
 
 evan::Engine::Engine(const std::shared_ptr<IPlatform> &platform)
 	: _platform(platform)
