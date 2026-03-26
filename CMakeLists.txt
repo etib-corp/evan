@@ -195,7 +195,8 @@ target_include_directories(${PROJECT_NAME}
 if(BUILD_FOR_OPENXR)
     target_include_directories(${PROJECT_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${openxr-sdk_SOURCE_DIR}/include>
+            "${openxr_SOURCE_DIR}/src/common"
+            "${openxr_SOURCE_DIR}/external/include"
     )
 endif()
 

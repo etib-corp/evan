@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "openxr/InteractionProfile.hpp"
 #include "openxr/XrPlatform.hpp"
 
 #include "ADeviceBackend.hpp"
@@ -188,6 +189,8 @@ namespace evan
 		 * XR environment.
 		 */
 		XrSpace _space = XR_NULL_HANDLE;
+
+		InteractionProfile _interactionProfile;
 
 		protected:
 		/**
