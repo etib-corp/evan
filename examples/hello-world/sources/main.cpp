@@ -6,6 +6,7 @@
 
 int main(void)
 {
+	evan::Software::initializeAssetManager(nullptr);
 	evan::Software mySoftware;
 
 	std::vector<std::string> texturePaths = {
