@@ -188,9 +188,8 @@ utility::math::Matrix4x4F evan::XrSwapchainContext::getView(int index) const
 		{ pose.position.x, pose.position.y, pose.position.z });
 
 	const utility::math::Matrix4x4F rotation =
-		utility::math::conjugate(orientation);
-	const utility::math::Matrix4x4F translation =
-		utility::math::Matrix4x4F::translate(utility::math::Matrix4x4F(1.0f),
-											 -position);
+		utility::math::Matrix4x4F(utility::math::conjugate(orientation));
+	const utility::math::Matrix4x4F translation = utility::math::translate(
+		utility::math::Matrix4x4F(1.0f, 0.0f, 0.0f, 0.0f), -position);
 	return rotation * translation;
 }
