@@ -190,6 +190,6 @@ utility::math::Matrix4x4F evan::XrSwapchainContext::getView(int index) const
 	const utility::math::Matrix4x4F rotation =
 		utility::math::Matrix4x4F(utility::math::conjugate(orientation));
 	const utility::math::Matrix4x4F translation = utility::math::translate(
-		utility::math::Matrix4x4F(1.0f, 0.0f, 0.0f, 0.0f), -position);
+		utility::math::Matrix4x4F({1.0f, 0.0f, 0.0f, 0.0f}), -position);
 	return rotation * translation;
 }
