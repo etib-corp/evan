@@ -182,8 +182,8 @@ utility::math::Matrix4x4F evan::XrSwapchainContext::getView(int index) const
 {
 	const auto &pose = _views[index].pose;
 	const utility::math::QuaternionF orientation(
-		pose.orientation.w, pose.orientation.x, pose.orientation.y,
-		pose.orientation.z);
+		{ pose.orientation.w, pose.orientation.x, pose.orientation.y,
+		  pose.orientation.z });
 	const utility::math::Vector3F position(pose.position.x, pose.position.y,
 										   pose.position.z);
 

@@ -67,7 +67,7 @@ FetchContent_MakeAvailable(stb)
 
 FetchContent_Declare(utility
     GIT_REPOSITORY https://github.com/etib-corp/utility.git
-    GIT_TAG main
+    GIT_TAG 14-feat-add-methods-for-quaternion
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
