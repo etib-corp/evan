@@ -9,6 +9,9 @@
 
 #include "DeviceContext.hpp"
 
+#include <utility/math/vector.hpp>
+#include <utility/math/trigonometric.hpp>
+
 evan::DesktopSwapchainContext::DesktopSwapchainContext(
 	const DeviceContext &deviceContext, GLFWwindow *window)
 {
@@ -47,13 +50,19 @@ VkResult evan::DesktopSwapchainContext::aquireImage(
 								 &imageIndex);
 }
 
-glm::mat4 evan::DesktopSwapchainContext::getProjection(int index) const
+utility::math::Matrix4x4F
+	evan::DesktopSwapchainContext::getProjection(int index) const
 {
-	return glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f);
+	return utility::math::Matrix4x4F(utility::math::perspective(
+		utility::math::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f));
 }
 
-glm::mat4 evan::DesktopSwapchainContext::getView(int index) const
+utility::math::Matrix4x4F
+	evan::DesktopSwapchainContext::getView(int index) const
 {
-	return glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-					   glm::vec3(0.0f, 1.0f, 0.0f));
+	return utility::math::Matrix4x4F(
+		utility::math::lookAt(utility::math::Vector3F({ 0.0f, 0.0f, 2.0f }),
+							  utility::math::Vector3F({ 0.0f, 0.0f, 0.0f }),
+							  utility::math::Vector3F({ 0.0f, 1.0f, 0.0f })));
+	utility::math::Vector3F({ 0.0f, 1.0f, 0.0f });
 }

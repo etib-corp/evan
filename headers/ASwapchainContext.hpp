@@ -11,6 +11,8 @@
 #include "ADeviceBackend.hpp"
 #include "ASwapchainImage.hpp"
 
+#include <utility/math/matrix.hpp>
+
 #include <map>
 #include <memory>
 #include <iostream>
@@ -179,29 +181,34 @@ namespace evan
 		 * This pure virtual function must be implemented by derived classes to
 		 * return the view matrix associated with the specified image index in
 		 * the swapchain. The view matrix is used in rendering operations to
-		 * transform world coordinates into view space for the corresponding image.
-		 *
-		 * @param index The index of the image in the swapchain for which to retrieve the view matrix.
-		 *
-		 * @return The view matrix as a glm::mat4 for the specified image index in the swapchain.
-		 */
-		virtual glm::mat4 getView(int index) const = 0;
-
-		/**
-		 * @brief Retrieves the projection matrix for the specified image index in
-		 * the swapchain.
-		 *
-		 * This pure virtual function must be implemented by derived classes to
-		 * return the projection matrix associated with the specified image index
-		 * in the swapchain. The projection matrix is used in rendering operations
-		 * to transform view space coordinates into clip space for the corresponding
+		 * transform world coordinates into view space for the corresponding
 		 * image.
 		 *
-		 * @param index The index of the image in the swapchain for which to retrieve the projection matrix.
+		 * @param index The index of the image in the swapchain for which to
+		 * retrieve the view matrix.
 		 *
-		 * @return The projection matrix as a glm::mat4 for the specified image index in the swapchain.
+		 * @return The view matrix as a utility::math::Matrix4x4F for the
+		 * specified image index in the swapchain.
 		 */
-		virtual glm::mat4 getProjection(int index) const = 0;
+		virtual utility::math::Matrix4x4F getView(int index) const = 0;
+
+		/**
+		 * @brief Retrieves the projection matrix for the specified image index
+		 * in the swapchain.
+		 *
+		 * This pure virtual function must be implemented by derived classes to
+		 * return the projection matrix associated with the specified image
+		 * index in the swapchain. The projection matrix is used in rendering
+		 * operations to transform view space coordinates into clip space for
+		 * the corresponding image.
+		 *
+		 * @param index The index of the image in the swapchain for which to
+		 * retrieve the projection matrix.
+		 *
+		 * @return The projection matrix as a utility::math::Matrix4x4F for the
+		 * specified image index in the swapchain.
+		 */
+		virtual utility::math::Matrix4x4F getProjection(int index) const = 0;
 
 		protected:
 		/**

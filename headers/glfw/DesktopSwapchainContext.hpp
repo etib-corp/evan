@@ -11,6 +11,8 @@
 
 #include "glfw/DesktopSwapchainImage.hpp"
 
+#include <utility/math/matrix.hpp>
+
 #include <memory>
 
 namespace evan
@@ -166,11 +168,11 @@ namespace evan
 		 *
 		 * @param index The index for which to retrieve the projection matrix.
 		 *
-		 * @return glm::mat4 The projection matrix corresponding to the
-		 * specified index. Implement this function to return the appropriate
-		 * projection matrix based on the rendering context and the specific
-		 * requirements of the application, such as the field of view, aspect
-		 * ratio, and near/far clipping planes.
+		 * @return utility::math::Matrix4x4F The projection matrix corresponding
+		 * to the specified index. Implement this function to return the
+		 * appropriate projection matrix based on the rendering context and the
+		 * specific requirements of the application, such as the field of view,
+		 * aspect ratio, and near/far clipping planes.
 		 *
 		 * @note This function is crucial for configuring the graphics pipeline
 		 * and ensuring that rendering operations are performed correctly.
@@ -178,7 +180,7 @@ namespace evan
 		 * provide the necessary projection matrix for rendering 3D objects in
 		 * the scene.
 		 */
-		glm::mat4 getProjection(int index) const override;
+		utility::math::Matrix4x4F getProjection(int index) const override;
 
 		/**
 		 * @brief Retrieves the view matrix for the specified index.
@@ -192,10 +194,11 @@ namespace evan
 		 *
 		 * @param index The index for which to retrieve the view matrix.
 		 *
-		 * @return glm::mat4 The view matrix corresponding to the specified
-		 * index. Implement this function to return the appropriate view matrix
-		 * based on the rendering context and the specific requirements of the
-		 * application, such as the camera position, target, and up vector.
+		 * @return utility::math::Matrix4x4F The view matrix corresponding to
+		 * the specified index. Implement this function to return the
+		 * appropriate view matrix based on the rendering context and the
+		 * specific requirements of the application, such as the camera
+		 * position, target, and up vector.
 		 *
 		 * @note This function is crucial for configuring the graphics pipeline
 		 * and ensuring that rendering operations are performed correctly.
@@ -204,6 +207,6 @@ namespace evan
 		 * scene, enabling the correct positioning and orientation of the
 		 * camera.
 		 */
-		glm::mat4 getView(int index) const override;
+		utility::math::Matrix4x4F getView(int index) const override;
 	};
 }	 // namespace evan

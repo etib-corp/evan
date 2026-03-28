@@ -11,6 +11,8 @@
 
 #include "ADeviceBackend.hpp"
 
+#include <utility/math/matrix.hpp>
+
 namespace evan
 {
 	/**
@@ -43,9 +45,9 @@ namespace evan
 		 *
 		 */
 		struct UniformBufferObject {
-			glm::mat4 model;	// Model matrix
-			glm::mat4 view;		// View matrix
-			glm::mat4 proj;		// Projection matrix
+			utility::math::Matrix4x4F model;	// Model matrix
+			utility::math::Matrix4x4F view;		// View matrix
+			utility::math::Matrix4x4F proj;		// Projection matrix
 		};
 
 		/**

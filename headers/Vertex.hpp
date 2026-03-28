@@ -10,6 +10,8 @@
 
 #include "EvanPlatform.hpp"
 
+#include <utility/math/vector.hpp>
+
 namespace evan
 {
 	/**
@@ -21,10 +23,11 @@ namespace evan
 	 *
 	 */
 	struct Vertex {
-		glm::vec3 pos;	  // Position of the vertex
-		glm::vec3
+		utility::math::Vector3F pos;	// Position of the vertex
+		utility::math::Vector3F
 			color;	  // Color of the vertex    (TODO: change to vec4 for alpha)
-		glm::vec2 texCoord;	   // Texture coordinates of the vertex
+		utility::math::Vector2F
+			texCoord;	 // Texture coordinates of the vertex
 
 		/*
 		 * @brief Get the binding description for the vertex.

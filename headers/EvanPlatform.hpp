@@ -25,11 +25,6 @@
 #include <utility/asset_manager/android_asset_manager.hpp>
 #include <utility/asset_manager/default_asset_manager.hpp>
 
-// GLM configuration
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/hash.hpp>
-
 #include <array>
 
 #ifdef NDEBUG

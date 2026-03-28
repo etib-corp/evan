@@ -223,8 +223,7 @@ namespace evan
 		 * @return A SwapChainSupportDetails structure containing the swap chain
 		 * support details for the specified device and surface.
 		 */
-		evan::SwapChainSupportDetails
-			querySwapChainSupport();
+		evan::SwapChainSupportDetails querySwapChainSupport();
 
 		/**
 		 * @brief Creates the presentation queue for the device context.
@@ -346,7 +345,7 @@ namespace evan
 		 * @return true if the device is suitable for use, false otherwise.
 		 */
 		bool isDeviceSuitable(VkPhysicalDevice physicalDevice,
-			std::vector<const char *> deviceExtensions);
+							  std::vector<const char *> deviceExtensions);
 
 		/**
 		 * @brief Checks if the specified Vulkan physical device supports the

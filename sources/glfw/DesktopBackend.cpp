@@ -136,8 +136,7 @@ evan::QueueFamilyIndices evan::DesktopBackend::findQueueFamilies()
 	return indices;
 }
 
-evan::SwapChainSupportDetails
-	evan::DesktopBackend::querySwapChainSupport()
+evan::SwapChainSupportDetails evan::DesktopBackend::querySwapChainSupport()
 {
 	SwapChainSupportDetails details;
 	uint32_t formatCount;
@@ -145,14 +144,14 @@ evan::SwapChainSupportDetails
 
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface,
 											  &details.capabilities);
-	if (vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-											 nullptr)
+	if (vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface,
+											 &formatCount, nullptr)
 		!= VK_SUCCESS)
 		return details;
 	if (formatCount != 0) {
 		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount,
-											 details.formats.data());
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			_physicalDevice, _surface, &formatCount, details.formats.data());
 	}
 
 	if (vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
@@ -161,8 +160,9 @@ evan::SwapChainSupportDetails
 		return details;
 	if (presentModeCount != 0) {
 		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(
-			_physicalDevice, _surface, &presentModeCount, details.presentModes.data());
+		vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
+												  &presentModeCount,
+												  details.presentModes.data());
 	}
 	return details;
 }
@@ -375,9 +375,10 @@ VkSurfaceKHR evan::DesktopBackend::createSurface(GLFWwindow *window)
 // Private Methods //
 /////////////////////
 
-bool evan::DesktopBackend::isDeviceSuitable(VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
+bool evan::DesktopBackend::isDeviceSuitable(
+	VkPhysicalDevice device, std::vector<const char *> deviceExtensions)
 {
-	_physicalDevice = device;
+	_physicalDevice			   = device;
 	QueueFamilyIndices indices = this->findQueueFamilies();
 
 	bool extensionsSupported =

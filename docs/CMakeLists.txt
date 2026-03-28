@@ -79,7 +79,7 @@ file(GLOB_RECURSE DOC_FILES "${CMAKE_SOURCE_DIR}/docs/*.md")
 
 # Create documentation using modern doxygen_add_docs function
 doxygen_add_docs(
-    docs
+    evan_docs
     ${HEADER_FILES}
     ${CMAKE_SOURCE_DIR}/README.md
     ${DOC_FILES}

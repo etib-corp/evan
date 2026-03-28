@@ -15,12 +15,12 @@ evan::ASwapchainImage::~ASwapchainImage()
 
 VkFormat evan::ASwapchainImage::findDepthFormat(VkPhysicalDevice physicalDevice)
 {
-	return evan::ASwapchainImage::findSupportedFormat(physicalDevice,
-							   { VK_FORMAT_D32_SFLOAT,
-								 VK_FORMAT_D32_SFLOAT_S8_UINT,
-								 VK_FORMAT_D24_UNORM_S8_UINT },
-							   VK_IMAGE_TILING_OPTIMAL,
-							   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	return evan::ASwapchainImage::findSupportedFormat(
+		physicalDevice,
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+		  VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 VkFormat evan::ASwapchainImage::findSupportedFormat(
@@ -82,13 +82,13 @@ void evan::ASwapchainImage::createColorResources(
 {
 	VkFormat colorFormat								  = _format;
 	ADeviceBackend::CreateImageProperties imageProperties = {
-		._width			 = _extent.width,
-		._height		 = _extent.height,
-		._mipLevels		 = 1,	 // No mipmaps for color attachment
-		._numSamples	 = msaaSamples,
-		._format		 = colorFormat,
-		._tiling		 = VK_IMAGE_TILING_OPTIMAL,
-		._usage			 = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT
+		._width		 = _extent.width,
+		._height	 = _extent.height,
+		._mipLevels	 = 1,	 // No mipmaps for color attachment
+		._numSamples = msaaSamples,
+		._format	 = colorFormat,
+		._tiling	 = VK_IMAGE_TILING_OPTIMAL,
+		._usage		 = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT
 			| VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		._properties  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		._image		  = _colorImage,
@@ -112,16 +112,16 @@ void evan::ASwapchainImage::createDepthResources(
 
 	VkFormat depthFormat = this->findDepthFormat(physicalDevice);
 	ADeviceBackend::CreateImageProperties depthImageProperties = {
-		._width			 = _extent.width,
-		._height		 = _extent.height,
-		._mipLevels		 = 1,	 // No mipmaps for depth attachment
-		._numSamples	 = msaaSamples,
-		._format		 = depthFormat,
-		._tiling		 = VK_IMAGE_TILING_OPTIMAL,
-		._usage			 = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		._properties	 = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		._image			 = _depthImage,
-		._imageMemory	 = _depthMemory
+		._width		  = _extent.width,
+		._height	  = _extent.height,
+		._mipLevels	  = 1,	  // No mipmaps for depth attachment
+		._numSamples  = msaaSamples,
+		._format	  = depthFormat,
+		._tiling	  = VK_IMAGE_TILING_OPTIMAL,
+		._usage		  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		._properties  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		._image		  = _depthImage,
+		._imageMemory = _depthMemory
 	};
 
 	deviceContext.getDeviceBackend()->createImage(depthImageProperties);

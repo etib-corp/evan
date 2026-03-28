@@ -83,7 +83,7 @@ namespace evan
 		 */
 		virtual void fillPresentInfo(VkPresentInfoKHR &presentInfo) const = 0;
 
-				/**
+		/**
 		 * @brief Finds a supported depth format for the swapchain context.
 		 *
 		 * This function is responsible for finding a supported depth format
@@ -148,10 +148,11 @@ namespace evan
 		 * performance for the intended usage in the swapchain context or other
 		 * rendering operations.
 		 */
-		static VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice,
-									 const std::vector<VkFormat> &candidates,
-									 VkImageTiling tiling,
-									 VkFormatFeatureFlags features);
+		static VkFormat
+			findSupportedFormat(VkPhysicalDevice physicalDevice,
+								const std::vector<VkFormat> &candidates,
+								VkImageTiling tiling,
+								VkFormatFeatureFlags features);
 
 		/**
 		 * @brief Retrieves the Vulkan framebuffer associated with the swapchain

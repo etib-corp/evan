@@ -7,8 +7,6 @@
 
 #include "Renderer.hpp"
 
-#include <glm/gtc/matrix_transform.hpp>
-
 evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples)
 {
@@ -381,7 +379,7 @@ void evan::Renderer::updateUniformBuffer(const Scene &scene,
 										 int currentIndex)
 {
 	Frame::UniformBufferObject ubo {};
-	ubo.model = glm::mat4(1.0f);
+	ubo.model = utility::math::Matrix4x4F(1.0f);
 	ubo.view  = swapchainContext.getView(currentIndex);
 	ubo.proj  = swapchainContext.getProjection(currentIndex);
 	// ubo.proj[1][1] *= -1;

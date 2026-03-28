@@ -38,11 +38,6 @@ elseif(UNIX)
     include(cmake/ConfigLinux.cmake)
 endif()
 
-# Global GLM defines
-add_compile_definitions(GLM_FORCE_RADIANS)
-add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
-add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
-
 # Check that at least one build mode is selected
 if(NOT BUILD_FOR_OPENXR AND NOT BUILD_FOR_GLFW)
     if(BUILD_DOCS)
@@ -62,15 +57,6 @@ include_directories(${HEADERS_DIR})
 # FetchContent module
 include(FetchContent)
 
-set(GLM_BUILD_TESTS OFF)
-FetchContent_Declare(glm
-    GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.2
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
-)
-FetchContent_MakeAvailable(glm)
-
 FetchContent_Declare(stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG master
@@ -81,7 +67,7 @@ FetchContent_MakeAvailable(stb)
 
 FetchContent_Declare(utility
     GIT_REPOSITORY https://github.com/etib-corp/utility.git
-    GIT_TAG main
+    GIT_TAG 12-feat-add-ray-calculation-for-camera-pixel-and-ray-object-intersection
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
@@ -100,7 +86,7 @@ else()
 endif()
 
 # Link common dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm utility)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan utility)
 
 # Configure for OpenXR
 if(BUILD_FOR_OPENXR)

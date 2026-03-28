@@ -16,8 +16,8 @@ evan::Shader::Shader(const std::vector<uint32_t> &vertexCode,
 	createInfo.codeSize = vertexCode.size() * sizeof(uint32_t);
 	createInfo.pCode	= vertexCode.data();
 
-	_vertexCode	  = vertexCode;
-	_fragmentCode = fragmentCode;
+	_vertexCode	   = vertexCode;
+	_fragmentCode  = fragmentCode;
 	_logicalDevice = device;
 
 	if (vkCreateShaderModule(device, &createInfo, nullptr, &_vertexShaderModule)

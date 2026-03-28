@@ -13,6 +13,8 @@
 #include "openxr/XrDeviceBackend.hpp"
 #include "openxr/XrSwapchainImage.hpp"
 
+#include <utility/math/matrix.hpp>
+
 #include <map>
 #include <memory>
 
@@ -192,12 +194,12 @@ namespace evan
 		 * @param index The index of the view for which to retrieve the
 		 * projection matrix.
 		 *
-		 * @return glm::mat4 The projection matrix for the specified view index,
-		 * which should be calculated based on the current view configurations
-		 * and any changes in the VR environment to ensure accurate rendering of
-		 * the scene in an OpenXR application.
+		 * @return utility::math::Matrix4x4F The projection matrix for the
+		 * specified view index, which should be calculated based on the current
+		 * view configurations and any changes in the VR environment to ensure
+		 * accurate rendering of the scene in an OpenXR application.
 		 */
-		glm::mat4 getProjection(int index) const override;
+		utility::math::Matrix4x4F getProjection(int index) const override;
 
 		/**
 		 * @brief Retrieves the view matrix for a specific view index.
@@ -213,12 +215,13 @@ namespace evan
 		 * @param index The index of the view for which to retrieve the view
 		 * matrix.
 		 *
-		 * @return glm::mat4 The view matrix for the specified view index, which
-		 * should be calculated based on the current view configurations, user
-		 * interactions, and any changes in the VR environment to ensure
-		 * accurate rendering of the scene in an OpenXR application.
+		 * @return utility::math::Matrix4x4F The view matrix for the specified
+		 * view index, which should be calculated based on the current view
+		 * configurations, user interactions, and any changes in the VR
+		 * environment to ensure accurate rendering of the scene in an OpenXR
+		 * application.
 		 */
-		glm::mat4 getView(int index) const override;
+		utility::math::Matrix4x4F getView(int index) const override;
 
 		/**
 		 * Vector of XrView structures for each view configuration.

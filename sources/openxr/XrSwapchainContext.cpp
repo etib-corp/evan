@@ -7,6 +7,10 @@
 
 #include "openxr/XrSwapchainContext.hpp"
 
+#include <utility/math/matrix.hpp>
+#include <utility/math/vector.hpp>
+#include <utility/math/quaternion.hpp>
+
 #include <algorithm>
 
 evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
@@ -147,7 +151,8 @@ const std::vector<XrCompositionLayerProjectionView> &
 	return _projectionLayerViews;
 }
 
-glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
+utility::math::Matrix4x4F
+	evan::XrSwapchainContext::getProjection(int index) const
 {
 	const XrFovf &fov = _views[index].fov;
 	float nearZ		  = 0.1f;
@@ -161,7 +166,7 @@ glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
 	float width	 = tanRight - tanLeft;
 	float height = tanUp - tanDown;
 
-	glm::mat4 projection(0.0f);
+	utility::math::Matrix4x4F projection(0.0f);
 	projection[0][0] = 2.0f / width;
 	projection[1][1] = 2.0f / height;
 	projection[2][0] = (tanRight + tanLeft) / width;
@@ -173,14 +178,20 @@ glm::mat4 evan::XrSwapchainContext::getProjection(int index) const
 	return projection;
 }
 
-glm::mat4 evan::XrSwapchainContext::getView(int index) const
+utility::math::Matrix4x4F evan::XrSwapchainContext::getView(int index) const
 {
 	const auto &pose = _views[index].pose;
-	const glm::quat orientation(pose.orientation.w, pose.orientation.x,
-								pose.orientation.y, pose.orientation.z);
-	const glm::vec3 position(pose.position.x, pose.position.y, pose.position.z);
+	const utility::math::QuaternionF orientation(
+		pose.orientation.w, pose.orientation.x, pose.orientation.y,
+		pose.orientation.z);
+	const utility::math::Vector3F position(pose.position.x, pose.position.y,
+										   pose.position.z);
 
-	const glm::mat4 rotation	= glm::mat4_cast(glm::conjugate(orientation));
-	const glm::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
+	const utility::math::Matrix4x4F rotation =
+		utility::math::Matrix4x4F::fromQuaternion(
+			utility::math::QuaternionF::conjugate(orientation));
+	const utility::math::Matrix4x4F translation =
+		utility::math::Matrix4x4F::translate(utility::math::Matrix4x4F(1.0f),
+											 -position);
 	return rotation * translation;
 }
