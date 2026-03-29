@@ -3,10 +3,15 @@
 #include <Renderer.hpp>
 #include <Frame.hpp>
 #include <map>
+#include <openxr/platform/LinuxXrPlatform.hpp>
 
 int main(void)
 {
-	evan::Software mySoftware;
+	std::shared_ptr<evan::IPlatform> platform =
+		std::make_shared<evan::LinuxXrPlatform>();
+	evan::Software mySoftware(platform);
+
+	g_assetManager->add(std::string("./texture1.png"));
 
 	std::vector<std::string> texturePaths = {
 		"./texture1.png",
