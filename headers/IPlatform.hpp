@@ -8,6 +8,7 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
+#include "ASwapchainContext.hpp"
 
 #include <string>
 
@@ -53,5 +54,28 @@ namespace evan
 		 * This method should be called regularly to process platform events.
 		 */
 		virtual void pollEvents(ADeviceBackend &deviceBackend) = 0;
+
+		/**
+		 * @brief Create a device context for the platform.
+		 *
+		 * @return A shared pointer to the created device context.
+		 *
+		 * This method should create and return a device context that is
+		 * compatible with the platform's requirements and capabilities.
+		 */
+		virtual std::shared_ptr<ADeviceBackend> createDeviceBackend() const = 0;
+
+		/**
+		 * @brief Get platform-specific instance creation information.
+		 *
+		 * @return A pointer to an XrBaseInStructure containing instance creation
+		 * information, or nullptr if not applicable.
+		 *
+		 * This method can be used to provide additional instance creation
+		 * information specific to the platform, such as application info or
+		 * extension-specific structures.
+		 */
+		virtual std::shared_ptr<ASwapchainContext> createSwapchainContext(
+			const DeviceContext &deviceContext) const = 0;
 	};
 }	 // namespace evan

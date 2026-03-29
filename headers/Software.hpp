@@ -16,7 +16,6 @@
 #include "IPlatform.hpp"
 
 #ifdef __OPENXR__
-	#include "openxr/XrPlatform.hpp"
 	#include "openxr/XrSwapchainContext.hpp"
 #elif defined(__GLFW__)
 	#include "glfw/DesktopPlatform.hpp"
@@ -82,35 +81,8 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Software();
+		Software(const std::shared_ptr<IPlatform> &platform);
 
-		/**
-		 * @brief Constructs a new Software object with default settings. This
-		 * constructor initializes the engine with default parameters, such as a
-		 * default window name, width, and height. It sets up the necessary
-		 * components of the engine, including the device context, renderer,
-		 * swapchain context, and platform abstraction, using default
-		 * configurations. This constructor is useful for quickly getting
-		 * started with the engine without needing to specify custom parameters.
-		 *
-		 * @param windowName The name of the window to be created by the engine.
-		 * This is used for window management and may be displayed in the title
-		 * bar of the window.
-		 * @param width The width of the window to be created by the engine, in
-		 * pixels. This determines the horizontal resolution of the rendering
-		 * output.
-		 * @param height The height of the window to be created by the engine,
-		 * in pixels. This determines the vertical resolution of the rendering
-		 * output
-		 *
-		 * @note The Software class is designed to be flexible and extensible,
-		 * allowing for future enhancements and additions to the engine's
-		 * capabilities. The current implementation focuses on establishing the
-		 * core structure and functionality of the engine, with plans for
-		 * further improvements and optimizations in the future.
-		 */
-		Software(const std::string &windowName, const uint32_t width,
-				 const uint32_t height);
 
 		~Software();
 
