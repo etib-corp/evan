@@ -43,9 +43,9 @@ void evan::IXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
 	}
 }
 
-std::shared_ptr<evan::DeviceContext> evan::IXrPlatform::createDeviceBackend() const
+std::shared_ptr<evan::ADeviceBackend> evan::IXrPlatform::createDeviceBackend() const
 {
-	return std::make_shared<DeviceContext>(*this);
+	return std::make_shared<XrDeviceBackend>(*this);
 }
 
 std::shared_ptr<evan::ASwapchainContext>evan::IXrPlatform::createSwapchainContext(

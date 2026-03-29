@@ -88,7 +88,7 @@ namespace evan
 		 * @return A shared pointer to the created DeviceContext for the OpenXR
 		 * platform.
 		 */
-		std::shared_ptr<DeviceContext> createDeviceBackend() const override;
+		std::shared_ptr<ADeviceBackend> createDeviceBackend() const override;
 
 		/**
 		 * @brief Create a swapchain context for the OpenXR platform.
