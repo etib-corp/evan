@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "openxr/XrPlatform.hpp"
+#include "openxr/IXrPlatform.hpp"
 
 #include "ADeviceBackend.hpp"
 

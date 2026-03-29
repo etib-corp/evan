@@ -2,13 +2,14 @@
 ** EPITECH PROJECT, 2026
 ** evan
 ** File description:
-** XrPlatform
+** IXrPlatform
 */
 
 #pragma once
 
 #include "IPlatform.hpp"
 #include "openxr/XrDeviceBackend.hpp"
+#include "openxr/XrSwapchainContext.hpp"
 
 #include <iostream>
 
@@ -20,65 +21,16 @@ namespace evan
 	 * This class provides an implementation of the IPlatform interface for
 	 * OpenXR. It handles platform-specific functionality related to OpenXR.
 	 */
-	class XrPlatform: public IPlatform
+	class IXrPlatform: public IPlatform
 	{
 		public:
-		/**
-		 * @brief Struct to hold Android-specific platform data for OpenXR
-		 * initialization.
-		 *
-		 * This structure encapsulates the necessary Android-specific data
-		 * required for initializing OpenXR on an Android platform, such as the
-		 * application VM and activity pointers.
-		 *
-		 * @note This struct is only relevant for Android platforms and may be
-		 * ignored or left empty on other platforms.
-		 */
-		struct AndroidPlatformData {
-			/**
-			 * @brief Pointer to the Android application VM.
-			 *
-			 * This is typically obtained from the Android Native Activity and
-			 * is used for OpenXR initialization on Android.
-			 */
-			void *applicationVM;
-
-			/**
-			 * @brief Pointer to the Android application activity.
-			 *
-			 * This is typically obtained from the Android Native Activity and
-			 * is used for OpenXR initialization on Android.
-			 */
-			void *applicationActivity;
-		};
 
 		/**
-		 * @brief Constructor for XrPlatform.
+		 * @brief Virtual destructor.
 		 *
-		 * This constructor initializes the XrPlatform with the provided
-		 * Android-specific platform data. It sets up the necessary OpenXR
-		 * instance creation information based on the Android platform data.
-		 *
-		 * @param data The platform-specific data required for OpenXR
-		 * initialization.
+		 * Ensures proper cleanup of derived class resources.
 		 */
-		XrPlatform(const AndroidPlatformData &data);
-
-		/**
-		 * @brief Default constructor for XrPlatform.
-		 *
-		 * This constructor can be used when no platform-specific data is
-		 * required for OpenXR initialization, or when the platform-specific
-		 * data will be set later.
-		 */
-		XrPlatform();
-
-		/**
-		 * @brief Destructor for XrPlatform.
-		 *
-		 * Ensures proper cleanup of OpenXR resources.
-		 */
-		~XrPlatform() override;
+		virtual ~IXrPlatform() = default;
 
 		/**
 		 * @brief Get the required instance extensions for the OpenXR platform.
@@ -91,7 +43,7 @@ namespace evan
 		 * @return A vector of strings containing the required instance
 		 * extensions for the OpenXR platform.
 		 */
-		std::vector<std::string> getRequiredInstanceExtensions() const override;
+		virtual std::vector<std::string> getRequiredInstanceExtensions() const = 0;
 
 		/**
 		 * @brief Check if the OpenXR platform should close.
@@ -126,6 +78,37 @@ namespace evan
 		void pollEvents(ADeviceBackend &deviceBackend) override;
 
 		/**
+		 * @brief Create a device context for the OpenXR platform.
+		 *
+		 * This function creates and returns a shared pointer to a DeviceContext
+		 * that is compatible with the OpenXR platform. The created device context
+		 * should be initialized with the necessary resources and configurations
+		 * required for rendering and interacting with the OpenXR runtime.
+		 *
+		 * @return A shared pointer to the created DeviceContext for the OpenXR
+		 * platform.
+		 */
+		std::shared_ptr<DeviceContext> createDeviceBackend() const override;
+
+		/**
+		 * @brief Create a swapchain context for the OpenXR platform.
+		 *
+		 * This function creates and returns a shared pointer to an ASwapchainContext
+		 * that is compatible with the OpenXR platform. The created swapchain context
+		 * should be initialized with the necessary resources and configurations
+		 * required for rendering to the OpenXR runtime's swapchain.
+		 *
+		 * @param deviceContext A reference to the DeviceContext that may be used
+		 * for initializing the swapchain context with the appropriate device
+		 * resources.
+		 *
+		 * @return A shared pointer to the created ASwapchainContext for the
+		 * OpenXR platform.
+		 */
+		std::shared_ptr<ASwapchainContext> createSwapchainContext(
+			const DeviceContext &deviceContext) const override;
+
+		/**
 		 * @brief Retrieves the Android-specific instance creation
 		 * information.
 		 *
@@ -137,7 +120,7 @@ namespace evan
 		 * @return A pointer to the Android-specific instance creation
 		 * information as an XrBaseInStructure.
 		 */
-		const XrBaseInStructure *getInstanceCreateInfoAndroid() const;
+		virtual const XrBaseInStructure *getInstanceCreateInfo() const = 0;
 
 		protected:
 		/**
@@ -175,18 +158,5 @@ namespace evan
 		 * the OpenXR runtime.
 		 */
 		bool _sessionRunning = false;
-
-#ifdef __ANDROID__
-		/**
-		 * @brief Android-specific instance creation information for OpenXR.
-		 *
-		 * This structure holds the necessary information for creating an OpenXR
-		 * instance on an Android platform, such as the application VM and
-		 * activity pointers. It is initialized based on the AndroidPlatformData
-		 * provided to the constructor and is used when creating the OpenXR
-		 * instance to ensure proper initialization on Android.
-		 */
-		XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {};
-#endif
 	};
 }	 // namespace evan

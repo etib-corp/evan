@@ -439,9 +439,9 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
-	createInfo.next =
-		dynamic_cast<evan::XrPlatform *>(const_cast<IPlatform *>(&platform))
-			->getInstanceCreateInfoAndroid();
+	auto xrPlatform = dynamic_cast<const IXrPlatform *>(&platform);
+
+	createInfo.next = xrPlatform->getInstanceCreateInfo();
 
 	XrResult result = xrCreateInstance(&createInfo, &_XrInstance);
 	if (result != XR_SUCCESS) {
