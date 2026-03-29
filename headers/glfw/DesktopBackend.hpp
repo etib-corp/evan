@@ -10,7 +10,7 @@
 #include "EvanPlatform.hpp"
 
 #include "ADeviceBackend.hpp"
-#include "DesktopPlatform.hpp"
+#include "IDesktopPlatform.hpp"
 #include "ASwapchainImage.hpp"
 
 #include "Version.hpp"
@@ -78,7 +78,7 @@ namespace evan
 		 * @param platform The platform instance to be used for Desktop
 		 * initialization.
 		 */
-		DesktopBackend(const DesktopPlatform &platform);
+		DesktopBackend(const IPlatform &platform);
 
 		/**
 		 * @brief Destructor for DesktopBackend.
@@ -320,14 +320,6 @@ namespace evan
 		 */
 		void pickPhysicalDevice() override;
 
-		/**
-		 * @brief Creates a Vulkan surface for rendering.
-		 *
-		 * @param window The GLFW window for which the surface will be created.
-		 * @return The created Vulkan surface.
-		 */
-		VkSurfaceKHR createSurface(GLFWwindow *window);
-
 		private:
 		/**
 		 * @brief Checks if the specified Vulkan physical device is suitable for
@@ -371,15 +363,6 @@ namespace evan
 		 * otherwise.
 		 */
 		bool checkValidationLayerSupport();
-
-		/**
-		 * @brief Retrieves the required instance extensions for the Desktop
-		 * backend.
-		 *
-		 * @return A vector of strings containing the names of the required
-		 * instance extensions.
-		 */
-		std::vector<std::string> getInstanceExtensions();
 
 		/**
 		 * @brief Populates the debug messenger create info structure.

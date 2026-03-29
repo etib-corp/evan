@@ -45,14 +45,17 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 	return VK_FALSE;
 }
 
-evan::DesktopBackend::DesktopBackend(const DesktopPlatform &platform)
+evan::DesktopBackend::DesktopBackend(const IPlatform &platform)
 {
 	Version appVersion(0, 1, 0);
 
+	auto glfwPlatform = dynamic_cast<const IDesktopPlatform *>(&platform);
+
 	this->createInstance(platform, "Evan", appVersion);
-	this->createSurface(platform._window);
+	_surface = glfwPlatform->createSurface(_VkInstance);
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
+	this->createPresentQueue();
 }
 
 evan::DesktopBackend::~DesktopBackend()
@@ -199,11 +202,7 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
-	auto extensions = this->getInstanceExtensions();
-
-#ifdef __APPLE__
-	extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-#endif
+	auto extensions = platform.getRequiredInstanceExtensions();
 
 	// Because the extensions are stored as std::string, we need to convert them
 	// to const char* to pass them to the Vulkan API.
@@ -345,32 +344,6 @@ void evan::DesktopBackend::pickPhysicalDevice()
 	}
 }
 
-VkSurfaceKHR evan::DesktopBackend::createSurface(GLFWwindow *window)
-{
-#ifdef _WIN32
-	VkWin32SurfaceCreateInfoKHR createInfo {};
-
-	createInfo.sType	 = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	createInfo.hwnd		 = glfwGetWin32Window(window);
-	createInfo.hinstance = GetModuleHandle(nullptr);
-
-	if (vkCreateWin32SurfaceKHR(_VkInstance, &createInfo, nullptr, &_surface)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to create window surface!");
-	}
-#else
-	if (_VkInstance == VK_NULL_HANDLE) {
-		throw std::runtime_error("Vulkan instance is NULL!");
-	}
-	if (glfwCreateWindowSurface(_VkInstance, window, nullptr, &_surface)
-		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to create window surface!");
-	}
-#endif
-
-	return _surface;
-}
-
 /////////////////////
 // Private Methods //
 /////////////////////
@@ -441,20 +414,6 @@ bool evan::DesktopBackend::checkValidationLayerSupport()
 		}
 	}
 	return true;
-}
-
-std::vector<std::string> evan::DesktopBackend::getInstanceExtensions()
-{
-	uint32_t glfwExtensionCount = 0;
-	const char **glfwExtensions =
-		glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	std::vector<const char *> extensions(glfwExtensions,
-										 glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers == true) {
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-	return std::vector<std::string>(extensions.begin(), extensions.end());
 }
 
 void evan::DesktopBackend::populateDebugMessengerCreateInfo(

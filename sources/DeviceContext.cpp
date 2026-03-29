@@ -45,10 +45,6 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	this->getMaxUsableSampleCount();
 	this->setupDebugMessenger();
 	this->createGraphicsQueue();
-#if defined(__GLFW__)
-	dynamic_cast<evan::DesktopBackend *>(_deviceBackend.get())
-		->createPresentQueue();
-#endif
 	this->createCommandPool();
 }
 
