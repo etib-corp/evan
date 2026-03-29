@@ -8,6 +8,7 @@
 #pragma once
 
 #include "IPlatform.hpp"
+#include "DeviceContext.hpp"
 #include "openxr/XrDeviceBackend.hpp"
 #include "openxr/XrSwapchainContext.hpp"
 

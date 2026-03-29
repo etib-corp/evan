@@ -8,13 +8,14 @@
 #pragma once
 
 #include "EvanPlatform.hpp"
-#include "ASwapchainContext.hpp"
 
 #include <string>
 
 namespace evan
 {
 	class ADeviceBackend;
+	class DeviceContext;
+	class ASwapchainContext;
 
 	/**
 	 * @brief Abstract interface for platform-specific functionality.

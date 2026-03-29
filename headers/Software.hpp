@@ -15,15 +15,6 @@
 #include "ASwapchainContext.hpp"
 #include "IPlatform.hpp"
 
-#ifdef __OPENXR__
-	#include "openxr/XrSwapchainContext.hpp"
-#elif defined(__GLFW__)
-	#include "glfw/DesktopPlatform.hpp"
-	#include "glfw/DesktopSwapchainContext.hpp"
-#else
-	#error "Unsupported platform"
-#endif
-
 #include <string>
 #include <memory>
 
