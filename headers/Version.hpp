@@ -1,5 +1,5 @@
 /*
- ** EPITECH PROJECT, 2025
+ ** ETIB PROJECT, 2025
  ** evan
  ** File description:
  ** Version
