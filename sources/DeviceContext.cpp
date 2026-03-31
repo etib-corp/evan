@@ -183,7 +183,7 @@ void evan::DeviceContext::setupDebugMessenger()
 	if (this->createDebugUtilsMessengerEXT(
 			_deviceBackend->_VkInstance, &createInfo, nullptr, &_debugMessenger)
 		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to set up debug messenger !");
+		std::cerr << "Failed to set up debug messenger!" << std::endl;
 	}
 }
 
