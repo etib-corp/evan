@@ -10,55 +10,15 @@
 std::unique_ptr<utility::AssetManager> g_assetManager =
 	std::make_unique<utility::DefaultAssetManager>();
 
-evan::Software::Software()
+evan::Software::Software(const std::shared_ptr<IPlatform> &platform)
+	: _platform(platform)
 {
 	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
 	g_assetManager->loadDirectory(std::string("./shaders"));
-	g_assetManager->add(std::string("./texture1.png"));
-#ifdef __OPENXR__
-	_platform =
-		std::make_shared<XrPlatform>();	   // TODO: Pass the platform data
-	_deviceContext	  = std::make_shared<DeviceContext>(*_platform);
-	_swapchainContext = std::make_shared<XrSwapchainContext>(*_deviceContext);
-#elif defined(__GLFW__)
-	_platform		  = std::make_shared<DesktopPlatform>("Evan app", 800, 600);
-	_deviceContext	  = std::make_shared<DeviceContext>(*_platform);
-	_swapchainContext = std::make_shared<DesktopSwapchainContext>(
-		*_deviceContext, ((DesktopPlatform *)_platform.get())->_window);
-#else
-	throw std::runtime_error("Unsupported platform");
-#endif
-	auto deviceBackend = _deviceContext->getDeviceBackend();
-	_renderer		   = std::make_shared<Renderer>(*_deviceContext,
-													_swapchainContext->getRenderPass(),
-													_deviceContext->getMsaaSamples());
-	_currentScene	   = 0;
 
-	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_renderer->createFrame(_deviceContext->getCommandPool(),
-							   *deviceBackend);
-	}
-}
+	_deviceContext	   = std::make_shared<DeviceContext>(*platform);
+	_swapchainContext = platform->createSwapchainContext(*_deviceContext);
 
-evan::Software::Software(const std::string &windowName, const uint32_t width,
-						 const uint32_t height)
-{
-	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
-	g_assetManager->loadDirectory(std::string("./shaders"));
-	g_assetManager->add(std::string("./texture1.png"));
-#ifdef __OPENXR__
-	_platform =
-		std::make_shared<XrPlatform>();	   // TODO: Pass the platform data
-	_deviceContext	  = std::make_shared<DeviceContext>(*_platform);
-	_swapchainContext = std::make_shared<XrSwapchainContext>(*_deviceContext);
-#elif defined(__GLFW__)
-	_platform = std::make_shared<DesktopPlatform>(windowName, width, height);
-	_deviceContext	  = std::make_shared<DeviceContext>(*_platform);
-	_swapchainContext = std::make_shared<DesktopSwapchainContext>(
-		*_deviceContext, ((DesktopPlatform *)_platform.get())->_window);
-#else
-	throw std::runtime_error("Unsupported platform");
-#endif
 	auto deviceBackend = _deviceContext->getDeviceBackend();
 	_renderer		   = std::make_shared<Renderer>(*_deviceContext,
 													_swapchainContext->getRenderPass(),

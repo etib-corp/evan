@@ -40,24 +40,11 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 
 evan::DeviceContext::DeviceContext(const IPlatform &platform)
 {
-#ifdef __OPENXR__
-	_deviceBackend = std::make_shared<XrDeviceBackend>(platform);
-#elif defined(__GLFW__)
-	_deviceBackend =
-		std::make_shared<DesktopBackend>((DesktopPlatform &)platform);
-#else
-	std::cerr
-		<< "No platform defined. Please define either __OPENXR__ or __GLFW__."
-		<< std::endl;
-	throw std::runtime_error("No platform defined for DeviceContext.");
-#endif
+	_deviceBackend = platform.createDeviceBackend();
+
 	this->getMaxUsableSampleCount();
 	this->setupDebugMessenger();
 	this->createGraphicsQueue();
-#if defined(__GLFW__)
-	dynamic_cast<evan::DesktopBackend *>(_deviceBackend.get())
-		->createPresentQueue();
-#endif
 	this->createCommandPool();
 }
 

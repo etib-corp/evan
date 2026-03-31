@@ -2,14 +2,13 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** DesktopPlatform
+** MacOsDesktopPlatform
 */
 
-#include "glfw/DesktopPlatform.hpp"
+#include "glfw/platform/MacOsDesktopPlatform.hpp"
 
-evan::DesktopPlatform::DesktopPlatform(const std::string &name,
-									   const uint32_t width,
-									   const uint32_t height)
+evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name, const uint32_t width,
+                                             const uint32_t height)
 {
 	if (!glfwInit()) {
 		throw std::runtime_error("Failed to initialize GLFW");
@@ -24,23 +23,11 @@ evan::DesktopPlatform::DesktopPlatform(const std::string &name,
 	}
 }
 
-evan::DesktopPlatform::~DesktopPlatform()
-{
-	glfwDestroyWindow(_window);
-	glfwTerminate();
-}
-
 ////////////////////
 // Public Methods //
 ////////////////////
 
-void evan::DesktopPlatform::pollEvents(ADeviceBackend &deviceBackend)
-{
-	glfwPollEvents();
-}
-
-std::vector<std::string>
-	evan::DesktopPlatform::getRequiredInstanceExtensions() const
+std::vector<std::string> evan::MacOsDesktopPlatform::getRequiredInstanceExtensions() const
 {
 	uint32_t glfwExtensionCount = 0;
 	const char **glfwExtensions =
@@ -52,10 +39,15 @@ std::vector<std::string>
 	if (enableValidationLayers == true) {
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 	return std::vector<std::string>(extensions.begin(), extensions.end());
 }
 
-bool evan::DesktopPlatform::shouldClose() const
+VkSurfaceKHR evan::MacOsDesktopPlatform::createSurface(VkInstance instance) const
 {
-	return glfwWindowShouldClose(_window);
+    VkSurfaceKHR surface;
+    if (glfwCreateWindowSurface(instance, _window, nullptr, &surface) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create window surface!");
+    }
+    return surface;
 }

@@ -1,5 +1,5 @@
 /*
-** EPITECH PROJECT, 2026
+** ETIB PROJECT, 2026
 ** evan
 ** File description:
 ** XrBackend
@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "openxr/XrPlatform.hpp"
+#include "openxr/IXrPlatform.hpp"
 
 #include "ADeviceBackend.hpp"
 
