@@ -8,6 +8,7 @@
 #pragma once
 
 #include "openxr/IXrPlatform.hpp"
+#include "openxr/InteractionProfile.hpp"
 
 #include "ADeviceBackend.hpp"
 
