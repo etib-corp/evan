@@ -20,15 +20,15 @@ evan::AndroidXrPlatform::AndroidXrPlatform(
 		XrLoaderInitInfoAndroidKHR loaderInitInfoAndroid = {};
 		loaderInitInfoAndroid.type = XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR;
 		loaderInitInfoAndroid.next = nullptr;
-		loaderInitInfoAndroid.applicationVM		 = data.applicationVM;
-		loaderInitInfoAndroid.applicationContext = data.applicationActivity;
+		loaderInitInfoAndroid.applicationVM		 = platformData.applicationVM;
+		loaderInitInfoAndroid.applicationContext = platformData.applicationActivity;
 		initializeLoader(
 			reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR *>(
 				&loaderInitInfoAndroid));
 	}
 	_instanceCreateInfoAndroid = { XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR };
-	_instanceCreateInfoAndroid.applicationVM	   = data.applicationVM;
-	_instanceCreateInfoAndroid.applicationActivity = data.applicationActivity;
+	_instanceCreateInfoAndroid.applicationVM	   = platformData.applicationVM;
+	_instanceCreateInfoAndroid.applicationActivity = platformData.applicationActivity;
 #endif
 }
 
