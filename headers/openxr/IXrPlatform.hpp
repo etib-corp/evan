@@ -1,5 +1,5 @@
 /*
-** EPITECH PROJECT, 2026
+** ETIB PROJECT, 2026
 ** evan
 ** File description:
 ** IXrPlatform
