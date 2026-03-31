@@ -3,12 +3,17 @@
 #include <Renderer.hpp>
 #include <Frame.hpp>
 #include <map>
-#include <openxr/platform/LinuxXrPlatform.hpp>
+#if defined(__OPENXR__)
+	#include <openxr/platform/LinuxXrPlatform.hpp>
+#elif defined(__APPLE__)
+	#include <glfw/platform/MacOsDesktopPlatform.hpp>
+#endif
+
 
 int main(void)
 {
 	std::shared_ptr<evan::IPlatform> platform =
-		std::make_shared<evan::LinuxXrPlatform>();
+		std::make_shared<evan::MacOsDesktopPlatform>("Hello World", 800, 600);
 	evan::Software mySoftware(platform);
 
 	g_assetManager->add(std::string("./texture1.png"));
