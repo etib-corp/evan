@@ -23,6 +23,10 @@ evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name, co
     }
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::WindowsDesktopPlatform::getRequiredInstanceExtensions() const
 {
     uint32_t glfwExtensionCount = 0;

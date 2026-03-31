@@ -23,6 +23,10 @@ evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name, const 
 	}
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::MacOsDesktopPlatform::getRequiredInstanceExtensions() const
 {
 	uint32_t glfwExtensionCount = 0;

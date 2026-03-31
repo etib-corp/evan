@@ -23,6 +23,10 @@ evan::LinuxDesktopPlatform::LinuxDesktopPlatform(const std::string &name, const 
     }
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::LinuxDesktopPlatform::getRequiredInstanceExtensions() const
 {
     uint32_t glfwExtensionCount = 0;

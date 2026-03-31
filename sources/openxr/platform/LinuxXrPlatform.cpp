@@ -11,6 +11,10 @@ evan::LinuxXrPlatform::LinuxXrPlatform()
 {
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::LinuxXrPlatform::getRequiredInstanceExtensions() const
 {
     return {

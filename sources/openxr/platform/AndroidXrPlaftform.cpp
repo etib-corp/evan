@@ -32,6 +32,10 @@ evan::AndroidXrPlatform::AndroidXrPlatform(
 #endif
 }
 
+////////////////////
+// Public Methods //
+////////////////////
+
 std::vector<std::string> evan::AndroidXrPlatform::getRequiredInstanceExtensions() const
 {
 	std::vector<std::string> extensions = {
