@@ -59,6 +59,31 @@ namespace evan
             void *androidApp;
 		};
 
+        /**
+         * @brief Struct to track the current state of the Android application.
+         * This struct is used to manage the lifecycle of the Android application and
+         * ensure that the OpenXR session responds appropriately to changes in the application state,
+         * such as when the app is resumed, paused, or stopped.
+         */
+        struct AndroidAppState {
+            #ifdef __ANDROID__
+                /**
+                 * @brief Pointer to the native Android window.
+                 *
+                 * This is typically obtained from the Android Native Activity and
+                 * is used for rendering and handling input in OpenXR on Android.
+                 */
+                ANativeWindow* NativeWindow = nullptr;
+            #endif
+
+            /**
+             * @brief Indicates whether the Android application is currently resumed.
+             * This flag can be used to determine if the OpenXR session should be active
+             * or if it should pause rendering and input processing when the app is not in the foreground.
+             */
+            bool Resumed = false;
+        };
+
 
         /**
          * @brief Constructs an AndroidXrPlatform instance with the specified
@@ -121,7 +146,6 @@ namespace evan
          */
         const XrBaseInStructure *getInstanceCreateInfo() const override;
 
-        #ifdef __ANDROID__
         /**
          * @brief Tracks the current state of the Android application.
          *
@@ -131,8 +155,7 @@ namespace evan
          * that the application responds appropriately to changes in its lifecycle
          * on Android devices.
          */
-        AndroidAppState _appState = AndroidAppState::UNKNOWN;
-        #endif
+        AndroidAppState _appState = {};
 
     private:
     #ifdef __ANDROID__

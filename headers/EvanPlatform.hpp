@@ -81,8 +81,6 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 	#include <openxr/openxr.h>
 	#ifdef __ANDROID__
 		#include <jni.h>
-		#include <android/looper.h>
-		#include <android_native_app_glue.h>
 	#endif
 	#include <openxr/openxr_platform.h>
 #endif
