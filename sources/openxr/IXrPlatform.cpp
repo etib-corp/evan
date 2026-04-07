@@ -6,6 +6,7 @@
 */
 
 #include "openxr/IXrPlatform.hpp"
+#include "openxr/XrDeviceBackend.hpp"
 
 ////////////////////
 // Public Methods //
@@ -58,7 +59,7 @@ std::shared_ptr<evan::ASwapchainContext>evan::IXrPlatform::createSwapchainContex
 ///////////////////////
 
 void evan::IXrPlatform::processSessionStateChangedEvent(
-	const XrEventDataSessionStateChanged &eventData, XrDeviceBackend &xrDeviceBackend)
+	const XrEventDataSessionStateChanged &eventData, evan::XrDeviceBackend &xrDeviceBackend)
 {
 	switch (eventData.state) {
 		case XR_SESSION_STATE_READY: {

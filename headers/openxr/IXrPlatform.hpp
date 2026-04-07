@@ -9,13 +9,13 @@
 
 #include "IPlatform.hpp"
 #include "DeviceContext.hpp"
-#include "openxr/XrDeviceBackend.hpp"
 #include "openxr/XrSwapchainContext.hpp"
 
 #include <iostream>
 
 namespace evan
 {
+	class XrDeviceBackend;
 	/**
 	 * @brief OpenXR platform implementation.
 	 *
