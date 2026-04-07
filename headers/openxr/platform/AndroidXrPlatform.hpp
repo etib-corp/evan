@@ -121,6 +121,19 @@ namespace evan
          */
         const XrBaseInStructure *getInstanceCreateInfo() const override;
 
+        #ifdef __ANDROID__
+        /**
+         * @brief Tracks the current state of the Android application.
+         *
+         * This variable is used to keep track of the current state of the
+         * Android application, such as whether it is in the foreground, paused,
+         * or stopped. It can be used to manage OpenXR session state and ensure
+         * that the application responds appropriately to changes in its lifecycle
+         * on Android devices.
+         */
+        AndroidAppState _appState = AndroidAppState::UNKNOWN;
+        #endif
+
     private:
     #ifdef __ANDROID__
         /**
@@ -133,17 +146,6 @@ namespace evan
          * instance to ensure proper initialization on Android.
          */
         XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {};
-
-        /**
-         * @brief Tracks the current state of the Android application.
-         *
-         * This variable is used to keep track of the current state of the
-         * Android application, such as whether it is in the foreground, paused,
-         * or stopped. It can be used to manage OpenXR session state and ensure
-         * that the application responds appropriately to changes in its lifecycle
-         * on Android devices.
-         */
-        AndroidAppState _appState = AndroidAppState::UNKNOWN;
     #endif
 
         /**
