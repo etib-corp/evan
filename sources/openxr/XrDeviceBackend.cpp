@@ -48,6 +48,9 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 
 bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
+	if (!_sessionRunning) {
+		return false;
+	}
 	XrFrameState frameState { XR_TYPE_FRAME_STATE };
 	XrFrameWaitInfo frameWaitInfo {
 		.type = XR_TYPE_FRAME_WAIT_INFO,

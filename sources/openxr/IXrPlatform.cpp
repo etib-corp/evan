@@ -19,17 +19,16 @@ bool evan::IXrPlatform::shouldClose() const
 void evan::IXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
 {
 	XrEventDataBuffer eventDataBuffer { XR_TYPE_EVENT_DATA_BUFFER };
-	XrInstance instance =
-		dynamic_cast<XrDeviceBackend &>(deviceBackend)._XrInstance;
-	XrSession session = dynamic_cast<XrDeviceBackend &>(deviceBackend)._session;
-	while (xrPollEvent(instance, &eventDataBuffer) == XR_SUCCESS) {
+	evan::XrDeviceBackend &xrDeviceBackend =
+		dynamic_cast<evan::XrDeviceBackend &>(deviceBackend);
+	while (xrPollEvent(xrDeviceBackend._XrInstance, &eventDataBuffer) == XR_SUCCESS) {
 		switch (eventDataBuffer.type) {
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
 				auto sessionStateChangedEvent =
 					*reinterpret_cast<XrEventDataSessionStateChanged *>(
 						&eventDataBuffer);
 				processSessionStateChangedEvent(sessionStateChangedEvent,
-												session);
+												xrDeviceBackend);
 				break;
 			}
 			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
@@ -59,7 +58,7 @@ std::shared_ptr<evan::ASwapchainContext>evan::IXrPlatform::createSwapchainContex
 ///////////////////////
 
 void evan::IXrPlatform::processSessionStateChangedEvent(
-	const XrEventDataSessionStateChanged &eventData, XrSession session)
+	const XrEventDataSessionStateChanged &eventData, XrDeviceBackend &xrDeviceBackend)
 {
 	switch (eventData.state) {
 		case XR_SESSION_STATE_READY: {
@@ -67,13 +66,13 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			sessionBeginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
 			sessionBeginInfo.primaryViewConfigurationType =
 				XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-			xrBeginSession(session, &sessionBeginInfo);
-			_sessionRunning = true;
+			xrBeginSession(xrDeviceBackend._session, &sessionBeginInfo);
+			xrDeviceBackend._sessionRunning = true;
 			break;
 		}
 		case XR_SESSION_STATE_STOPPING:
-			xrEndSession(session);
-			_sessionRunning = false;
+			xrEndSession(xrDeviceBackend._session);
+			xrDeviceBackend._sessionRunning = false;
 			break;
 		case XR_SESSION_STATE_EXITING:
 			_shouldClose = true;

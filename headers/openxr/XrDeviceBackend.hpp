@@ -192,6 +192,15 @@ namespace evan
 
 		InteractionProfile _interactionProfile;
 
+		/**
+		 * Flag to track if the session is currently running.
+		 *
+		 * This is used to determine if the application should continue running
+		 * or if it should exit based on the session state changes received from
+		 * the OpenXR runtime.
+		 */
+		bool _sessionRunning = false;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with the specified application name

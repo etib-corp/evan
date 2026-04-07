@@ -134,7 +134,7 @@ namespace evan
 		 *
 		 * @param eventData The event data containing information about the
 		 * session state change.
-		 * @param session The OpenXR session associated with the event.
+		 * @param xrDeviceBackend The OpenXR device backend associated with the event.
 		 *
 		 * @note This function is typically called from within the pollEvents
 		 * method when a session state change event is received. It is
@@ -142,7 +142,7 @@ namespace evan
 		 * to changes in the OpenXR session state.
 		 */
 		void processSessionStateChangedEvent(
-			const XrEventDataSessionStateChanged &eventData, XrSession session);
+			const XrEventDataSessionStateChanged &eventData, XrDeviceBackend &xrDeviceBackend);
 
 		/**
 		 * Flag to indicate if the platform should close.
@@ -150,14 +150,5 @@ namespace evan
 		 * OpenXR specific.
 		 */
 		bool _shouldClose = false;
-
-		/**
-		 * Flag to track if the session is currently running.
-		 *
-		 * This is used to determine if the application should continue running
-		 * or if it should exit based on the session state changes received from
-		 * the OpenXR runtime.
-		 */
-		bool _sessionRunning = false;
 	};
 }	 // namespace evan
