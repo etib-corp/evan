@@ -50,6 +50,13 @@ namespace evan
 			 * is used for OpenXR initialization on Android.
 			 */
 			void *applicationActivity;
+
+            /**
+             * @brief Pointer to the Android application structure.
+             * This is used for handling Android application lifecycle events and may
+             * be necessary for certain OpenXR implementations on Android.
+             */
+            void *androidApp;
 		};
 
 
@@ -72,6 +79,20 @@ namespace evan
          * Ensures proper cleanup of resources used by the AndroidXrPlatform.
          */
         ~AndroidXrPlatform() override = default;
+
+        /**
+         * @brief Get the required instance extensions for the OpenXR platform on
+         * Android.
+         *
+         * This function returns a vector of strings representing the required
+         * instance extensions for the OpenXR platform on Android. These
+         * extensions are necessary for proper functionality and compatibility with
+         * the OpenXR runtime on Android devices.
+         *
+         * @return A vector of strings containing the required instance extensions
+         * for the OpenXR platform on Android.
+         */
+        void pollEvents(ADeviceBackend &deviceBackend) override;
 
         /**
          * @brief Retrieves the required instance extensions for Android in the OpenXR
@@ -112,6 +133,28 @@ namespace evan
          * instance to ensure proper initialization on Android.
          */
         XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {};
+
+        /**
+         * @brief Tracks the current state of the Android application.
+         *
+         * This variable is used to keep track of the current state of the
+         * Android application, such as whether it is in the foreground, paused,
+         * or stopped. It can be used to manage OpenXR session state and ensure
+         * that the application responds appropriately to changes in its lifecycle
+         * on Android devices.
+         */
+        AndroidAppState _appState = AndroidAppState::UNKNOWN;
     #endif
+
+        /**
+         * @brief Stores the Android-specific platform data for OpenXR initialization.
+         *
+         * This member variable holds the Android-specific data provided to the
+         * constructor, which is necessary for initializing OpenXR on Android
+         * platforms. It may include pointers to the application VM, activity, and
+         * other relevant Android data required for proper OpenXR functionality on
+         * Android devices.
+         */
+        AndroidPlatformData _platformData;
     };
 }

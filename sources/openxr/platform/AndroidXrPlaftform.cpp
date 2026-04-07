@@ -6,10 +6,12 @@
 */
 
 #include "openxr/platform/AndroidXrPlatform.hpp"
+#include "openxr/XrDeviceBackend.hpp"
 
 evan::AndroidXrPlatform::AndroidXrPlatform(
     const AndroidPlatformData &platformData)
 {
+	_platformData = platformData;
 #ifdef __ANDROID__
 	PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
 
@@ -35,6 +37,27 @@ evan::AndroidXrPlatform::AndroidXrPlatform(
 ////////////////////
 // Public Methods //
 ////////////////////
+
+void evan::AndroidXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
+{
+	#ifdef __ANDROID__
+	evan::XrDeviceBackend &xrDeviceBackend =
+		dynamic_cast<evan::XrDeviceBackend &>(deviceBackend);
+	for (;;) {
+        int events;
+        struct android_poll_source *source;
+        const int kTimeoutMilliseconds =
+            (!_appState.resumed && !_appState.paused) ? -1 : 0;
+        if (ALooper_pollAll(kTimeoutMilliseconds, nullptr, &events, (void **) &source) < 0) {
+          break;
+        }
+        if (source != nullptr) {
+          source->process(_platformData.androidApp, source);
+        }
+      }
+	#endif
+	IXrPlatform::pollEvents(deviceBackend);
+}
 
 std::vector<std::string> evan::AndroidXrPlatform::getRequiredInstanceExtensions() const
 {
