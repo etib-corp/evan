@@ -81,7 +81,14 @@ namespace evan
              * This flag can be used to determine if the OpenXR session should be active
              * or if it should pause rendering and input processing when the app is not in the foreground.
              */
-            bool Resumed = false;
+            bool _resumed = false;
+
+            /**
+            * @brief Indicates whether the Android application is currently paused.
+            * This flag can be used to determine if the OpenXR session should pause rendering and input processing
+            * when the app is paused, such as when the user switches to another app or receives a phone call.
+            */
+            bool _paused = false;
         };
 
 
