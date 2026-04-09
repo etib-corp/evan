@@ -2,7 +2,7 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** Software
+** Engine
 */
 
 #pragma once
@@ -21,44 +21,44 @@
 namespace evan
 {
 	/**
-	 * @brief The Software class is the main entry point for the Evan Engine. It
+	 * @brief The Engine class is the main entry point for the Evan Engine. It
 	 * manages the core components of the engine, including the device context,
 	 * renderer, scenes, swapchain context, and platform abstraction. The
-	 * Software class is responsible for initializing these components, running
+	 * Engine class is responsible for initializing these components, running
 	 * the main loop of the engine, and providing methods for updating and
 	 * rendering scenes. It serves as the central hub for managing the engine's
 	 * functionality and orchestrating the various subsystems to create a
 	 * cohesive experience.
 	 *
-	 * The Software class provides a high-level interface for interacting with
+	 * The Engine class provides a high-level interface for interacting with
 	 * the engine, allowing users to add scenes, handle updates, and manage
 	 * rendering without needing to directly interact with the lower-level
 	 * components. It abstracts away the complexities of Vulkan and
 	 * platform-specific details, providing a more user-friendly API for
 	 * developers using the Evan Engine.
 	 *
-	 * The Software class is designed to be extensible and modular, allowing for
+	 * The Engine class is designed to be extensible and modular, allowing for
 	 * future enhancements and additions to the engine's capabilities. It can be
 	 * extended to support additional features such as physics, audio, or
 	 * networking, while still maintaining a clear separation of concerns
 	 * between different subsystems of the engine.
 	 *
-	 * Overall, the Software class serves as the backbone of the Evan Engine,
+	 * Overall, the Engine class serves as the backbone of the Evan Engine,
 	 * providing a structured and organized way to manage the various components
 	 * and functionalities of the engine while offering a user-friendly
 	 * interface for developers to create their applications.
 	 *
-	 * @note The Software class is currently in its early stages of development,
+	 * @note The Engine class is currently in its early stages of development,
 	 * and additional features and improvements are expected to be added in
 	 * future iterations of the engine. The current implementation focuses on
 	 * establishing the core structure and functionality of the engine, with
 	 * plans for further enhancements and optimizations in the future.
 	 */
-	class Software
+	class Engine
 	{
 		public:
 		/**
-		 * @brief Constructs a new Software object with default settings. This
+		 * @brief Constructs a new Engine object with default settings. This
 		 * constructor initializes the engine with default parameters, such as a
 		 * default window name, width, and height. It sets up the necessary
 		 * components of the engine, including the device context, renderer,
@@ -66,37 +66,16 @@ namespace evan
 		 * configurations. This constructor is useful for quickly getting
 		 * started with the engine without needing to specify custom parameters.
 		 *
-		 * @note The Software class is designed to be flexible and extensible,
+		 * @note The Engine class is designed to be flexible and extensible,
 		 * allowing for future enhancements and additions to the engine's
 		 * capabilities. The current implementation focuses on establishing the
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Software(const std::shared_ptr<IPlatform> &platform);
+		Engine(const std::shared_ptr<IPlatform> &platform);
 
 
-		~Software();
-
-		/**
-		 * @brief Runs the main loop of the engine. This method is responsible
-		 * for continuously updating and rendering the current scene until the
-		 * application is closed. It handles the timing and synchronization of
-		 * updates and rendering, ensuring that the engine runs smoothly and
-		 * efficiently. The run method typically includes a loop that checks for
-		 * user input, updates the state of the engine, and renders the current
-		 * scene to the screen. It may also handle events such as window
-		 * resizing or closing, allowing for a responsive and interactive
-		 * experience.
-		 *
-		 * @note The Software class is designed to be flexible and extensible,
-		 * allowing for future enhancements and additions to the engine's
-		 * capabilities. The current implementation focuses on establishing the
-		 * core structure and functionality of the engine, with plans for
-		 * further improvements and optimizations in the future.
-		 *
-		 * This method should be removed in the future.
-		 */
-		void run();
+		~Engine();
 
 		/**
 		 * @brief Updates the state of the engine. This method is responsible
@@ -109,7 +88,7 @@ namespace evan
 		 * specific requirements of the application being developed with the
 		 * engine.
 		 *
-		 * @note The Software class is designed to be flexible and extensible,
+		 * @note The Engine class is designed to be flexible and extensible,
 		 * allowing for future enhancements and additions to the engine's
 		 * capabilities. The current implementation focuses on establishing the
 		 * core structure and functionality of the engine, with plans for
@@ -127,13 +106,30 @@ namespace evan
 		 * the specific requirements of the application being developed with the
 		 * engine.
 		 *
-		 * @note The Software class is designed to be flexible and extensible,
+		 * @note The Engine class is designed to be flexible and extensible,
 		 * allowing for future enhancements and additions to the engine's
 		 * capabilities. The current implementation focuses on establishing the
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
 		void render();	  // For rendering the current scene.
+
+		/**
+		 * @brief Polls for events from the platform. This method is responsible for
+		 * handling input events, window events, and other platform-specific events.
+		 * It is typically called once per frame, allowing the engine to
+		 * respond to user input, window resizing, and other events that may occur during the
+		 * application's runtime. The pollEvents method interacts with the platform abstraction
+		 * layer to retrieve and process events, ensuring that the engine can
+		 * respond to user interactions and system events in a timely manner.
+		 *
+		 * @note The Engine class is designed to be flexible and extensible,
+		 * allowing for future enhancements and additions to the engine's
+		 * capabilities. The current implementation focuses on establishing the
+		 * core structure and functionality of the engine, with plans for
+		 * further improvements and optimizations in the future.
+		 */
+		void pollEvents();  // For handling input and other events.
 
 		/**
 		 * @brief Adds a new scene to the engine. This method allows users to
@@ -147,14 +143,22 @@ namespace evan
 		 * scenes within the engine, enabling them to switch between different
 		 * scenes as needed.
 		 *
-		 * @note The Software class is designed to be flexible and extensible,
+		 * @note The Engine class is designed to be flexible and extensible,
 		 * allowing for future enhancements and additions to the engine's
 		 * capabilities. The current implementation focuses on establishing the
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		void addScene(std::vector<std::string> texturePaths,
+		void addScene(size_t sceneIndex, std::vector<std::string> texturePaths,
 					  std::map<std::string, std::vector<Mesh>> meshData);
+
+		/**
+		 * @brief Switches the current scene to the scene with the specified index.
+		 * This method allows users to navigate between different scenes managed by the engine.
+		 *
+		 * @param sceneIndex The index of the scene to switch to.
+		 */
+		void switchScene(size_t sceneIndex);
 
 		protected:
 		/**
@@ -200,13 +204,16 @@ namespace evan
 		std::shared_ptr<Renderer> _renderer;
 
 		/**
-		 * A vector of Scene objects, representing the different scenes that can
-		 * be rendered or managed by the engine. Each Scene contains its own set
-		 * of objects, materials, and other relevant data for rendering. The
-		 * vector allows for easy management of multiple scenes, enabling users
-		 * to switch between different scenes as needed.
+		 * A map of scenes managed by the engine, where the key is a unique
+		 * identifier (size_t) for each scene, and the value is a Scene object
+		 * containing the data and resources for that scene. This allows the
+		 * engine to manage multiple scenes simultaneously, enabling users to
+		 * switch between different scenes as needed. Each Scene object contains
+		 * the necessary data for rendering, such as meshes, materials, and textures,
+		 * allowing the engine to efficiently manage and render multiple
+		 * scenes within the application.
 		 */
-		std::vector<Scene> _scenes;
+		std::map<size_t, Scene> _scenes;
 
 		/**
 		 * An index to keep track of the current scene being rendered or
@@ -216,7 +223,7 @@ namespace evan
 		 * determine which scene is currently active and should be rendered or
 		 * updated during the main loop of the engine.
 		 */
-		uint32_t _currentScene;
+		size_t _currentScene;
 
 		/**
 		 * A shared pointer to an ASwapchainContext object, which manages the

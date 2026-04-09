@@ -2,15 +2,15 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** Software
+** Engine
 */
 
-#include "Software.hpp"
+#include "Engine.hpp"
 
 std::unique_ptr<utility::AssetManager> g_assetManager =
 	std::make_unique<utility::DefaultAssetManager>();
 
-evan::Software::Software(const std::shared_ptr<IPlatform> &platform)
+evan::Engine::Engine(const std::shared_ptr<IPlatform> &platform)
 	: _platform(platform)
 {
 	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
@@ -31,7 +31,7 @@ evan::Software::Software(const std::shared_ptr<IPlatform> &platform)
 	}
 }
 
-evan::Software::~Software()
+evan::Engine::~Engine()
 {
 	auto deviceBackend = _deviceContext->getDeviceBackend();
 	auto device		   = deviceBackend->_device;
@@ -40,7 +40,7 @@ evan::Software::~Software()
 
 	_renderer->destroy(device);
 	_swapchainContext->destroy(device);
-	for (auto &scene: _scenes) {
+	for (auto &[_, scene]: _scenes) {
 		scene.destroy(device);
 	}
 	_deviceContext.reset();
@@ -50,38 +50,48 @@ evan::Software::~Software()
 // Public Methods //
 ////////////////////
 
-void evan::Software::addScene(std::vector<std::string> texturePaths,
-							  std::map<std::string, std::vector<Mesh>> meshData)
+void evan::Engine::addScene(size_t sceneIndex, std::vector<std::string> texturePaths,
+							std::map<std::string, std::vector<Mesh>> meshData)
 {
-	_scenes.emplace_back(*_deviceContext, *_renderer, texturePaths, meshData);
+	Scene newScene(*_deviceContext, *_renderer, texturePaths, meshData);
+	_scenes.emplace(sceneIndex, std::move(newScene));
 	if (_scenes.size() == 1) {
-		_currentScene = 0;
+		_currentScene = sceneIndex;
 	}
 }
 
-void evan::Software::run()
-{
-	while (!_platform->shouldClose()) {
-		_platform->pollEvents(*_deviceContext->getDeviceBackend());
-
-		this->update();
-		this->render();
-	}
-}
-
-void evan::Software::update()
+void evan::Engine::update()
 {
 	// Logic updates, input handling, etc.
 	// Will be implemented in the future when the input system and scene
 	// management will be implemented.
 }
 
-void evan::Software::render()
+void evan::Engine::render()
 {
 	if (_scenes.empty()) {
 		return;
 	}
 
+	auto currentSceneIt = _scenes.find(_currentScene);
+	if (currentSceneIt == _scenes.end()) {
+		return;
+	}
+
 	_renderer->drawFrame(*_deviceContext, *_swapchainContext,
-						 _scenes[_currentScene]);
+						 currentSceneIt->second);
+}
+
+void evan::Engine::pollEvents()
+{
+	_platform->pollEvents(*_deviceContext->getDeviceBackend());
+}
+
+void evan::Engine::switchScene(size_t sceneIndex)
+{
+	if (_scenes.find(sceneIndex) != _scenes.end()) {
+		_currentScene = sceneIndex;
+	} else {
+		std::cerr << "Scene index " << sceneIndex << " does not exist." << std::endl;
+	}
 }
