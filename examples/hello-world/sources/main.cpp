@@ -1,5 +1,5 @@
 #include <iostream>
-#include <Software.hpp>
+#include <Engine.hpp>
 #include <Renderer.hpp>
 #include <Frame.hpp>
 #include <map>
@@ -13,8 +13,8 @@
 int main(void)
 {
 	std::shared_ptr<evan::IPlatform> platform =
-		std::make_shared<evan::MacOsDesktopPlatform>("Hello World", 800, 600);
-	evan::Software mySoftware(platform);
+		std::make_shared<evan::LinuxXrPlatform>();
+	evan::Engine myEngine(platform);
 
 	g_assetManager->add(std::string("./texture1.png"));
 
@@ -41,9 +41,12 @@ int main(void)
 						 std::vector<unsigned int> { 0, 1, 2, 2, 3, 0 } } } },
 	};
 
-	mySoftware.addScene(texturePaths, meshData);
-	while (true) {
-		mySoftware.run();
+	myEngine.addScene(0, texturePaths, meshData);
+	while (!platform->shouldClose()) {
+		myEngine.pollEvents();
+
+		myEngine.update();
+		myEngine.render();
 	}
 	return 0;
 }
