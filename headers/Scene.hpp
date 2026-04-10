@@ -70,7 +70,24 @@ namespace evan
 			  std::vector<std::string> texturePaths,
 			  std::map<std::string, std::vector<Mesh>> meshData);
 
+		Scene() = default;
+
 		~Scene();
+
+		/**
+		 * @brief Updates the Scene by loading new meshes and materials from the
+		 * provided data.
+		 *
+		 * This method allows updating the Scene with new mesh and material data. It
+		 * takes references to the DeviceContext and Renderer to access the necessary
+		 * Vulkan resources for creating GPU meshes. The method processes the new mesh data,
+		 * creates GPUMesh instances for each new mesh, and updates the _meshes vector
+		 * accordingly. It also creates Material instances for any new unique material IDs found in the new mesh data
+		 * and updates the _materials map accordingly.
+		 */
+		void updateScene(const DeviceContext &deviceContext, const Renderer &renderer,
+						 std::vector<std::string> texturePaths,
+						 std::map<std::string, std::vector<Mesh>> meshData);
 
 		/**
 		 * @brief Destroys the Scene by cleaning up GPU resources associated
