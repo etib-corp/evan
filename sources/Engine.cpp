@@ -95,3 +95,14 @@ void evan::Engine::switchScene(size_t sceneIndex)
 		std::cerr << "Scene index " << sceneIndex << " does not exist." << std::endl;
 	}
 }
+
+void evan::Engine::updateScene(size_t sceneIndex, std::vector<std::string> texturePaths,
+								std::map<std::string, std::vector<Mesh>> meshData)
+{
+	auto sceneIt = _scenes.find(sceneIndex);
+	if (sceneIt != _scenes.end()) {
+		sceneIt->second.updateScene(*_deviceContext, *_renderer, texturePaths, meshData);
+	} else {
+		std::cerr << "Scene index " << sceneIndex << " does not exist." << std::endl;
+	}
+}

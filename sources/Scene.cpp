@@ -39,6 +39,32 @@ evan::Scene::~Scene()
 // Public Methods //
 ////////////////////
 
+void evan::Scene::updateScene(const DeviceContext &deviceContext, const Renderer &renderer,
+							 std::vector<std::string> texturePaths,
+							 std::map<std::string, std::vector<Mesh>> meshData)
+{
+	// Clear existing meshes and materials
+	_meshes.clear();
+	_materials.clear();
+
+	// Create new materials for each texture path
+	for (const auto &texturePath: texturePaths) {
+		_materials.emplace(_materials.size(),
+						   Material(deviceContext, renderer, texturePath));
+
+		auto correspondingMeshData = meshData.find(texturePath);
+
+		if (correspondingMeshData != meshData.end()) {
+			// If there is a mesh data corresponding to the texture path, create
+			// a GPUMesh for each mesh
+			for (const auto &mesh: correspondingMeshData->second) {
+				_meshes.emplace_back(deviceContext, mesh.vertices, mesh.indices,
+									 _materials.size() - 1);
+			}
+		}
+	}
+}
+
 void evan::Scene::destroy(VkDevice device)
 {
 	for (auto &mesh: _meshes) {
