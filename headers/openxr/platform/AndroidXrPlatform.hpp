@@ -113,20 +113,6 @@ namespace evan
         ~AndroidXrPlatform() override = default;
 
         /**
-         * @brief Get the required instance extensions for the OpenXR platform on
-         * Android.
-         *
-         * This function returns a vector of strings representing the required
-         * instance extensions for the OpenXR platform on Android. These
-         * extensions are necessary for proper functionality and compatibility with
-         * the OpenXR runtime on Android devices.
-         *
-         * @return A vector of strings containing the required instance extensions
-         * for the OpenXR platform on Android.
-         */
-        void pollEvents(ADeviceBackend &deviceBackend) override;
-
-        /**
          * @brief Retrieves the required instance extensions for Android in the OpenXR
          * device backend.
          *

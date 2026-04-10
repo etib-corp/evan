@@ -38,22 +38,6 @@ evan::AndroidXrPlatform::AndroidXrPlatform(
 // Public Methods //
 ////////////////////
 
-void evan::AndroidXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
-{
-#ifdef __ANDROID__
-
-    evan::XrDeviceBackend &xrDeviceBackend =
-        dynamic_cast<evan::XrDeviceBackend &>(deviceBackend);
-
-    // Process GameActivity events
-    GameActivity_processEvents(_platformData.gameActivity);
-
-#endif
-
-    // OpenXR events (IMPORTANT)
-    IXrPlatform::pollEvents(deviceBackend);
-}
-
 std::vector<std::string> evan::AndroidXrPlatform::getRequiredInstanceExtensions() const
 {
 	std::vector<std::string> extensions = {
