@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "openxr/actions/XrHandActions.hpp"
+#include "openxr/actions/XrHandsActions.hpp"
 
 #include <memory>
 
@@ -37,7 +37,6 @@ namespace evan
     private:
         XrActionSet _actionSet; // The main action set for the application
 
-        std::unique_ptr<XrHandActions> _leftHandActions; // Actions for the left hand
-        std::unique_ptr<XrHandActions> _rightHandActions; // Actions for the right hand
+        std::unique_ptr<XrHandsActions> _handsActions; // Action manager for hand tracking actions
     };
 } // namespace evan

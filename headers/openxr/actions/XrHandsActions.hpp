@@ -2,7 +2,7 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** XrHandActions
+** XrHandsActions
 */
 
 #pragma once
@@ -26,7 +26,7 @@ namespace evan {
     class XrDeviceBackend;
 
     /**
-     * @brief The XrHandActions class is responsible for managing hand tracking
+     * @brief The XrHandsActions class is responsible for managing hand tracking
      * actions in an OpenXR application.
      *
      * This class encapsulates the functionality required to define and manage
@@ -36,30 +36,27 @@ namespace evan {
      * application, allowing developers to create immersive experiences that
      * utilize hand gestures and movements.
      */
-    class XrHandActions {
+    class XrHandsActions {
         public:
-            enum class HandType {
-                Left,
-                Right
-            };
-            XrHandActions(HandType handType, XrActionSet actionSet, XrDeviceBackend &deviceBackend);
 
-            ~XrHandActions();
+            XrHandsActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
+
+            ~XrHandsActions();
 
             std::vector<std::shared_ptr<utility::event::Event>> getEvents(XrDeviceBackend &deviceBackend);
 
         private:
-            std::string _handPath; // Path for the hand (e.g., "/user/hand/left" or "/user/hand/right")
 
-            std::string _prefixActionName; // Prefix for action names (e.g., "left_hand" or "right_hand")
+            void createHandActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
 
             XrAction _handAction; // Action for hand aim tracking
             XrAction _handGripAction; // Action for hand grip tracking
 
-            XrPath _handXrPath; // Path for the hand aim action
             XrPath _handGripPath; // Path for the hand grip action
+            XrSpace _handGripSpace; // Action space for the hand grip action
 
-            XrSpace _handActionSpace; // Action space for the hand aim action
+            XrPath _handSubactionPath[2];
+            XrSpace _handSpace[2];
 
     };
 } // namespace evan

@@ -20,8 +20,7 @@ evan::XrManageActions::XrManageActions(XrDeviceBackend &deviceBackend)
         throw std::runtime_error("Failed to create action set");
     }
 
-    _leftHandActions = std::make_unique<XrHandActions>(XrHandActions::HandType::Left, _actionSet, deviceBackend);
-    _rightHandActions = std::make_unique<XrHandActions>(XrHandActions::HandType::Right, _actionSet, deviceBackend);
+    _handsActions = std::make_unique<XrHandsActions>(_actionSet, deviceBackend);
 }
 
 evan::XrManageActions::~XrManageActions()
@@ -42,9 +41,7 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::XrManageActions::pollA
     if (result != XR_SUCCESS) {
         throw std::runtime_error("Failed to sync actions");
     }
-    const auto leftEvents = _leftHandActions->getEvents(deviceBackend);
-    events.insert(events.end(), leftEvents.begin(), leftEvents.end());
-    const auto rightEvents = _rightHandActions->getEvents(deviceBackend);
-    events.insert(events.end(), rightEvents.begin(), rightEvents.end());
+    const auto handEvents = _handsActions->getEvents(deviceBackend);
+    events.insert(events.end(), handEvents.begin(), handEvents.end());
     return events;
 }
