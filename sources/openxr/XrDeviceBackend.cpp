@@ -22,9 +22,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->createSession();
 	this->createVisualizedSpace();
 
-	std::cout << _interactionProfile.getCurrentInteractionProfilePath(_XrInstance, _session,
-												  "/user/hand/left")
-			  << std::endl;
+	_actionManager = std::make_unique<evan::XrManageActions>(*this);
 }
 
 evan::XrDeviceBackend::~XrDeviceBackend()
@@ -202,6 +200,13 @@ std::vector<XrViewConfigurationView>
 		viewConfigurationCount, &viewConfigurationCount,
 		viewConfigurations.data());
 	return viewConfigurations;
+}
+
+void evan::XrDeviceBackend::pollActions()
+{
+	if (_actionManager) {
+		_actionManager->pollActions(*this);
+	}
 }
 
 ///////////////////////

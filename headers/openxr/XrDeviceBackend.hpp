@@ -8,7 +8,7 @@
 #pragma once
 
 #include "openxr/IXrPlatform.hpp"
-#include "openxr/InteractionProfile.hpp"
+#include "openxr/XrManageActions.hpp"
 
 #include "ADeviceBackend.hpp"
 
@@ -156,6 +156,18 @@ namespace evan
 			enumerateViewConfigurations() const;
 
 		/**
+		 * @brief Polls input actions for the OpenXR session.
+		 *
+		 * This method is responsible for polling the input actions defined for
+		 * the OpenXR session, including actions for the left and right hands.
+		 * It interacts with the action manager to retrieve the current state of
+		 * input actions and to handle any user interactions within the XR
+		 * environment. Polling actions is essential for enabling responsive and
+		 * interactive experiences in the XR application.
+		 */
+		void pollActions();
+
+		/**
 		 * The OpenXR instance, which represents the
 		 * connection between the application and the
 		 * OpenXR runtime. It is used to create and manage
@@ -190,7 +202,17 @@ namespace evan
 		 */
 		XrSpace _space = XR_NULL_HANDLE;
 
-		InteractionProfile _interactionProfile;
+		/**
+		 * @brief The action manager for handling input actions in the OpenXR session.
+		 *
+		 * This member variable is responsible for managing the input actions defined for the
+		 * OpenXR session, including actions for the left and right hands. It encapsulates the
+		 * functionality required to create and manage action sets, as well as to handle input from
+		 * various input sources such as controllers and hand tracking. The action manager is essential
+		 * for enabling interactive experiences in the XR environment by allowing the application to respond
+		 * to user input in a flexible and extensible manner.
+		 */
+		std::unique_ptr<XrManageActions> _actionManager;
 
 		/**
 		 * Flag to track if the session is currently running.
@@ -200,6 +222,15 @@ namespace evan
 		 * the OpenXR runtime.
 		 */
 		bool _sessionRunning = false;
+
+		/**
+		 * The predicted display time for the next frame, used for
+		 * synchronizing rendering with the XR device's display
+		 * refresh cycle. It is updated each frame to ensure
+		 * smooth and responsive rendering in the XR environment.
+		 */
+		XrTime _predictedDisplayTime = 0;
+
 
 		protected:
 		/**
@@ -292,14 +323,6 @@ namespace evan
 		 * "VK_LAYER_KHRONOS_validation" layer.
 		 */
 		std::vector<VkExtensionProperties> getInstanceExtensions() const;
-
-		/**
-		 * The predicted display time for the next frame, used for
-		 * synchronizing rendering with the XR device's display
-		 * refresh cycle. It is updated each frame to ensure
-		 * smooth and responsive rendering in the XR environment.
-		 */
-		XrTime _predictedDisplayTime = 0;
 
 		private:
 		/**

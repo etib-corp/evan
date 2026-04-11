@@ -19,27 +19,28 @@ namespace evan {
             InteractionProfile();
             virtual ~InteractionProfile() = default;
 
-            std::string getRuntimeName(XrInstance instance) const;
-            std::string getSystemName(XrInstance instance, XrSystemId systemId) const;
+            static std::string getRuntimeName(XrInstance instance);
+            static std::string getSystemName(XrInstance instance, XrSystemId systemId);
 
-            XrPath stringToPath(XrInstance instance, const std::string &pathString) const;
-            std::string pathToString(XrInstance instance, XrPath path) const;
+            static XrPath stringToPath(XrInstance instance, const std::string &pathString);
+            static std::string pathToString(XrInstance instance, XrPath path);
 
-            std::string getCurrentInteractionProfilePath(
+            static std::string getCurrentInteractionProfilePath(
                 XrInstance instance,
                 XrSession session,
-                const std::string &userPathString) const;
+                const std::string &userPathString);
 
-            std::vector<XrPath>
+            static std::vector<XrPath>
                 enumerateBoundSourcesForAction(XrInstance instance,
                     XrSession session,
-                    XrAction action) const;
-            std::vector<std::string>
+                    XrAction action);
+            static std::vector<std::string>
                 enumerateBoundSourcePathStringsForAction(
                     XrInstance instance,
                     XrSession session,
-                    XrAction action) const;
+                    XrAction action);
 
         private:
+            XrActionSet _actionSet;
     };
 } // namespace evan

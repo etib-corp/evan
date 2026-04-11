@@ -13,7 +13,7 @@ evan::InteractionProfile::InteractionProfile()
 {
 }
 
-std::string evan::InteractionProfile::getRuntimeName(XrInstance instance) const
+std::string evan::InteractionProfile::getRuntimeName(XrInstance instance)
 {
 	XrInstanceProperties instanceProperties { XR_TYPE_INSTANCE_PROPERTIES };
 
@@ -27,7 +27,7 @@ std::string evan::InteractionProfile::getRuntimeName(XrInstance instance) const
 }
 
 std::string evan::InteractionProfile::getSystemName(XrInstance instance,
-    XrSystemId systemId) const
+    XrSystemId systemId)
 {
 	XrSystemProperties systemProperties { XR_TYPE_SYSTEM_PROPERTIES };
 
@@ -43,7 +43,7 @@ std::string evan::InteractionProfile::getSystemName(XrInstance instance,
 }
 
 XrPath evan::InteractionProfile::stringToPath(XrInstance instance,
-    const std::string &pathString) const
+    const std::string &pathString)
 {
 	XrPath path = XR_NULL_PATH;
 
@@ -58,7 +58,7 @@ XrPath evan::InteractionProfile::stringToPath(XrInstance instance,
 }
 
 std::string evan::InteractionProfile::pathToString(XrInstance instance,
-    XrPath path) const
+    XrPath path)
 {
 	if (path == XR_NULL_PATH) {
 		return {};
@@ -91,7 +91,7 @@ std::string evan::InteractionProfile::pathToString(XrInstance instance,
 std::string evan::InteractionProfile::getCurrentInteractionProfilePath(
 	XrInstance instance,
     XrSession session,
-    const std::string &userPathString) const
+    const std::string &userPathString)
 {
 	if (session == XR_NULL_HANDLE) {
 		std::cerr << "OpenXR session is not initialized." << std::endl;
@@ -121,7 +121,7 @@ std::string evan::InteractionProfile::getCurrentInteractionProfilePath(
 std::vector<XrPath>
 	evan::InteractionProfile::enumerateBoundSourcesForAction(XrInstance instance,
         XrSession session,
-        XrAction action) const
+        XrAction action)
 {
 	std::vector<XrPath> paths;
 
@@ -160,7 +160,7 @@ std::vector<std::string> evan::InteractionProfile::
 	enumerateBoundSourcePathStringsForAction(
         XrInstance instance,
         XrSession session,
-        XrAction action) const
+        XrAction action)
 {
 	std::vector<std::string> sourcePathStrings;
 	std::vector<XrPath> sourcePaths = enumerateBoundSourcesForAction(instance,

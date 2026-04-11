@@ -22,6 +22,9 @@ void evan::IXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
 	XrEventDataBuffer eventDataBuffer { XR_TYPE_EVENT_DATA_BUFFER };
 	evan::XrDeviceBackend &xrDeviceBackend =
 		dynamic_cast<evan::XrDeviceBackend &>(deviceBackend);
+
+	xrDeviceBackend.pollActions();
+
 	while (xrPollEvent(xrDeviceBackend._XrInstance, &eventDataBuffer) == XR_SUCCESS) {
 		switch (eventDataBuffer.type) {
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
