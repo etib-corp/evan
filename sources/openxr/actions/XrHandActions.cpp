@@ -12,11 +12,12 @@
 evan::XrHandActions::XrHandActions(HandType handType, XrActionSet actionSet, XrDeviceBackend &deviceBackend)
 {
     _handPath = (handType == HandType::Left) ? "/user/hand/left" : "/user/hand/right";
+    _prefixActionName = (handType == HandType::Left) ? "left_hand" : "right_hand";
 
     // Create hand pose action
     XrActionCreateInfo handPoseActionInfo{XR_TYPE_ACTION_CREATE_INFO};
-    std::strncpy(handPoseActionInfo.actionName, "left-hand-pose", XR_MAX_ACTION_NAME_SIZE);
-    std::strncpy(handPoseActionInfo.localizedActionName, "left-hand-pose", XR_MAX_LOCALIZED_ACTION_NAME_SIZE);
+    std::strncpy(handPoseActionInfo.actionName, (_prefixActionName + "_pose").c_str(), XR_MAX_ACTION_NAME_SIZE);
+    std::strncpy(handPoseActionInfo.localizedActionName, (_prefixActionName + "_pose").c_str(), XR_MAX_LOCALIZED_ACTION_NAME_SIZE);
     handPoseActionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
     handPoseActionInfo.countSubactionPaths = 0;
     handPoseActionInfo.subactionPaths = nullptr;

@@ -51,6 +51,8 @@ namespace evan {
         private:
             std::string _handPath; // Path for the hand (e.g., "/user/hand/left" or "/user/hand/right")
 
+            std::string _prefixActionName; // Prefix for action names (e.g., "left_hand" or "right_hand")
+
             XrAction _handAction; // Action for hand aim tracking
             XrAction _handGripAction; // Action for hand grip tracking
 
