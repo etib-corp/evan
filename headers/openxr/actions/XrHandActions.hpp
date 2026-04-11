@@ -51,13 +51,13 @@ namespace evan {
         private:
             std::string _handPath; // Path for the hand (e.g., "/user/hand/left" or "/user/hand/right")
 
-            XrAction _handAimAction; // Action for hand aim tracking
+            XrAction _handAction; // Action for hand aim tracking
             XrAction _handGripAction; // Action for hand grip tracking
 
-            XrPath _handAimPath; // Path for the hand aim action
+            XrPath _handXrPath; // Path for the hand aim action
             XrPath _handGripPath; // Path for the hand grip action
 
-            XrSpace _handAimActionSpace; // Action space for the hand aim action
+            XrSpace _handActionSpace; // Action space for the hand aim action
 
     };
 } // namespace evan

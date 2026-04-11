@@ -20,10 +20,8 @@ evan::XrManageActions::XrManageActions(XrDeviceBackend &deviceBackend)
         throw std::runtime_error("Failed to create action set");
     }
 
-        _leftHandActions = std::make_unique<XrHandActions>(
-            XrHandActions::HandType::Left, _actionSet, deviceBackend);
-        _rightHandActions = std::make_unique<XrHandActions>(
-            XrHandActions::HandType::Right, _actionSet, deviceBackend);
+    _leftHandActions = std::make_unique<XrHandActions>(XrHandActions::HandType::Left, _actionSet, deviceBackend);
+    _rightHandActions = std::make_unique<XrHandActions>(XrHandActions::HandType::Right, _actionSet, deviceBackend);
 }
 
 evan::XrManageActions::~XrManageActions()
