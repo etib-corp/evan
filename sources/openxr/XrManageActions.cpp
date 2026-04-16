@@ -50,7 +50,8 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::XrManageActions::pollA
 
     XrResult result = xrSyncActions(deviceBackend._session, &syncInfo);
     if (result != XR_SUCCESS) {
-        throw std::runtime_error("Failed to sync actions");
+        std::cerr << "Failed to sync actions: " << result << std::endl;
+        return events;
     }
     const auto handEvents = _handsActions->getEvents(deviceBackend);
     events.insert(events.end(), handEvents.begin(), handEvents.end());
