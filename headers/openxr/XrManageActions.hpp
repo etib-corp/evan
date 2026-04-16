@@ -34,9 +34,9 @@ namespace evan
 
         std::vector<std::shared_ptr<utility::event::Event>> pollActions(XrDeviceBackend &deviceBackend);
 
-    private:
         XrActionSet _actionSet; // The main action set for the application
 
         std::unique_ptr<XrHandsActions> _handsActions; // Action manager for hand tracking actions
+    private:
     };
 } // namespace evan

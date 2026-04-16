@@ -15,19 +15,21 @@ evan::XrHandsActions::XrHandsActions(XrActionSet actionSet, XrDeviceBackend &dev
 
     XrActionSuggestedBinding bindings[4];
     bindings[0].action = _handAction;
-    bindings[0].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/aim");
+    bindings[0].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/aim/pose");
     bindings[1].action = _handAction;
-    bindings[1].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/aim");
+    bindings[1].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/aim/pose");
     bindings[2].action = _handGripAction;
-    bindings[2].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/grip");
+    bindings[2].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/grip");
     bindings[3].action = _handGripAction;
-    bindings[3].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/grip");
+    bindings[3].binding = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/grip");
 
     XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
     suggestedBindings.interactionProfile = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/interaction_profiles/khr/simple_controller");
     suggestedBindings.countSuggestedBindings = 4;
     suggestedBindings.suggestedBindings = bindings;
     xrSuggestInteractionProfileBindings(deviceBackend._XrInstance, &suggestedBindings);
+
+    createHandSpaces(deviceBackend);
 }
 
 evan::XrHandsActions::~XrHandsActions()
@@ -55,16 +57,26 @@ void evan::XrHandsActions::createHandActions(XrActionSet actionSet, XrDeviceBack
     strcpy(actionInfo.actionName, "hand_pose");
     strcpy(actionInfo.localizedActionName, "Hand Pose");
 
-    xrCreateAction(actionSet, &actionInfo, &_handAction);
+    XrResult result = xrCreateAction(actionSet, &actionInfo, &_handAction);
+    if (result != XR_SUCCESS) {
+        std::cerr << "Failed to create hand pose action: " << result << std::endl;
+        throw std::runtime_error("Failed to create hand pose action");
+    }
+}
 
-    // Create space per hand
-    XrActionSpaceCreateInfo spaceInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
-    spaceInfo.action = _handAction;
-    spaceInfo.poseInActionSpace.orientation.w = 1.0f;
-
+void evan::XrHandsActions::createHandSpaces(XrDeviceBackend &deviceBackend)
+{
     for (int i = 0; i < 2; i++) {
-        spaceInfo.subactionPath = _handSubactionPath[i];
-        xrCreateActionSpace(deviceBackend._session, &spaceInfo, &_handSpace[i]);
+        XrActionSpaceCreateInfo spaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
+        spaceCreateInfo.action = _handAction;
+        spaceCreateInfo.subactionPath = _handSubactionPath[i];
+        spaceCreateInfo.poseInActionSpace.orientation.w = 1.0f;
+
+        XrResult result = xrCreateActionSpace(deviceBackend._session, &spaceCreateInfo, &_handSpace[i]);
+        if (result != XR_SUCCESS) {
+            std::cerr << "Failed to create hand space: " << result << std::endl;
+            throw std::runtime_error("Failed to create hand space");
+        }
     }
 }
 
@@ -81,8 +93,10 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::XrHandsActions::getEve
         XrActionStatePose poseState{XR_TYPE_ACTION_STATE_POSE};
         xrGetActionStatePose(deviceBackend._session, &getInfo, &poseState);
 
-        if (!poseState.isActive)
+        if (!poseState.isActive) {
+            std::cout << (i == 0 ? "LEFT" : "RIGHT") << " hand is not active.\n";
             continue;
+        }
 
         // 2. Get real pose
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION};
@@ -94,8 +108,10 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::XrHandsActions::getEve
             &location
         );
 
-        if (XR_FAILED(res))
+        if (XR_FAILED(res)) {
+            std::cerr << "Failed to locate hand space: " << res << std::endl;
             continue;
+        }
 
         if ((location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) &&
             (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT)) {

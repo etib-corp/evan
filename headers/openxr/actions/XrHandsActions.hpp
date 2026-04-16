@@ -45,10 +45,6 @@ namespace evan {
 
             std::vector<std::shared_ptr<utility::event::Event>> getEvents(XrDeviceBackend &deviceBackend);
 
-        private:
-
-            void createHandActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
-
             XrAction _handAction; // Action for hand aim tracking
             XrAction _handGripAction; // Action for hand grip tracking
 
@@ -57,6 +53,12 @@ namespace evan {
 
             XrPath _handSubactionPath[2];
             XrSpace _handSpace[2];
+        private:
+
+            void createHandActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
+
+            void createHandSpaces(XrDeviceBackend &deviceBackend);
+
 
     };
 } // namespace evan

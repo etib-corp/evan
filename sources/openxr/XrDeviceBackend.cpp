@@ -204,6 +204,9 @@ std::vector<XrViewConfigurationView>
 
 void evan::XrDeviceBackend::pollActions()
 {
+	if (!_sessionRunning) {
+		return;
+	}
 	if (_actionManager) {
 		_actionManager->pollActions(*this);
 	}
