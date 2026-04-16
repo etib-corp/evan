@@ -193,9 +193,9 @@ void evan::Renderer::createGraphicsPipeline(VkDevice device,
 											VkSampleCountFlagBits msaaSamples)
 {
 	auto fragShaderFile =
-		g_assetManager->open(std::string("./shaders/frag.spv"));
+		g_assetManager->open(std::string("shaders/frag.spv"));
 	auto vertShaderFile =
-		g_assetManager->open(std::string("./shaders/vert.spv"));
+		g_assetManager->open(std::string("shaders/vert.spv"));
 
 	std::string vertShaderString = vertShaderFile->content();
 	std::string fragShaderString = fragShaderFile->content();
