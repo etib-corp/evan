@@ -37,6 +37,10 @@ void evan::Renderer::destroy(VkDevice device)
 	vkDestroyDescriptorSetLayout(device, _descriptorSetLayout, nullptr);
 	vkDestroyPipeline(device, _pipeline, nullptr);
 	vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
+
+	for (Frame &frame: _frames) {
+		frame.destroy(device);
+	}
 }
 
 void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
