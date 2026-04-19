@@ -21,6 +21,10 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->createLogicalDevice();
 	this->createSession();
 	this->createVisualizedSpace();
+
+	_handActionSubactionPath[LEFT_HAND_INDEX] = InteractionProfile::stringToPath(_XrInstance, "/user/hand/left");
+	_handActionSubactionPath[RIGHT_HAND_INDEX] = InteractionProfile::stringToPath(_XrInstance, "/user/hand/right");
+	_actionManager = std::make_unique<evan::XrManageActions>(*this);
 }
 
 evan::XrDeviceBackend::~XrDeviceBackend()
@@ -44,6 +48,9 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 
 bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
+	if (!_sessionRunning) {
+		return false;
+	}
 	XrFrameState frameState { XR_TYPE_FRAME_STATE };
 	XrFrameWaitInfo frameWaitInfo {
 		.type = XR_TYPE_FRAME_WAIT_INFO,
@@ -195,6 +202,16 @@ std::vector<XrViewConfigurationView>
 		viewConfigurationCount, &viewConfigurationCount,
 		viewConfigurations.data());
 	return viewConfigurations;
+}
+
+void evan::XrDeviceBackend::pollActions()
+{
+	if (!_sessionRunning) {
+		return;
+	}
+	if (_actionManager) {
+		_actionManager->pollActions(*this);
+	}
 }
 
 ///////////////////////

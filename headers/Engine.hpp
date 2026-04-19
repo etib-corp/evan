@@ -171,6 +171,8 @@ namespace evan
 		void updateScene(size_t sceneIndex, std::vector<std::string> texturePaths,
 						 std::map<std::string, std::vector<Mesh>> meshData);
 
+		static void initializeAssetManager(void* platformAssetManager);
+
 		protected:
 		/**
 		 * The name of the engine.

@@ -7,14 +7,24 @@
 
 #include "Engine.hpp"
 
-std::unique_ptr<utility::AssetManager> g_assetManager =
-	std::make_unique<utility::DefaultAssetManager>();
+#ifdef __ANDROID__
+std::unique_ptr<utility::AndroidAssetManager> g_assetManager;
+#else
+std::unique_ptr<utility::AssetManager> g_assetManager;
+#endif
+
+void evan::Engine::initializeAssetManager(void* platformAssetManager) {
+    #ifdef __ANDROID__
+        g_assetManager = std::make_unique<utility::AndroidAssetManager>(static_cast<AAssetManager*>(platformAssetManager));
+    #else
+        g_assetManager = std::make_unique<utility::DefaultAssetManager>();
+    #endif
+}
 
 evan::Engine::Engine(const std::shared_ptr<IPlatform> &platform)
 	: _platform(platform)
 {
-	g_assetManager = std::make_unique<utility::DefaultAssetManager>();
-	g_assetManager->loadDirectory(std::string("./shaders"));
+	g_assetManager->loadDirectory(std::string("shaders"));
 
 	_deviceContext	   = std::make_shared<DeviceContext>(*platform);
 	_swapchainContext = platform->createSwapchainContext(*_deviceContext);

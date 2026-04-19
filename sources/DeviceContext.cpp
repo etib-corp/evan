@@ -155,10 +155,29 @@ void evan::DeviceContext::createGraphicsQueue()
 					 &_graphicsQueue);
 }
 
+bool evan::DeviceContext::checkDebugUtilsSupport(VkInstance instance) {
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+
+    for (const auto& extension : extensions) {
+        if (strcmp(extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void evan::DeviceContext::setupDebugMessenger()
 {
 	if (!enableValidationLayers)
 		return;
+
+	if (!checkDebugUtilsSupport(_deviceBackend->_VkInstance)) {
+		std::cerr << "Debug Utils extension not supported!" << std::endl;
+		return;
+	}
 
 	VkDebugUtilsMessengerCreateInfoEXT createInfo;
 
@@ -166,7 +185,7 @@ void evan::DeviceContext::setupDebugMessenger()
 	if (this->createDebugUtilsMessengerEXT(
 			_deviceBackend->_VkInstance, &createInfo, nullptr, &_debugMessenger)
 		!= VK_SUCCESS) {
-		throw std::runtime_error("Failed to set up debug messenger !");
+		std::cerr << "Failed to set up debug messenger!" << std::endl;
 	}
 }
 

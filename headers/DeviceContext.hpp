@@ -208,6 +208,17 @@ namespace evan
 		void createGraphicsQueue();
 
 		/**
+		 * @brief Checks if the Vulkan debug utils extension is supported by the
+		 * Vulkan instance.
+		 *
+		 * This function enumerates the available instance extensions and checks if
+		 * the `VK_EXT_debug_utils` extension is available.
+		 * @param instance The Vulkan instance to check for extension support.
+		 * @return `true` if the extension is supported, `false` otherwise.
+		 */
+		bool checkDebugUtilsSupport(VkInstance instance);
+
+		/**
 		 * @brief Sets up the Vulkan debug messenger for the device context.
 		 *
 		 * This function initializes the Vulkan debug messenger, which is used

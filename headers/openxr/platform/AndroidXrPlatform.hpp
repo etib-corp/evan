@@ -50,7 +50,46 @@ namespace evan
 			 * is used for OpenXR initialization on Android.
 			 */
 			void *applicationActivity;
+
+            /**
+             * @brief Pointer to the Android application structure.
+             * This is used for handling Android application lifecycle events and may
+             * be necessary for certain OpenXR implementations on Android.
+             */
+            void *androidApp;
 		};
+
+        /**
+         * @brief Struct to track the current state of the Android application.
+         * This struct is used to manage the lifecycle of the Android application and
+         * ensure that the OpenXR session responds appropriately to changes in the application state,
+         * such as when the app is resumed, paused, or stopped.
+         */
+        struct AndroidAppState {
+            #ifdef __ANDROID__
+                /**
+                 * @brief Pointer to the native Android window.
+                 *
+                 * This is typically obtained from the Android Native Activity and
+                 * is used for rendering and handling input in OpenXR on Android.
+                 */
+                ANativeWindow* NativeWindow = nullptr;
+            #endif
+
+            /**
+             * @brief Indicates whether the Android application is currently resumed.
+             * This flag can be used to determine if the OpenXR session should be active
+             * or if it should pause rendering and input processing when the app is not in the foreground.
+             */
+            bool _resumed = false;
+
+            /**
+            * @brief Indicates whether the Android application is currently paused.
+            * This flag can be used to determine if the OpenXR session should pause rendering and input processing
+            * when the app is paused, such as when the user switches to another app or receives a phone call.
+            */
+            bool _paused = false;
+        };
 
 
         /**
@@ -100,6 +139,17 @@ namespace evan
          */
         const XrBaseInStructure *getInstanceCreateInfo() const override;
 
+        /**
+         * @brief Tracks the current state of the Android application.
+         *
+         * This variable is used to keep track of the current state of the
+         * Android application, such as whether it is in the foreground, paused,
+         * or stopped. It can be used to manage OpenXR session state and ensure
+         * that the application responds appropriately to changes in its lifecycle
+         * on Android devices.
+         */
+        AndroidAppState _appState = {};
+
     private:
     #ifdef __ANDROID__
         /**
@@ -113,5 +163,16 @@ namespace evan
          */
         XrInstanceCreateInfoAndroidKHR _instanceCreateInfoAndroid {};
     #endif
+
+        /**
+         * @brief Stores the Android-specific platform data for OpenXR initialization.
+         *
+         * This member variable holds the Android-specific data provided to the
+         * constructor, which is necessary for initializing OpenXR on Android
+         * platforms. It may include pointers to the application VM, activity, and
+         * other relevant Android data required for proper OpenXR functionality on
+         * Android devices.
+         */
+        AndroidPlatformData _platformData;
     };
 }
