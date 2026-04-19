@@ -8,6 +8,11 @@
 #include "openxr/actions/XrManageButtonsActions.hpp"
 #include "openxr/XrDeviceBackend.hpp"
 
+////////////////////
+// Public Methods //
+////////////////////
+
+
 std::vector<std::unique_ptr<utility::event::Event>> evan::XrButtonAAction::getEvent(evan::XrDeviceBackend &deviceBackend)
 {
     std::vector<std::unique_ptr<utility::event::Event>> events = {};
@@ -47,6 +52,10 @@ evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDe
 evan::XrManageButtonsActions::~XrManageButtonsActions()
 {
 }
+
+////////////////////
+// Public Methods //
+////////////////////
 
 std::vector<std::unique_ptr<utility::event::Event>> evan::XrManageButtonsActions::getEvents(evan::XrDeviceBackend &deviceBackend)
 {
