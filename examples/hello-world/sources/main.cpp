@@ -13,7 +13,7 @@
 int main(void)
 {
 	std::shared_ptr<evan::IPlatform> platform =
-		std::make_shared<evan::MacOsDesktopPlatform>();
+		std::make_shared<evan::MacOsDesktopPlatform>("test", 800, 600);
 	evan::Engine myEngine(platform);
 
 	g_assetManager->add(std::string("./texture1.png"));
