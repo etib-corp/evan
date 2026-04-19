@@ -43,7 +43,9 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	_deviceBackend = platform.createDeviceBackend();
 
 	this->getMaxUsableSampleCount();
-	this->setupDebugMessenger();
+	if (enableValidationLayers) {
+		this->setupDebugMessenger();
+	}
 	this->createGraphicsQueue();
 	this->createCommandPool();
 }
