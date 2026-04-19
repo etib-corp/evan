@@ -5,25 +5,28 @@
 ** IXrAction
 */
 
-#include "openxr/actions/IXrAction.hpp"
+#include "openxr/actions/AXrAction.hpp"
 
+////////////////////
+// Public Methods //
+////////////////////
 
-XrAction evan::IXrAction::getAction() const
+XrAction evan::AXrAction::getAction() const
 {
     return _action;
 }
 
-const std::string &evan::IXrAction::getActionName() const
+const std::string &evan::AXrAction::getActionName() const
 {
     return _actionName;
 }
 
-const std::string &evan::IXrAction::getBindingPath() const
+const std::string &evan::AXrAction::getBindingPath() const
 {
     return _bindingPath;
 }
 
-void evan::IXrAction::createAction(const PropertiesXrActions &properties)
+void evan::AXrAction::createAction(const PropertiesXrActions &properties)
 {
     _actionName = properties.actionName;
     _bindingPath = properties.bindingPath;
