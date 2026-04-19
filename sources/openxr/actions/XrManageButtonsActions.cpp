@@ -47,6 +47,7 @@ evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDe
     _buttonAAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::A);
     _buttonBAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::B);
     _buttonXAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::X);
+    _buttonYAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::Y);
     _buttonMenuAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::Menu);
     _buttonSystemAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::System);
 
@@ -70,6 +71,13 @@ evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDe
     propertiesButtonXAction.actionSet = actionSet;
     propertiesButtonXAction.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
     _buttonXAction->createAction(propertiesButtonXAction);
+
+evan::AXrAction::PropertiesXrActions propertiesButtonYAction;
+    propertiesButtonYAction.actionName = "button_y_action";
+    propertiesButtonYAction.bindingPath = "/user/hand/left/input/y/click";
+    propertiesButtonYAction.actionSet = actionSet;
+    propertiesButtonYAction.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+    _buttonYAction->createAction(propertiesButtonYAction);
 
     evan::AXrAction::PropertiesXrActions propertiesButtonMenuAction;
     propertiesButtonMenuAction.actionName = "button_menu_action";
@@ -106,6 +114,9 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrManageButtonsActions
 
     auto buttonXEvents = _buttonXAction->getEvent(deviceBackend);
     events.insert(events.end(), std::make_move_iterator(buttonXEvents.begin()), std::make_move_iterator(buttonXEvents.end()));
+
+    auto buttonYEvents = _buttonYAction->getEvent(deviceBackend);
+    events.insert(events.end(), std::make_move_iterator(buttonYEvents.begin()), std::make_move_iterator(buttonYEvents.end()));
 
     auto buttonMenuEvents = _buttonMenuAction->getEvent(deviceBackend);
     events.insert(events.end(), std::make_move_iterator(buttonMenuEvents.begin()), std::make_move_iterator(buttonMenuEvents.end()));
