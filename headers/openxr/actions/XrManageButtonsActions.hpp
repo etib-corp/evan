@@ -9,7 +9,7 @@
 
 #include "EvanPlatform.hpp"
 
-#include "openxr/actions/IXrAction.hpp"
+#include "openxr/actions/AXrAction.hpp"
 #include "openxr/InteractionProfile.hpp"
 
 #ifdef None
@@ -23,7 +23,7 @@ namespace evan {
 
     class XrDeviceBackend;
 
-    class XrButtonAAction: public IXrAction {
+    class XrButtonAAction: public AXrAction {
         public:
             XrButtonAAction() = default;
 

@@ -36,7 +36,7 @@ evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDe
 {
     _buttonAAction = std::make_unique<XrButtonAAction>();
 
-    evan::IXrAction::PropertiesXrActions propertiesButtonAAction;
+    evan::AXrAction::PropertiesXrActions propertiesButtonAAction;
     propertiesButtonAAction.actionName = "button_a_action";
     propertiesButtonAAction.bindingPath = "/user/hand/right/input/a/click";
     propertiesButtonAAction.actionSet = actionSet;
