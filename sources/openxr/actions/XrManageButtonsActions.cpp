@@ -24,8 +24,8 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrButtonAAction::getEv
     xrGetActionStateBoolean(deviceBackend._session, &getInfo, &state);
 
     if (state.isActive) {
-        auto buttonEvent = std::make_unique<utility::event::ControllerButtonEvent>();
-        buttonEvent->setButton(utility::event::ControllerButtonEvent::Button::A);
+        auto buttonEvent = std::make_unique<utility::event::HandButtonEvent>();
+        buttonEvent->setButton(utility::event::HandButtonEvent::Button::A);
         buttonEvent->setClicked(state.currentState);
 
         std::cout << "Button A is " << (state.currentState ? "pressed" : "released") << std::endl;

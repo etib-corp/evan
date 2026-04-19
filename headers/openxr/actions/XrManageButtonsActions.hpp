@@ -12,13 +12,6 @@
 #include "openxr/actions/AXrAction.hpp"
 #include "openxr/InteractionProfile.hpp"
 
-#ifdef None
-#undef None
-#endif
-
-#include <utility/event/controller_button_event.hpp>
-
-
 namespace evan {
 
     class XrDeviceBackend;

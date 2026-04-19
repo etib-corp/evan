@@ -38,8 +38,8 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrHandsMotionActions::
 
     for (int i = 0; i < 2; i++) {
 
-        auto handEvent = std::make_unique<utility::event::ControllerMotionEvent>();
-        handEvent->setControllerType(i == 0 ? utility::event::ControllerEvent::ControllerType::Left : utility::event::ControllerEvent::ControllerType::Right);
+        auto handEvent = std::make_unique<utility::event::HandMotionEvent>();
+        handEvent->setHandType(i == 0 ? utility::event::HandEvent::HandType::Left : utility::event::HandEvent::HandType::Right);
 
         XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
         getInfo.action = _handAimAction;

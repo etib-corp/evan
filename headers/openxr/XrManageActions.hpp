@@ -15,7 +15,10 @@
 namespace evan
 {
     class XrDeviceBackend;
+
     /**
+     * @class XrManageActions
+     *
      * @brief The XrManageActions class is responsible for managing all action sets
      * and actions in an OpenXR application.
      *
@@ -29,6 +32,28 @@ namespace evan
      */
     class XrManageActions {
     public:
+        /**
+         * @brief Initializes XrManageActions with OpenXR action management.
+         *
+         * Constructs an XrManageActions instance and sets up all necessary OpenXR action
+         * handling including action set creation, hands motion and button input actions,
+         * space binding, and session attachment.
+         *
+         * @param deviceBackend Reference to the XrDeviceBackend instance that manages
+         *                      the OpenXR device and session.
+         *
+         * @details The constructor performs the following initialization steps in order:
+         *          1. Creates the main action set
+         *          2. Initializes hands motion action handler
+         *          3. Initializes buttons action handler
+         *          4. Binds all action sets to the device backend
+         *          5. Creates spaces for hands motion tracking
+         *          6. Attaches the action set to the active session
+         *
+         * @note The order of operations is critical for proper OpenXR initialization.
+         *
+         * @see XrHandsMotionActions, XrManageButtonsActions
+         */
         XrManageActions(XrDeviceBackend &deviceBackend);
 
         ~XrManageActions();

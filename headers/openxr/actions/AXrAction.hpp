@@ -11,11 +11,7 @@
 
 #include "openxr/InteractionProfile.hpp"
 
-#ifdef None
-#undef None
-#endif
-
-#include <utility/event/controller_button_event.hpp>
+#include <utility/event/hand_button_event.hpp>
 
 
 namespace evan {

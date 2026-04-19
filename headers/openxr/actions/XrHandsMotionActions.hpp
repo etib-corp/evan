@@ -11,12 +11,8 @@
 
 #include "openxr/InteractionProfile.hpp"
 
-#ifdef None
-#undef None
-#endif
-
-#include <utility/event/controller_motion_event.hpp>
-#include <utility/event/controller_thumb_stick_event.hpp>
+#include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include <openxr/openxr.h>
 
