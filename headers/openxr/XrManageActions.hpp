@@ -69,10 +69,33 @@ namespace evan
 
         std::unique_ptr<XrManageThumbStickActions> _manageThumbStickActions; // Action manager for thumb stick actions
     private:
+        /**
+         * @brief Creates the main action set for the application.
+         *
+         * This method initializes the main action set that will be used to group all related actions for the application.
+         * It sets up the necessary OpenXR structures and registers the action set with the OpenXR runtime.
+         * The created action set will serve as the parent for all individual actions related to hand tracking, button input, and thumb stick input.
+         *
+         * @param deviceBackend Reference to the XrDeviceBackend instance that manages the OpenXR device and session, used for registering the action set with the runtime.
+         */
         void createActionSet(XrDeviceBackend &deviceBackend);
 
+        /**
+         * @brief Creates spaces for hand motion tracking.
+         *
+         * This method sets up the necessary action spaces for hand motion tracking, allowing the application to track the position and orientation of the user's hands in the XR environment. It creates action spaces for both hand aim and hand grip actions, which are essential for accurate hand tracking and interaction within the XR experience.
+         *
+         * @param deviceBackend Reference to the XrDeviceBackend instance that manages the OpenXR device and session, used for creating action spaces with the runtime.
+         */
         void attachSessionActionSet(XrDeviceBackend &deviceBackend);
 
+        /**
+         * @brief Binds all action sets to the device backend.
+         *
+         * This method binds the created action sets and their associated actions to the OpenXR device backend, allowing the application to receive input events from the XR runtime. It ensures that all action sets are properly registered with the device backend so that input events can be correctly routed to the appropriate handlers for hand tracking, button input, and thumb stick input.
+         *
+         * @param deviceBackend Reference to the XrDeviceBackend instance that manages the OpenXR device and session, used for binding action sets with the runtime.
+         */
         void bindActionSets(XrDeviceBackend &deviceBackend);
     };
 } // namespace evan
