@@ -14,6 +14,7 @@ evan::XrManageActions::XrManageActions(XrDeviceBackend &deviceBackend)
 
     _handsMotionActions = std::make_unique<XrHandsMotionActions>(_actionSet, deviceBackend);
     _manageButtonsActions = std::make_unique<XrManageButtonsActions>(_actionSet, deviceBackend);
+    _manageThumbStickActions = std::make_unique<XrManageThumbStickActions>(_actionSet, deviceBackend);
 
     bindActionSets(deviceBackend);
 
@@ -90,8 +91,12 @@ void evan::XrManageActions::bindActionSets(XrDeviceBackend &deviceBackend)
         {_manageButtonsActions->_buttonXAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/x/click")},
         {_manageButtonsActions->_buttonYAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/y/click")},
 
-        {_manageButtonsActions->_buttonMenuAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/menu/click")},
-        {_manageButtonsActions->_buttonSystemAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/system/click")},
+        {_manageThumbStickActions->_leftHandThumbStickActions->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/thumbstick")},
+        {_manageThumbStickActions->_rightHandThumbStickActions->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/thumbstick")},
+
+        // ERROR: When trying to bind the menu and system buttons, all the actions stop working and no events are generated.
+        // {_manageButtonsActions->_buttonMenuAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/menu/click")},
+        // {_manageButtonsActions->_buttonSystemAction->getAction(), InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/system/click")},
     };
 
     XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};

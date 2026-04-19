@@ -12,7 +12,6 @@
 #include "openxr/InteractionProfile.hpp"
 
 #include <utility/event/hand_motion_event.hpp>
-#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include <openxr/openxr.h>
 
@@ -95,14 +94,6 @@ namespace evan {
              * the position and orientation of the hands in the virtual environment based on the OpenXR runtime's tracking data.
              */
             XrSpace _handAimSpace[2];
-
-            /** @brief Subaction paths for hand actions.
-             *
-             * This member variable holds the XrPath values that represent the subaction paths for the left and right hand actions.
-             * These paths are used to specify which hand (left or right) is associated with each action, allowing the application
-             * to differentiate between input from the left and right hands when processing hand tracking data from the OpenXR runtime.
-             */
-            XrPath _handActionSubactionPath[2];
 
              /** @brief Creates the hand motion actions and their corresponding spaces.
              *

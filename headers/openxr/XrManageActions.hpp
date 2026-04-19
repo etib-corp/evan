@@ -9,6 +9,7 @@
 
 #include "openxr/actions/XrHandsMotionActions.hpp"
 #include "openxr/actions/XrManageButtonsActions.hpp"
+#include "openxr/actions/XrManageThumbStickActions.hpp"
 
 #include <memory>
 
@@ -65,6 +66,8 @@ namespace evan
         std::unique_ptr<XrHandsMotionActions> _handsMotionActions; // Action manager for hand tracking actions
 
         std::unique_ptr<XrManageButtonsActions> _manageButtonsActions; // Action manager for button actions
+
+        std::unique_ptr<XrManageThumbStickActions> _manageThumbStickActions; // Action manager for thumb stick actions
     private:
         void createActionSet(XrDeviceBackend &deviceBackend);
 

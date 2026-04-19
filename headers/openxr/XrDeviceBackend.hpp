@@ -18,6 +18,9 @@
 #include <openxr/openxr_platform.h>
 #include <vector>
 
+#define LEFT_HAND_INDEX 0
+#define RIGHT_HAND_INDEX 1
+
 namespace evan
 {
 	/**
@@ -231,6 +234,16 @@ namespace evan
 		 */
 		XrTime _predictedDisplayTime = 0;
 
+		const static size_t _handCount = 2; // Assuming two hands (left and right)
+
+		/**
+		 * Subaction paths for hand input actions, used to differentiate
+		 * between left and right hand actions in the OpenXR session. These
+		 * paths are used when polling input actions to determine which hand is
+		 * associated with a particular action state, allowing for accurate
+		 * handling of user input from both hands in the XR environment.
+		 */
+		std::array<XrPath, _handCount> _handActionSubactionPath;
 
 		protected:
 		/**
