@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include "openxr/actions/XrHandsActions.hpp"
+#include "openxr/actions/XrHandsMotionActions.hpp"
+#include "openxr/actions/XrManageButtonsActions.hpp"
 
 #include <memory>
 
@@ -32,11 +33,18 @@ namespace evan
 
         ~XrManageActions();
 
-        std::vector<std::shared_ptr<utility::event::Event>> pollActions(XrDeviceBackend &deviceBackend);
+        std::vector<std::unique_ptr<utility::event::Event>> pollActions(XrDeviceBackend &deviceBackend);
 
         XrActionSet _actionSet; // The main action set for the application
 
-        std::unique_ptr<XrHandsActions> _handsActions; // Action manager for hand tracking actions
+        std::unique_ptr<XrHandsMotionActions> _handsMotionActions; // Action manager for hand tracking actions
+
+        std::unique_ptr<XrManageButtonsActions> _manageButtonsActions; // Action manager for button actions
     private:
+        void createActionSet(XrDeviceBackend &deviceBackend);
+
+        void attachSessionActionSet(XrDeviceBackend &deviceBackend);
+
+        void bindActionSets(XrDeviceBackend &deviceBackend);
     };
 } // namespace evan

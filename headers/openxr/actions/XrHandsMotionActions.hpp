@@ -2,7 +2,7 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** XrHandsActions
+** XrHandsMotionActions
 */
 
 #pragma once
@@ -16,7 +16,6 @@
 #endif
 
 #include <utility/event/controller_motion_event.hpp>
-#include <utility/event/controller_button_event.hpp>
 #include <utility/event/controller_thumb_stick_event.hpp>
 
 #include <openxr/openxr.h>
@@ -26,7 +25,7 @@ namespace evan {
     class XrDeviceBackend;
 
     /**
-     * @brief The XrHandsActions class is responsible for managing hand tracking
+     * @brief The XrHandsMotionActions class is responsible for managing hand tracking
      * actions in an OpenXR application.
      *
      * This class encapsulates the functionality required to define and manage
@@ -36,14 +35,14 @@ namespace evan {
      * application, allowing developers to create immersive experiences that
      * utilize hand gestures and movements.
      */
-    class XrHandsActions {
+    class XrHandsMotionActions {
         public:
 
-            XrHandsActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
+            XrHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
 
-            ~XrHandsActions();
+            ~XrHandsMotionActions();
 
-            std::vector<std::shared_ptr<utility::event::Event>> getEvents(XrDeviceBackend &deviceBackend);
+            std::vector<std::unique_ptr<utility::event::Event>> getEvents(XrDeviceBackend &deviceBackend);
 
             XrAction _handAimAction; // Action for hand aim tracking
             XrAction _handGripAction; // Action for hand grip tracking
@@ -55,11 +54,12 @@ namespace evan {
             XrSpace _handAimSpace[2];
 
             XrPath _handActionSubactionPath[2]; // Subaction paths for hand actions
+
+            void createHandsMotionSpaces(XrDeviceBackend &deviceBackend);
+
         private:
+            void createHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
 
-            void createHandActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend);
-
-            void createHandSpaces(XrDeviceBackend &deviceBackend);
 
 
     };

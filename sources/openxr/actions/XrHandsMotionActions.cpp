@@ -2,41 +2,22 @@
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
-** XrHandsActions
+** XrHandsMotionActions
 */
 
-#include "openxr/actions/XrHandsActions.hpp"
+#include "openxr/actions/XrHandsMotionActions.hpp"
 
 #include "openxr/XrDeviceBackend.hpp"
 
-evan::XrHandsActions::XrHandsActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
+evan::XrHandsMotionActions::XrHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
 {
-    // Convert paths
     xrStringToPath(deviceBackend._XrInstance, "/user/hand/left", &_handActionSubactionPath[0]);
     xrStringToPath(deviceBackend._XrInstance, "/user/hand/right", &_handActionSubactionPath[1]);
 
-    createHandActions(actionSet, deviceBackend);
-
-    std::vector<XrActionSuggestedBinding> bindings = {
-        // Grip
-        {_handGripAction, InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/grip/pose")},
-        {_handGripAction, InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/grip/pose")},
-
-        // Aim
-        {_handAimAction, InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/left/input/aim/pose")},
-        {_handAimAction, InteractionProfile::stringToPath(deviceBackend._XrInstance, "/user/hand/right/input/aim/pose")}
-    };
-
-    XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
-    suggestedBindings.interactionProfile = evan::InteractionProfile::stringToPath(deviceBackend._XrInstance, "/interaction_profiles/oculus/touch_controller");
-    suggestedBindings.countSuggestedBindings = static_cast<uint32_t>(bindings.size());
-    suggestedBindings.suggestedBindings = bindings.data();
-    xrSuggestInteractionProfileBindings(deviceBackend._XrInstance, &suggestedBindings);
-
-    createHandSpaces(deviceBackend);
+    createHandsMotionActions(actionSet, deviceBackend);
 }
 
-evan::XrHandsActions::~XrHandsActions()
+evan::XrHandsMotionActions::~XrHandsMotionActions()
 {
     xrDestroyAction(_handAimAction);
     xrDestroySpace(_handAimSpace[0]);
@@ -47,7 +28,7 @@ evan::XrHandsActions::~XrHandsActions()
     xrDestroySpace(_handGripSpace[1]);
 }
 
-void evan::XrHandsActions::createHandActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
+void evan::XrHandsMotionActions::createHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
 {
     // Create pose action
     XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
@@ -79,7 +60,7 @@ void evan::XrHandsActions::createHandActions(XrActionSet actionSet, XrDeviceBack
     }
 }
 
-void evan::XrHandsActions::createHandSpaces(XrDeviceBackend &deviceBackend)
+void evan::XrHandsMotionActions::createHandsMotionSpaces(XrDeviceBackend &deviceBackend)
 {
     for (int i = 0; i < 2; i++) {
         XrActionSpaceCreateInfo spaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
@@ -102,13 +83,13 @@ void evan::XrHandsActions::createHandSpaces(XrDeviceBackend &deviceBackend)
     }
 }
 
-std::vector<std::shared_ptr<utility::event::Event>> evan::XrHandsActions::getEvents(evan::XrDeviceBackend &deviceBackend)
+std::vector<std::unique_ptr<utility::event::Event>> evan::XrHandsMotionActions::getEvents(evan::XrDeviceBackend &deviceBackend)
 {
-    std::vector<std::shared_ptr<utility::event::Event>> events;
+    std::vector<std::unique_ptr<utility::event::Event>> events;
 
     for (int i = 0; i < 2; i++) {
 
-        auto handEvent = std::make_shared<utility::event::ControllerMotionEvent>();
+        auto handEvent = std::make_unique<utility::event::ControllerMotionEvent>();
         handEvent->setControllerType(i == 0 ? utility::event::ControllerEvent::ControllerType::Left : utility::event::ControllerEvent::ControllerType::Right);
 
         XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
@@ -180,7 +161,7 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::XrHandsActions::getEve
         }
 
 
-        events.push_back(handEvent);
+        events.push_back(std::move(handEvent));
     }
     return events;
 }
