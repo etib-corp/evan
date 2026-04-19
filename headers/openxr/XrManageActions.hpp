@@ -59,6 +59,14 @@ namespace evan
 
         ~XrManageActions();
 
+        /**
+         * @brief Polls for input events from the OpenXR runtime.
+         *
+         * This method queries the OpenXR runtime for the current state of all managed actions, including hand motion, button input, and thumb stick input. It generates a vector of events based on the retrieved state, which can be used by the application to respond to user input. The events may include information about hand positions, button presses, and thumb stick movements detected by the OpenXR runtime.
+         *
+         * @param deviceBackend Reference to the XrDeviceBackend instance that manages the OpenXR device and session.
+         * @return A vector of unique pointers to events representing the current state of all managed actions.
+         */
         std::vector<std::unique_ptr<utility::event::Event>> pollActions(XrDeviceBackend &deviceBackend);
 
         XrActionSet _actionSet; // The main action set for the application

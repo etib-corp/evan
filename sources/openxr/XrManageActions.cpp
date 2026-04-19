@@ -48,6 +48,8 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrManageActions::pollA
     events.insert(events.end(), std::make_move_iterator(handEvents.begin()), std::make_move_iterator(handEvents.end()));
     auto buttonEvents = _manageButtonsActions->getEvents(deviceBackend);
     events.insert(events.end(), std::make_move_iterator(buttonEvents.begin()), std::make_move_iterator(buttonEvents.end()));
+    auto thumbStickEvents = _manageThumbStickActions->getEvents(deviceBackend);
+    events.insert(events.end(), std::make_move_iterator(thumbStickEvents.begin()), std::make_move_iterator(thumbStickEvents.end()));
     return events;
 }
 
