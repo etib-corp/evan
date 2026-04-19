@@ -36,7 +36,7 @@ namespace evan {
     class AXrAction {
         public:
 
-            /*
+            /**
              * @struct PropertiesXrActions
              * @brief Encapsulates properties required for creating an OpenXR action.
              *
@@ -47,22 +47,22 @@ namespace evan {
              * single object.
              */
             struct PropertiesXrActions {
-                /* @brief The name of the action, used for identification and debugging
+                /** @brief The name of the action, used for identification and debugging
                  * purposes. It should be unique within the action set.
                  */
                 std::string actionName;
-                /* @brief The binding path for the action, specifying how the action
+                /** @brief The binding path for the action, specifying how the action
                  * is bound to input devices. This path should follow OpenXR's
                  * binding syntax and conventions.
                  */
                 std::string bindingPath;
-                /* @brief The action set to which this action belongs. An action set
+                /** @brief The action set to which this action belongs. An action set
                  * is a collection of actions that can be activated or deactivated
                  * together, allowing for better organization and management of
                  * actions in an OpenXR application.
                  */
                 XrActionSet actionSet;
-                /* @brief The type of the action, indicating how it is used in the
+                /** @brief The type of the action, indicating how it is used in the
                  * application. This can be a boolean input, a float input, a pose
                  * input, etc., and determines how the action is processed and
                  * interpreted by the OpenXR runtime.
@@ -70,7 +70,7 @@ namespace evan {
                 XrActionType actionType;
             };
 
-            /* @brief Destructor for AXrAction, responsible for cleaning up OpenXR resources.
+            /** @brief Destructor for AXrAction, responsible for cleaning up OpenXR resources.
              *
              * This destructor ensures that the XrAction handle is properly destroyed
              * when the AXrAction object goes out of scope. It also checks if the
@@ -86,7 +86,7 @@ namespace evan {
                 }
             }
 
-            /* @brief Retrieves the XrAction handle associated with this AXrAction.
+            /** @brief Retrieves the XrAction handle associated with this AXrAction.
              *
              * This method returns the XrAction handle that represents the OpenXR
              * action managed by this class. The handle can be used in OpenXR
@@ -95,7 +95,7 @@ namespace evan {
              */
             virtual std::vector<std::unique_ptr<utility::event::Event>> getEvent(XrDeviceBackend &deviceBackend) = 0;
 
-            /* @brief Retrieves the XrAction handle associated with this AXrAction.
+            /** @brief Retrieves the XrAction handle associated with this AXrAction.
              *
              * This method returns the XrAction handle that represents the OpenXR
              * action managed by this class. The handle can be used in OpenXR
@@ -104,7 +104,7 @@ namespace evan {
              */
             XrAction getAction() const;
 
-            /* @brief Retrieves the name of the action.
+            /** @brief Retrieves the name of the action.
              *
              * This method returns the name of the action, which is used for
              * identification and debugging purposes. The name should be unique within
@@ -114,7 +114,7 @@ namespace evan {
              */
             const std::string &getActionName() const;
 
-            /* @brief Retrieves the binding path of the action.
+            /** @brief Retrieves the binding path of the action.
              *
              * This method returns the binding path for the action, which specifies
              * how the action is bound to input devices. The binding path should
@@ -125,7 +125,7 @@ namespace evan {
              */
             const std::string &getBindingPath() const;
 
-            /* @brief Creates an OpenXR action based on the provided properties.
+            /** @brief Creates an OpenXR action based on the provided properties.
              *
              * This method takes a PropertiesXrActions structure containing all
              * necessary parameters for creating an OpenXR action, such as the
@@ -143,19 +143,19 @@ namespace evan {
             void createAction(const PropertiesXrActions &properties);
 
         private:
-            /* @brief The XrAction handle representing the OpenXR action managed by this class. */
+            /** @brief The XrAction handle representing the OpenXR action managed by this class. */
             XrAction _action;
 
-            /* @brief The XrSpace handle associated with the action, used for spatial interactions. */
+            /** @brief The XrSpace handle associated with the action, used for spatial interactions. */
             XrSpace _actionSpace = XR_NULL_HANDLE;
 
-            /* @brief The subaction path for the action, specifying the input source or device associated with the action. */
+            /** @brief The subaction path for the action, specifying the input source or device associated with the action. */
             XrPath _actionSubactionPath;
 
-            /* @brief The name of the action, used for identification and debugging purposes. */
+            /** @brief The name of the action, used for identification and debugging purposes. */
             std::string _actionName;
 
-            /* @brief The binding path for the action, specifying how the action is bound to input devices. */
+            /** @brief The binding path for the action, specifying how the action is bound to input devices. */
             std::string _bindingPath;
     };
 
