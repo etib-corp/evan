@@ -139,5 +139,4 @@ namespace evan {
         private:
 
     };
-
-}
+} // namespace evan

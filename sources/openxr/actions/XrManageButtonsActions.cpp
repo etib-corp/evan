@@ -40,8 +40,6 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrButtonAction::getEve
     return events;
 }
 
-
-
 evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
 {
     _buttonAAction = std::make_unique<XrButtonAction>(utility::event::HandButtonEvent::Button::A);
@@ -72,7 +70,7 @@ evan::XrManageButtonsActions::XrManageButtonsActions(XrActionSet actionSet, XrDe
     propertiesButtonXAction.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
     _buttonXAction->createAction(propertiesButtonXAction);
 
-evan::AXrAction::PropertiesXrActions propertiesButtonYAction;
+    evan::AXrAction::PropertiesXrActions propertiesButtonYAction;
     propertiesButtonYAction.actionName = "button_y_action";
     propertiesButtonYAction.bindingPath = "/user/hand/left/input/y/click";
     propertiesButtonYAction.actionSet = actionSet;
