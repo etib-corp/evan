@@ -28,60 +28,9 @@ evan::XrHandsMotionActions::~XrHandsMotionActions()
     xrDestroySpace(_handGripSpace[1]);
 }
 
-void evan::XrHandsMotionActions::createHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
-{
-    // Create pose action
-    XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
-    actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-    actionInfo.countSubactionPaths = 2;
-    actionInfo.subactionPaths = _handActionSubactionPath;
-
-    strcpy(actionInfo.actionName, "hand_pose");
-    strcpy(actionInfo.localizedActionName, "Hand Pose");
-
-    XrResult result = xrCreateAction(actionSet, &actionInfo, &_handAimAction);
-    if (result != XR_SUCCESS) {
-        std::cerr << "Failed to create hand pose action: " << result << std::endl;
-        throw std::runtime_error("Failed to create hand pose action");
-    }
-
-    // Create grip action
-    actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-    actionInfo.countSubactionPaths = 2;
-    actionInfo.subactionPaths = _handActionSubactionPath;
-
-    strcpy(actionInfo.actionName, "hand_grip");
-    strcpy(actionInfo.localizedActionName, "Hand Grip");
-
-    result = xrCreateAction(actionSet, &actionInfo, &_handGripAction);
-    if (result != XR_SUCCESS) {
-        std::cerr << "Failed to create hand grip action: " << result << std::endl;
-        throw std::runtime_error("Failed to create hand grip action");
-    }
-}
-
-void evan::XrHandsMotionActions::createHandsMotionSpaces(XrDeviceBackend &deviceBackend)
-{
-    for (int i = 0; i < 2; i++) {
-        XrActionSpaceCreateInfo spaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
-        spaceCreateInfo.action = _handAimAction;
-        spaceCreateInfo.subactionPath = _handActionSubactionPath[i];
-        spaceCreateInfo.poseInActionSpace.orientation.w = 1.0f;
-
-        XrResult result = xrCreateActionSpace(deviceBackend._session, &spaceCreateInfo, &_handAimSpace[i]);
-        if (result != XR_SUCCESS) {
-            std::cerr << "Failed to create hand space: " << result << std::endl;
-            throw std::runtime_error("Failed to create hand space");
-        }
-
-        spaceCreateInfo.action = _handGripAction;
-        result = xrCreateActionSpace(deviceBackend._session, &spaceCreateInfo, &_handGripSpace[i]);
-        if (result != XR_SUCCESS) {
-            std::cerr << "Failed to create hand grip space: " << result << std::endl;
-            throw std::runtime_error("Failed to create hand grip space");
-        }
-    }
-}
+////////////////////
+// Public Methods //
+////////////////////
 
 std::vector<std::unique_ptr<utility::event::Event>> evan::XrHandsMotionActions::getEvents(evan::XrDeviceBackend &deviceBackend)
 {
@@ -164,4 +113,63 @@ std::vector<std::unique_ptr<utility::event::Event>> evan::XrHandsMotionActions::
         events.push_back(std::move(handEvent));
     }
     return events;
+}
+
+void evan::XrHandsMotionActions::createHandsMotionActions(XrActionSet actionSet, XrDeviceBackend &deviceBackend)
+{
+    // Create pose action
+    XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+    actionInfo.countSubactionPaths = 2;
+    actionInfo.subactionPaths = _handActionSubactionPath;
+
+    strcpy(actionInfo.actionName, "hand_pose");
+    strcpy(actionInfo.localizedActionName, "Hand Pose");
+
+    XrResult result = xrCreateAction(actionSet, &actionInfo, &_handAimAction);
+    if (result != XR_SUCCESS) {
+        std::cerr << "Failed to create hand pose action: " << result << std::endl;
+        throw std::runtime_error("Failed to create hand pose action");
+    }
+
+    // Create grip action
+    actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+    actionInfo.countSubactionPaths = 2;
+    actionInfo.subactionPaths = _handActionSubactionPath;
+
+    strcpy(actionInfo.actionName, "hand_grip");
+    strcpy(actionInfo.localizedActionName, "Hand Grip");
+
+    result = xrCreateAction(actionSet, &actionInfo, &_handGripAction);
+    if (result != XR_SUCCESS) {
+        std::cerr << "Failed to create hand grip action: " << result << std::endl;
+        throw std::runtime_error("Failed to create hand grip action");
+    }
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
+
+void evan::XrHandsMotionActions::createHandsMotionSpaces(XrDeviceBackend &deviceBackend)
+{
+    for (int i = 0; i < 2; i++) {
+        XrActionSpaceCreateInfo spaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
+        spaceCreateInfo.action = _handAimAction;
+        spaceCreateInfo.subactionPath = _handActionSubactionPath[i];
+        spaceCreateInfo.poseInActionSpace.orientation.w = 1.0f;
+
+        XrResult result = xrCreateActionSpace(deviceBackend._session, &spaceCreateInfo, &_handAimSpace[i]);
+        if (result != XR_SUCCESS) {
+            std::cerr << "Failed to create hand space: " << result << std::endl;
+            throw std::runtime_error("Failed to create hand space");
+        }
+
+        spaceCreateInfo.action = _handGripAction;
+        result = xrCreateActionSpace(deviceBackend._session, &spaceCreateInfo, &_handGripSpace[i]);
+        if (result != XR_SUCCESS) {
+            std::cerr << "Failed to create hand grip space: " << result << std::endl;
+            throw std::runtime_error("Failed to create hand grip space");
+        }
+    }
 }
