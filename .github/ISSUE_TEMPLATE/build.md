@@ -10,6 +10,18 @@ assignees: clement-antoine-xavier
 # Context
 **Describe what problems is encountered and why it has to be fixed**
 
+## Concerned Platform APIs
+
+[ ] OpenXR
+[ ] GLFW
+
+## Concerned OS
+
+[ ] Windows
+[ ] Linux
+[ ] MacOS
+[ ] Android
+
 ## Priority level
 **Add enough elements that shows how much this build issue is important to be fixed**
 
@@ -17,3 +29,6 @@ assignees: clement-antoine-xavier
 **Explain what this build issue should do**
 
 ## Schemas / Designs (optional)
+
+## Proofs
+**(in case of a bug) Add screenshots or logs to help explain your problem**
