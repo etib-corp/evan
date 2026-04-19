@@ -27,7 +27,9 @@
  * on macOS where Vulkan support is provided through MoltenVK.
  */
 const std::vector<const char *> deviceExtensions = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_KHR_portability_subset"
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	"VK_KHR_portability_subset",
+	VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME
 };
 
 namespace evan
