@@ -17,6 +17,8 @@ evan::XrManageActions::XrManageActions(XrDeviceBackend &deviceBackend)
 
     bindActionSets(deviceBackend);
 
+    // WARNING: The order of these operations is critical. All spaces must be created before attaching the action set to the session,
+    // otherwise the runtime will not recognize the spaces and they will not function correctly.
     _handsMotionActions->createHandsMotionSpaces(deviceBackend);
 
     attachSessionActionSet(deviceBackend);

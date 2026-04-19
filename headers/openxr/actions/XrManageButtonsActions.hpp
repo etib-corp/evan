@@ -16,32 +16,17 @@ namespace evan {
 
     class XrDeviceBackend;
 
-    /**
-     * @class XrManageButtonsActions
-     *
-     * @brief Manages button actions for an OpenXR application.
-     *
-     * This class is responsible for creating and managing button actions,
-     * such as the A button on a controller, within an OpenXR application.
-     * It encapsulates the functionality required to define button actions, query their state,
-     * and generate corresponding events based on user input.
-     * The class interacts with the OpenXR runtime through the provided device backend to retrieve
-     * action states and create events that can be used by the application to respond to button presses and releases.
-     *
-     * @note This class is designed to be extended with additional button actions as needed,
-     * allowing for flexible management of various input actions in an OpenXR application.
-     */
-    class XrButtonAAction: public AXrAction {
+    class XrButtonAction: public AXrAction {
         public:
             /** @brief Default constructor for the XrButtonAAction class.
              *
             */
-            XrButtonAAction() = default;
+            XrButtonAction(utility::event::HandButtonEvent::Button buttonType = utility::event::HandButtonEvent::Button::Unknown);
 
             /** @brief Destructor for the XrButtonAAction class.
              *
             */
-            ~XrButtonAAction() = default;
+            ~XrButtonAction() = default;
 
             /** @brief Retrieves the current state of the A button action and generates corresponding events.
              *
@@ -55,6 +40,7 @@ namespace evan {
             std::vector<std::unique_ptr<utility::event::Event>> getEvent(XrDeviceBackend &deviceBackend) override;
 
         private:
+            utility::event::HandButtonEvent::Button _buttonType; /**< The type of button this action represents (A, B, X, Y, Menu, System). */
 
     };
 
@@ -102,11 +88,54 @@ namespace evan {
              */
             std::vector<std::unique_ptr<utility::event::Event>> getEvents(XrDeviceBackend &deviceBackend);
 
-            /** @brief The XrButtonAAction instance for managing the A button action.
+            /**
+             * @brief Unique pointer to the action associated with the A button.
+             *
+             * This member holds the action object responsible for handling input events related to the A button.
+             * It is initialized during the construction of the XrManageButtonsActions class.
+             */
+            std::unique_ptr<XrButtonAction> _buttonAAction;
+
+            /**
+             * @brief Unique pointer to the action associated with the B button.
+             *
+             * This member holds the action object responsible for handling input events related to the B button.
+             * It is initialized during the construction of the XrManageButtonsActions class.
+             */
+            std::unique_ptr<XrButtonAction> _buttonBAction;
+
+            /**
+             * @brief Unique pointer to the action associated with the X button.
+             *
+             * This member holds the action object responsible for handling input events related to the X button.
+             * It is initialized during the construction of the XrManageButtonsActions class.
+             */
+            std::unique_ptr<XrButtonAction> _buttonXAction;
+
+            /**
+            * @brief Unique pointer to the action associated with the Menu button.
             *
-            * This member variable holds an instance of the XrButtonAAction class, which is responsible for managing the state and events related to the A button action in the OpenXR runtime. It allows the XrManageButtonsActions class to query the state of the A button and generate corresponding events based on user input.
+            * This member holds the action object responsible for handling input events related to the Menu button.
+            * It is initialized during the construction of the XrManageButtonsActions class.
             */
-            std::unique_ptr<XrButtonAAction> _buttonAAction;
+            std::unique_ptr<XrButtonAction> _buttonYAction;
+
+            /**
+             * @brief Unique pointer to the action associated with the System button.
+             *
+             * This member holds the action object responsible for handling input events related to the System button.
+             * It is initialized during the construction of the XrManageButtonsActions class.
+             */
+            std::unique_ptr<XrButtonAction> _buttonMenuAction;
+
+            /**
+            * @brief Unique pointer to the action associated with the System button.
+            *
+            * This member holds the action object responsible for handling input events related to the System button.
+            * It is initialized during the construction of the XrManageButtonsActions class.
+            */
+            std::unique_ptr<XrButtonAction> _buttonSystemAction;
+
         private:
 
     };
