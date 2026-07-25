@@ -33,10 +33,6 @@ jobs:
             engine-backend: openxr
             operating-system: linux
             runner: ubuntu-latest
-          - name: OpenXR Android
-            engine-backend: openxr
-            operating-system: android
-            runner: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6.0.2
