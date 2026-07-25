@@ -1,0 +1,74 @@
+name: Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  LUNARG_VULKAN_SDK_VERSION: 1.4.304.1
+  JAVA_TUMERIN_JDK_VERSION: 21
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GLFW Linux
+            engine-backend: glfw
+            operating-system: linux
+            runner: ubuntu-latest
+          - name: GLFW macOS
+            engine-backend: glfw
+            operating-system: macos
+            runner: macos-latest
+          - name: GLFW Windows
+            engine-backend: glfw
+            operating-system: windows
+            runner: windows-latest
+          - name: OpenXR Linux
+            engine-backend: openxr
+            operating-system: linux
+            runner: ubuntu-latest
+          - name: OpenXR Android
+            engine-backend: openxr
+            operating-system: android
+            runner: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Install Ubuntu dependencies
+        if: matrix.runner == 'ubuntu-latest'
+        run: bash scripts/install_ubuntu_dependencies.sh
+
+      - name: Configure Vulkan SDK using the downloaded spec
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: ${{ env.LUNARG_VULKAN_SDK_VERSION }}
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Setup JDK
+        if: matrix.operating-system == 'android'
+        uses: actions/setup-java@v5.2.0
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_TUMERIN_JDK_VERSION }}
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ github.workspace }}/build -S ${{ github.workspace }}
+          -DBUILD_FOR_GLFW=${{ matrix.engine-backend == 'glfw' }}
+          -DBUILD_FOR_OPENXR=${{ matrix.engine-backend == 'openxr' }}
+          -DBUILD_FOR_LINUX=${{ matrix.operating-system == 'linux' }}
+          -DBUILD_FOR_MACOS=${{ matrix.operating-system == 'macos' }}
+          -DBUILD_FOR_WINDOWS=${{ matrix.operating-system == 'windows' }}
+          -DBUILD_FOR_ANDROID=${{ matrix.operating-system == 'android' }}
+
+      - name: Build
+        run: >
+          cmake --build ${{ github.workspace }}/build
