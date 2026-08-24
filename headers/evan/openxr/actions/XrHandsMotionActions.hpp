@@ -92,7 +92,7 @@ namespace evan
 		 * the state of hand aim tracking and to generate events based on the
 		 * hand's position and orientation.
 		 */
-		XrAction _handAimAction;
+		XrAction _handAimAction = XR_NULL_HANDLE;
 		/** @brief The XrAction handle for hand grip tracking.
 		 *
 		 * This member variable holds the XrAction handle that represents the
@@ -100,7 +100,7 @@ namespace evan
 		 * the state of hand grip tracking and to generate events based on the
 		 * hand's position and orientation when gripping.
 		 */
-		XrAction _handGripAction;
+		XrAction _handGripAction = XR_NULL_HANDLE;
 
 		/** @brief Action spaces for hand aim and grip tracking.
 		 *
