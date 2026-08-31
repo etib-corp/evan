@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Evan links against the utility library, GLM, and Vulkan. Downstream
+# consumers must be able to resolve these dependencies.
+find_dependency(utility)
+find_dependency(glm)
+find_dependency(Vulkan)
+
+include("${CMAKE_CURRENT_LIST_DIR}/evanTargets.cmake")
+
+check_required_components(evan)
