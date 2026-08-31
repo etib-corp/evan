@@ -36,7 +36,8 @@ evan::XrManageActions::~XrManageActions()
 {
 	this->getLogger().info() << "Destroying XrManageActions";
 
-	xrDestroyActionSet(_actionSet);
+	if (_actionSet != XR_NULL_HANDLE)
+		xrDestroyActionSet(_actionSet);
 }
 
 std::vector<std::shared_ptr<utility::event::Event>>

@@ -69,12 +69,12 @@ namespace evan
 		/**
 		 * Vulkan shader module for the vertex shader
 		 */
-		VkShaderModule _vertexShaderModule;
+		VkShaderModule _vertexShaderModule = VK_NULL_HANDLE;
 
 		/**
 		 * Vulkan shader module for the fragment shader
 		 */
-		VkShaderModule _fragmentShaderModule;
+		VkShaderModule _fragmentShaderModule = VK_NULL_HANDLE;
 
 		/**
 		 * SPIR-V code for the vertex shader
