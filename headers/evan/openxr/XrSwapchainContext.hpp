@@ -202,82 +202,40 @@ namespace evan
 			getProjectionLayerViews() const;
 
 		/**
-		 * @brief Retrieves the projection matrix for a specific view index.
+		 * @brief Retrieves the set of views to render (mutable).
 		 *
-		 * This method returns the projection matrix for a specific view index,
-		 * which is essential for rendering the scene accurately in an OpenXR
-		 * application. The projection matrix is used to project the 3D scene
-		 * onto the 2D display, and it may vary based on the view configurations
-		 * and user interactions. Implement this method to return the
-		 * appropriate projection matrix for the specified view index.
-		 *
-		 * @param index The index of the view for which to retrieve the
-		 * projection matrix.
-		 *
-		 * @return glm::mat4 The projection matrix for the specified view index,
-		 * which should be calculated based on the current view configurations
-		 * and any changes in the VR environment to ensure accurate rendering of
-		 * the scene in an OpenXR application.
+		 * @return A mutable reference to the ViewSet.
 		 */
-		glm::mat4 getProjection(std::size_t index) const override;
+		ViewSet &getViewSet() override;
 
 		/**
-		 * @brief Retrieves the view matrix for a specific view index.
+		 * @brief Retrieves the set of views to render (const).
 		 *
-		 * This method returns the view matrix for a specific view index, which
-		 * is essential for rendering the scene accurately in an OpenXR
-		 * application. The view matrix is used to transform the 3D scene based
-		 * on the position and orientation of the user's head and controllers,
-		 * and it may vary based on user interactions and changes in the VR
-		 * environment. Implement this method to return the appropriate view
-		 * matrix for the specified view index.
-		 *
-		 * @param index The index of the view for which to retrieve the view
-		 * matrix.
-		 *
-		 * @return glm::mat4 The view matrix for the specified view index, which
-		 * should be calculated based on the current view configurations, user
-		 * interactions, and any changes in the VR environment to ensure
-		 * accurate rendering of the scene in an OpenXR application.
+		 * @return A const reference to the ViewSet.
 		 */
-		utility::graphic::ViewF getView(std::size_t index) const override;
+		const ViewSet &getViewSet() const override;
+
+		/**
+		 * @brief Rebuilds the ViewSet from the latest OpenXR view state.
+		 *
+		 * Must be called after xrLocateViews (done in preprocessFrame) so the
+		 * ViewSet reflects the current eye poses, fields of view and clipping
+		 * planes before the renderer iterates over it.
+		 */
+		void syncViewSet();
 
 		/**
 		 * @brief Sets the view matrix for a specific view index.
 		 *
-		 * This method sets the view matrix for a specific view index, which is
-		 * essential for rendering the scene accurately in an OpenXR
-		 * application. The view matrix is used to transform the 3D scene based
-		 * on the position and orientation of the user's head and controllers,
-		 * and it may need to be updated based on user interactions and changes
-		 * in the VR environment. Implement this method to set the appropriate
-		 * view matrix for the specified view index.
+		 * For OpenXR this method updates the near and far clipping planes used
+		 * to build the per-eye projection matrices. The actual eye pose and
+		 * field of view are refreshed by syncViewSet each frame.
 		 *
 		 * @param index The index of the view for which to set the view matrix.
-		 * @param view The view matrix to set for the specified view index,
-		 * which should be calculated based on user interactions and any changes
-		 * in the VR environment to ensure accurate rendering of the scene in an
-		 * OpenXR application.
+		 * @param view The view matrix to set for the specified view index.
 		 */
 		void setView(std::size_t index,
 					 const utility::graphic::ViewF &view) override;
-
-		/**
-		 * @brief Retrieves the number of views in the swapchain context.
-		 *
-		 * This method returns the number of views associated with the swapchain
-		 * context, which is essential for configuring the rendering pipeline
-		 * and ensuring that rendering operations are performed correctly for
-		 * each view. Implement this method to return the appropriate number of
-		 * views based on the current view configurations and any changes in the
-		 * VR environment.
-		 *
-		 * @return std::size_t The number of views in the swapchain context,
-		 * which should be calculated based on the current view configurations
-		 * and any changes in the VR environment to ensure accurate rendering of
-		 * the scene in an OpenXR application.
-		 */
-		std::size_t getViewCount(void) const override;
 
 		/**
 		 * Vector of XrView structures for each view configuration.
@@ -292,6 +250,12 @@ namespace evan
 		std::vector<XrViewConfigurationView> _viewsConfigurations;
 
 		private:
+		/**
+		 * The set of views rendered by this swapchain context. Each view maps
+		 * to one eye and targets its own swapchain image set.
+		 */
+		ViewSet _viewSet;
+
 		/**
 		 * Vector of XrCompositionLayerProjectionView structures for each
 		 * projection layer view.
