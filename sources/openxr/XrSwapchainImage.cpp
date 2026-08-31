@@ -80,6 +80,7 @@ void evan::XrSwapchainImage::destroy(VkDevice device)
 	vkDestroyImage(device, _depthImage, nullptr);
 	vkFreeMemory(device, _depthMemory, nullptr);
 	vkDestroyImageView(device, _depthView, nullptr);
+	xrDestroySwapchain(_swapchain);
 }
 
 void evan::XrSwapchainImage::fillPresentInfo(
