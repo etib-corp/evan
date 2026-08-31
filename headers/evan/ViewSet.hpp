@@ -59,11 +59,7 @@ namespace evan
 		 * @param swapchainIndex Index of the swapchain image set to target.
 		 */
 		void addView(const utility::graphic::ViewF &view,
-					 std::size_t swapchainIndex)
-		{
-			_views.push_back(View { view, swapchainIndex });
-		}
-
+					 std::size_t swapchainIndex);
 		/**
 		 * @brief Sets the view state at the given index, growing the set if
 		 * necessary.
@@ -74,13 +70,7 @@ namespace evan
 		 * @param index Index of the view to set.
 		 * @param view The view state to store.
 		 */
-		void setView(std::size_t index, const utility::graphic::ViewF &view)
-		{
-			if (index >= _views.size()) {
-				_views.resize(index + 1);
-			}
-			_views[index].view = view;
-		}
+		void setView(std::size_t index, const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Sets the swapchain index of the view at the given index,
@@ -89,47 +79,29 @@ namespace evan
 		 * @param index Index of the view to update.
 		 * @param swapchainIndex Index of the swapchain image set to target.
 		 */
-		void setSwapchainIndex(std::size_t index, std::size_t swapchainIndex)
-		{
-			if (index >= _views.size()) {
-				_views.resize(index + 1);
-			}
-			_views[index].swapchainIndex = swapchainIndex;
-		}
+		void setSwapchainIndex(std::size_t index, std::size_t swapchainIndex);
 
 		/**
 		 * @brief Resizes the view set to contain exactly @p count views.
 		 *
 		 * @param count The new number of views.
 		 */
-		void resize(std::size_t count)
-		{
-			_views.resize(count);
-		}
+		void resize(std::size_t count);
 
 		/**
 		 * @brief Removes all views from the set.
 		 */
-		void clear()
-		{
-			_views.clear();
-		}
+		void clear();
 
 		/**
 		 * @return The number of views in the set.
 		 */
-		std::size_t size() const
-		{
-			return _views.size();
-		}
+		std::size_t size() const;
 
 		/**
 		 * @return True when the set contains no view.
 		 */
-		bool empty() const
-		{
-			return _views.empty();
-		}
+		bool empty() const;
 
 		/**
 		 * @brief Accesses the view at the given index (unchecked).
@@ -182,10 +154,7 @@ namespace evan
 		 * @param index Index of the view.
 		 * @return The view state.
 		 */
-		utility::graphic::ViewF getView(std::size_t index) const
-		{
-			return _views.at(index).view;
-		}
+		utility::graphic::ViewF getView(std::size_t index) const;
 
 		/**
 		 * @brief Retrieves the projection matrix for the given index.
@@ -193,10 +162,7 @@ namespace evan
 		 * @param index Index of the view.
 		 * @return The projection matrix.
 		 */
-		glm::mat4 getProjection(std::size_t index) const
-		{
-			return _views.at(index).view.getProjectionMatrix();
-		}
+		glm::mat4 getProjection(std::size_t index) const;
 
 		private:
 		/**
