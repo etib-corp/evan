@@ -25,3 +25,18 @@ and one platform when configuring the project.
 - [How Evan Works](docs/HOW_EVAN_WORKS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Technical Choices](docs/TECHNICAL_CHOICES.md)
+- [Code Conventions](docs/CODE_CONVENTIONS.md)
+- [Commit Conventions](docs/COMMIT_CONVENTIONS.md)
+
+## Contributing
+
+We welcome contributions from the community! If you're interested in
+contributing to Evan, please check out our
+[Contributing Guidelines](CONTRIBUTING.md) for more information on how to get
+involved.
+
+## License
+
+Evan is released under the [MIT License](LICENSE). See
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards and
+[SECURITY.md](SECURITY.md) for reporting vulnerabilities.
