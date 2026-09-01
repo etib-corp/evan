@@ -350,6 +350,8 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		static_cast<uint32_t>(extensionsWrapped.size());
 	createInfo.ppEnabledExtensionNames = extensionsWrapped.data();
 
+	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
+
 	if (useValidationLayers) {
 		createInfo.enabledLayerCount =
 			static_cast<uint32_t>(validationLayers.size());
@@ -357,7 +359,6 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		this->getLogger().info()
 			<< "Validation layers enabled for instance creation. Setting up "
 			   "debug messenger create info...";
-		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
 
 		this->populateDebugMessengerCreateInfo(debugCreateInfo,
 											   defaultDebugCallback);

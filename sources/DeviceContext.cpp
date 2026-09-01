@@ -90,10 +90,10 @@ evan::DeviceContext::~DeviceContext()
 {
 	this->getLogger().info() << "Cleaning up device context...";
 	vkDestroyCommandPool(_deviceBackend->_device, _commandPool, nullptr);
-	// if (enableValidationLayers) {
-	// 	vkDestroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance,
-	// _debugMessenger, 									nullptr);
-	// }
+	if (enableValidationLayers && _debugMessenger != VK_NULL_HANDLE) {
+		this->destroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance,
+											_debugMessenger);
+	}
 	_deviceBackend.reset();
 }
 
@@ -240,17 +240,43 @@ bool evan::DeviceContext::checkDebugUtilsSupport(VkInstance instance)
 	return false;
 }
 
+bool evan::DeviceContext::checkDebugUtilsEnabled(VkInstance instance)
+{
+	this->getLogger().info()
+		<< "Checking if VK_EXT_debug_utils is enabled on the instance...";
+
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+		instance, "vkCreateDebugUtilsMessengerEXT");
+
+	if (func == nullptr) {
+		this->getLogger().warning()
+			<< "VK_EXT_debug_utils is not enabled on the instance.";
+		return false;
+	}
+	this->getLogger().info()
+		<< "VK_EXT_debug_utils is enabled on the instance.";
+	return true;
+}
+
 void evan::DeviceContext::setupDebugMessenger()
 {
 	this->getLogger().info() << "Setting up Vulkan debug messenger...";
-	if (!enableValidationLayers)
+	if (!enableValidationLayers) {
 		this->getLogger().warning() << "Validation layers are disabled, "
 									   "skipping debug messenger setup.";
-	return;
+		return;
+	}
 
 	if (!checkDebugUtilsSupport(_deviceBackend->_VkInstance)) {
 		this->getLogger().warning() << "Debug utils extension not supported, "
 									   "skipping debug messenger setup.";
+		return;
+	}
+
+	if (!checkDebugUtilsEnabled(_deviceBackend->_VkInstance)) {
+		this->getLogger().warning() << "Debug utils extension not enabled on "
+									   "the instance, skipping debug messenger "
+									   "setup.";
 		return;
 	}
 
@@ -310,5 +336,24 @@ VkResult evan::DeviceContext::createDebugUtilsMessengerEXT(
 		this->getLogger().error() << "vkCreateDebugUtilsMessengerEXT not "
 									 "found, cannot create debug messenger.";
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+}
+
+void evan::DeviceContext::destroyDebugUtilsMessengerEXT(
+	VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger)
+{
+	this->getLogger().info() << "Destroying debug utils messenger...";
+
+	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+		instance, "vkDestroyDebugUtilsMessengerEXT");
+
+	if (func != nullptr) {
+		func(instance, debugMessenger, nullptr);
+		this->getLogger().info()
+			<< "Debug utils messenger destroyed successfully.";
+	} else {
+		this->getLogger().warning()
+			<< "vkDestroyDebugUtilsMessengerEXT not found, cannot destroy "
+			   "debug messenger.";
 	}
 }
