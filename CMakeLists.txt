@@ -26,6 +26,7 @@ option(BUILD_FOR_WINDOWS "Build for Windows" OFF)
 option(BUILD_FOR_MACOS "Build for macOS" OFF)
 option(BUILD_DOCS "Build Doxygen documentation" OFF)
 option(BUILD_DOCS_ONLY "Configure only the documentation target" OFF)
+option(BUILD_BENCHMARKS "Build the benchmark harness" OFF)
 option(DEV_MODE "Enable development mode" OFF)
 
 if(BUILD_DOCS_ONLY)
@@ -117,13 +118,16 @@ if(NOT BUILD_DOCS_ONLY)
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
+    # Prefer a local utility checkout (../utility) for development so that
+    # local fixes are picked up without pushing to GitHub first.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../utility/CMakeLists.txt")
+        set(FETCHCONTENT_SOURCE_DIR_UTILITY
+            "${CMAKE_CURRENT_SOURCE_DIR}/../utility" CACHE PATH "" FORCE)
+    endif()
     FetchContent_MakeAvailable(utility)
 
     # 04. Library definition
-    file(GLOB SOURCES_COMMON
-        "${SOURCES_DIR}/common/*.cpp"
-        "${SOURCES_DIR}/*.cpp"
-    )
+    include(cmake/Sources.cmake)
 
     if(BUILD_SHARED_LIBS)
         add_library(${PROJECT_NAME} SHARED)
@@ -133,7 +137,7 @@ if(NOT BUILD_DOCS_ONLY)
 
     target_sources(${PROJECT_NAME}
         PRIVATE
-            ${SOURCES_COMMON}
+            ${EVAN_SOURCES_COMMON}
     )
 
     # 05. Include directories
@@ -210,18 +214,17 @@ if(NOT BUILD_DOCS_ONLY)
 
     # OpenXR sources
     if(BUILD_FOR_OPENXR)
-        file(GLOB_RECURSE SOURCES_XR
-            "${SOURCES_DIR}/openxr/*.cpp"
-        )
-
-        if(NOT BUILD_FOR_ANDROID)
-            list(FILTER SOURCES_XR EXCLUDE REGEX ".*AndroidPlatform\\.cpp$")
-        endif()
-
         target_sources(${PROJECT_NAME}
             PRIVATE
-                ${SOURCES_XR}
+                ${EVAN_SOURCES_OPENXR}
         )
+
+        if(BUILD_FOR_ANDROID)
+            target_sources(${PROJECT_NAME}
+                PRIVATE
+                    ${EVAN_SOURCES_OPENXR_ANDROID}
+            )
+        endif()
     endif()
 
     # OpenXR links
@@ -264,13 +267,9 @@ if(NOT BUILD_DOCS_ONLY)
 
     # GLFW sources
     if(BUILD_FOR_GLFW)
-        file(GLOB_RECURSE GLFW_SOURCES
-            "${SOURCES_DIR}/glfw/*.cpp"
-        )
-
         target_sources(${PROJECT_NAME}
             PRIVATE
-                ${GLFW_SOURCES}
+                ${EVAN_SOURCES_GLFW}
         )
     endif()
 
@@ -289,6 +288,53 @@ if(NOT BUILD_DOCS_ONLY)
             DEV
         )
     endif()
+
+    # 08b. Packaging & consumability
+    include(GNUInstallDirs)
+
+    install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+
+    install(DIRECTORY ${HEADERS_DIR}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+    install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    )
+
+    include(CMakePackageConfigHelpers)
+    configure_package_config_file(
+        cmake/${PROJECT_NAME}Config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    )
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    )
+
+    # CPack packaging
+    set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+    set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
+    set(CPACK_PACKAGE_VENDOR "ETIB Corporation")
+    set(CPACK_PACKAGE_CONTACT "clement-antoine.xavier@epitech.eu")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+    include(CPack)
 endif()
 
 # 09. Documentations
@@ -309,3 +355,14 @@ if(BUILD_TESTING)
 else()
     message(STATUS "Skipping tests...")
 endif()
+
+# 11. Benchmarks
+
+if(BUILD_BENCHMARKS)
+    message(STATUS "Building benchmarks...")
+    add_subdirectory(benchmarks)
+endif()
+
+# 12. Examples
+
+add_subdirectory(examples)

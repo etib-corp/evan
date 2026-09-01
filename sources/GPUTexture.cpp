@@ -90,13 +90,13 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 
 	uint32_t texWidth	  = texture.width();
 	uint32_t texHeight	  = texture.height();
-	const uint8_t *pixels = texture._pixels.data();
+	const uint8_t *pixels = texture.pixels().data();
 
 	this->getLogger().info()
 		<< "Texture dimensions: " << texWidth << "x" << texHeight;
 
 	VkDeviceSize imageSize = texWidth * texHeight
-		* (texture._type == utility::graphic::Texture::TextureType::FontAtlas
+		* (texture.type() == utility::graphic::Texture::TextureType::FontAtlas
 			   ? 1
 			   : 4);
 	VkBuffer stagingBuffer;
@@ -105,7 +105,7 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	this->getLogger().info()
 		<< "Calculated image size: " << imageSize << " bytes";
 
-	if (texture._pixels.size() == 0) {
+	if (texture.pixels().size() == 0) {
 		this->getLogger().warning() << "Texture pixel data is empty. Creating "
 									   "a 1x1 white texture as a fallback.";
 		uint8_t whitePixel[4] = { 255, 255, 255, 255 };	   // RGBA for white
@@ -115,7 +115,7 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 		texHeight			  = 1;
 	}
 
-	if (texture._type == utility::graphic::Texture::TextureType::FontAtlas) {
+	if (texture.type() == utility::graphic::Texture::TextureType::FontAtlas) {
 		_mipLevel = 1;	  // Font atlases typically don't use mipmaps
 	} else {
 		_mipLevel = static_cast<uint32_t>(

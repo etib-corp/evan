@@ -1,0 +1,138 @@
+name: Sanitizers & Static Analysis
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Install Ubuntu dependencies
+        run: bash scripts/install_ubuntu_dependencies.sh
+
+      - name: Configure Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Configure CMake with sanitizers
+        run: >
+          cmake
+          -B ${{ github.workspace }}/build
+          -S ${{ github.workspace }}
+          -DBUILD_FOR_GLFW=ON
+          -DBUILD_FOR_LINUX=ON
+          -DBUILD_TESTING=ON
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build
+        run: >
+          cmake
+          --build ${{ github.workspace }}/build
+
+      - name: Run tests under sanitizers
+        run: >
+          ctest
+          --test-dir ${{ github.workspace }}/build
+          --output-on-failure
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Install clang-tidy
+        run: sudo apt-get install -y clang-tidy
+
+      - name: Install Ubuntu dependencies
+        run: bash scripts/install_ubuntu_dependencies.sh
+
+      - name: Configure Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Configure CMake
+        run: >
+          cmake
+          -B ${{ github.workspace }}/build
+          -S ${{ github.workspace }}
+          -DBUILD_FOR_GLFW=ON
+          -DBUILD_FOR_LINUX=ON
+          -DBUILD_TESTING=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy on headers and sources
+        run: >
+          find ${{ github.workspace }}/headers ${{ github.workspace }}/sources
+          \( -name '*.hpp' -o -name '*.cpp' \)
+          | xargs clang-tidy
+          -p ${{ github.workspace }}/build
+          --quiet
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+
+      - name: Install Ubuntu dependencies
+        run: bash scripts/install_ubuntu_dependencies.sh
+
+      - name: Configure Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Configure CMake with coverage
+        run: >
+          cmake
+          -B ${{ github.workspace }}/build
+          -S ${{ github.workspace }}
+          -DBUILD_FOR_GLFW=ON
+          -DBUILD_FOR_LINUX=ON
+          -DBUILD_TESTING=ON
+          -DCMAKE_CXX_FLAGS="--coverage"
+          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+
+      - name: Build
+        run: >
+          cmake
+          --build ${{ github.workspace }}/build
+
+      - name: Run tests
+        run: >
+          ctest
+          --test-dir ${{ github.workspace }}/build
+          --output-on-failure
+
+      - name: Generate coverage report
+        run: >
+          lcov
+          --capture
+          --directory ${{ github.workspace }}/build
+          --output-file coverage.info
+          --exclude '*/_deps/*' '*/tests/*' '*/googletest*'
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5.0.0
+        with:
+          files: coverage.info
+          fail_ci_if_error: false
