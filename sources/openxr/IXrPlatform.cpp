@@ -100,12 +100,18 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			sessionBeginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
 			sessionBeginInfo.primaryViewConfigurationType =
 				XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-			xrBeginSession(xrDeviceBackend._session, &sessionBeginInfo);
+			if (xrBeginSession(xrDeviceBackend._session, &sessionBeginInfo) != XR_SUCCESS) {
+				this->getLogger().error() << "Failed to begin session";
+				break;
+			}
 			xrDeviceBackend._sessionRunning = true;
 			break;
 		}
-		case XR_SESSION_STATE_STOPPING:
-			xrEndSession(xrDeviceBackend._session);
+			if (xrEndSession(xrDeviceBackend._session) != XR_SUCCESS) {
+				case XR_SESSION_STATE_STOPPING:
+				this->getLogger().error() << "Failed to end session";
+				break;
+			}
 			xrDeviceBackend._sessionRunning = false;
 			break;
 		case XR_SESSION_STATE_EXITING:
@@ -113,6 +119,14 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			break;
 		case XR_SESSION_STATE_LOSS_PENDING:
 			_shouldClose = true;
+			break;
+		case XR_SESSION_STATE_FOCUSED:
+			break;
+		case XR_SESSION_STATE_VISIBLE:
+			break;
+		case XR_SESSION_STATE_SYNCHRONIZED:
+			break;
+		case XR_SESSION_STATE_IDLE:
 			break;
 		default:
 			break;
