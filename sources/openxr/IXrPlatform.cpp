@@ -107,8 +107,8 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			xrDeviceBackend._sessionRunning = true;
 			break;
 		}
+		case XR_SESSION_STATE_STOPPING:
 			if (xrEndSession(xrDeviceBackend._session) != XR_SUCCESS) {
-				case XR_SESSION_STATE_STOPPING:
 				this->getLogger().error() << "Failed to end session";
 				break;
 			}
