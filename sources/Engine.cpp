@@ -65,6 +65,8 @@ evan::Engine::Engine(
 		_renderer->createFrame(_deviceContext->getCommandPool(),
 							   *deviceBackend);
 	}
+
+	_scenes[0] = std::make_shared<Scene>();
 }
 
 evan::Engine::~Engine()
