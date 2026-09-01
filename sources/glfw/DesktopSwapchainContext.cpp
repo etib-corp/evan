@@ -22,6 +22,8 @@ evan::DesktopSwapchainContext::DesktopSwapchainContext(
 		<< "Creating swapchain images for DesktopSwapchainContext...";
 	_swapchainImages.push_back(std::make_shared<DesktopSwapchainImage>(
 		deviceContext, window, _renderPass));
+
+	_viewSet.resize(1);
 }
 
 evan::DesktopSwapchainContext::~DesktopSwapchainContext()
@@ -79,10 +81,11 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 		<< "Setting up view for Desktop platform with viewport size: "
 		<< viewportSize;
 
-	auto view		 = this->getView(0);
+	auto view = this->getViewSet()[0].view;
 	view.setViewportSize(
 		utility::math::Vector2F{viewportSize.x / 2, viewportSize.y / 2});
 	view.setPerspective(M_PI_2, viewportSize.x / viewportSize.y);
+	this->getViewSet().setView(0, view);
 }
 
 VkResult evan::DesktopSwapchainContext::aquireImage(
@@ -102,24 +105,17 @@ VkResult evan::DesktopSwapchainContext::aquireImage(
 								 &imageIndex);
 }
 
-glm::mat4 evan::DesktopSwapchainContext::getProjection(std::size_t index) const
+evan::ViewSet &evan::DesktopSwapchainContext::getViewSet()
 {
-	return _view.getProjectionMatrix();
+	return _viewSet;
 }
 
-utility::graphic::ViewF
-	evan::DesktopSwapchainContext::getView(std::size_t index) const
+const evan::ViewSet &evan::DesktopSwapchainContext::getViewSet() const
 {
-	return _view;
+	return _viewSet;
 }
 
-void evan::DesktopSwapchainContext::setView(std::size_t index,
-											const utility::graphic::ViewF &view)
+bool evan::DesktopSwapchainContext::usesImageAvailableSemaphore() const
 {
-	_view = view;
-}
-
-std::size_t evan::DesktopSwapchainContext::getViewCount(void) const
-{
-	return 1;
+	return true;
 }

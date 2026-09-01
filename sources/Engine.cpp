@@ -64,6 +64,8 @@ evan::Engine::Engine(
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
 		_renderer->createFrame(_deviceContext);
 	}
+
+	_scenes[0] = std::make_shared<Scene>();
 }
 
 evan::Engine::~Engine()

@@ -27,6 +27,11 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 			->enumerateViewConfigurations();
 	_views.resize(_viewsConfigurations.size(), { XR_TYPE_VIEW });
 
+	_viewSet.resize(_viewsConfigurations.size());
+	for (std::size_t i = 0; i < _viewsConfigurations.size(); ++i) {
+		_viewSet[i].swapchainIndex = i;
+	}
+
 	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
 
 	for (const auto &viewConfig: _viewsConfigurations) {
@@ -227,31 +232,45 @@ const std::vector<XrCompositionLayerProjectionView> &
 	return _projectionLayerViews;
 }
 
-glm::mat4 evan::XrSwapchainContext::getProjection(std::size_t index) const
+evan::ViewSet &evan::XrSwapchainContext::getViewSet()
 {
-	return getView(index).getProjectionMatrix();
+	return _viewSet;
 }
 
-utility::graphic::ViewF
-	evan::XrSwapchainContext::getView(std::size_t index) const
+const evan::ViewSet &evan::XrSwapchainContext::getViewSet() const
 {
-	utility::graphic::ViewF view;
-	const auto &xrPose = _views[index].pose;
-	utility::graphic::PositionF position(xrPose.position.x, xrPose.position.y,
-										 xrPose.position.z);
-	utility::graphic::OrientationF orientation(
-		xrPose.orientation.x, xrPose.orientation.y, xrPose.orientation.z,
-		xrPose.orientation.w);
-	utility::graphic::PoseF pose(position, orientation);
-	utility::graphic::FieldOfViewF fov(
-		_views[index].fov.angleUp, _views[index].fov.angleDown,
-		_views[index].fov.angleLeft, _views[index].fov.angleRight);
+	return _viewSet;
+}
 
-	view.setPose(pose);
-	view.setFieldOfView(fov);
-	view.setClippingPlanes(_nearPlane, _farPlane);
+void evan::XrSwapchainContext::syncViewSet()
+{
+	this->getLogger().info() << "Syncing ViewSet from OpenXR view state";
 
-	return view;
+	if (_viewSet.size() != _views.size()) {
+		_viewSet.resize(_views.size());
+	}
+
+	for (std::size_t i = 0; i < _views.size(); ++i) {
+		_viewSet[i].swapchainIndex = i;
+
+		utility::graphic::ViewF view;
+		const auto &xrPose = _views[i].pose;
+		utility::graphic::PositionF position(
+			xrPose.position.x, xrPose.position.y, xrPose.position.z);
+		utility::graphic::OrientationF orientation(
+			xrPose.orientation.x, xrPose.orientation.y, xrPose.orientation.z,
+			xrPose.orientation.w);
+		utility::graphic::PoseF pose(position, orientation);
+		utility::graphic::FieldOfViewF fov(
+			_views[i].fov.angleUp, _views[i].fov.angleDown,
+			_views[i].fov.angleLeft, _views[i].fov.angleRight);
+
+		view.setPose(pose);
+		view.setFieldOfView(fov);
+		view.setClippingPlanes(_nearPlane, _farPlane);
+
+		_viewSet[i].view = view;
+	}
 }
 
 void evan::XrSwapchainContext::setView(std::size_t index,
@@ -260,9 +279,4 @@ void evan::XrSwapchainContext::setView(std::size_t index,
 {
 	_nearPlane = view.getNearPlane();
 	_farPlane  = view.getFarPlane();
-}
-
-std::size_t evan::XrSwapchainContext::getViewCount(void) const
-{
-	return _views.size();
 }

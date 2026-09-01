@@ -76,106 +76,121 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 {
 	this->getLogger().info() << "Drawing frame...";
 
+	auto device = deviceContext.getDeviceBackend()->_device;
+
 	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
 		this->getLogger().warning()
 			<< "Preprocessing frame failed. Skipping frame rendering.";
 		return;
 	}
 
+	auto &frame			= *_frames[_currentFrameIndex];
+	const ViewSet &viewSet = swapchainContext.getViewSet();
+	const std::size_t swapchainCount = swapchainContext.getSwapchainCount();
+
 	this->getLogger().info()
-		<< "Acquiring swapchain image and recording command buffer...";
-	for (int i = 0; i < swapchainContext._swapchainImages.size(); i++) {
-		this->getLogger().info() << "Processing swapchain image index: " << i;
+		<< "Rendering " << viewSet.size() << " view(s) across "
+		<< swapchainCount << " swapchain(s).";
 
-		this->getLogger().info() << "Waiting for in-flight fence...";
-		vkWaitForFences(deviceContext.getDeviceBackend()->_device, 1,
-						&_frames[_currentFrameIndex]->_inFlight, VK_TRUE,
-						UINT64_MAX);
+	// 1. Acquire exactly one image per swapchain image set.
+	std::vector<uint32_t> acquiredImage(swapchainCount, 0);
+	for (std::size_t s = 0; s < swapchainCount; ++s) {
+		this->getLogger().info()
+			<< "Waiting for in-flight fence for swapchain " << s << "...";
+		vkWaitForFences(device, 1, &frame._inFlight[s], VK_TRUE, UINT64_MAX);
+		vkResetFences(device, 1, &frame._inFlight[s]);
 
-		uint32_t imageIndex;
-		this->getLogger().info() << "Aquiring swapchain image...";
-		auto result = swapchainContext.aquireImage(
-			i, deviceContext.getDeviceBackend()->_device,
-			_frames[_currentFrameIndex]->_image, VK_NULL_HANDLE, imageIndex);
+		this->getLogger().info()
+			<< "Acquiring swapchain image for swapchain " << s << "...";
+		VkResult result = swapchainContext.aquireImage(
+			static_cast<uint32_t>(s), device, frame._imageAvailable[s],
+			VK_NULL_HANDLE, acquiredImage[s]);
 
-		swapchainContext.waitForImage(i);
+		swapchainContext.waitForImage(static_cast<uint32_t>(s));
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		if (result == VK_ERROR_OUT_OF_DATE_KHR
+			|| result == VK_SUBOPTIMAL_KHR) {
+			this->getLogger().warning()
+				<< "Swapchain " << s
+				<< " is out of date. Recreating swapchain.";
 			swapchainContext.recreateSwapchain(
 				deviceContext, swapchainContext.getRenderPass());
-		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-			this->getLogger().error() << "Failed to acquire swap chain image! "
-										 "Skipping frame rendering.";
-			this->getLogger().error() << "Vulkan error code: " << result;
-			this->getLogger().warning()
-				<< "Aborting frame rendering due to image acquisition failure.";
+			return;
+		} else if (result != VK_SUCCESS) {
+			this->getLogger().error()
+				<< "Failed to acquire swapchain image for swapchain " << s
+				<< ". Skipping frame rendering.";
 			return;
 		}
+	}
 
-		this->updateUniformBuffer(scene, swapchainContext, i);
+	// 2. Render each view into the acquired image of its swapchain. The
+	// uniform buffer is updated per view, not per acquired image index.
+	const bool waitOnImageAvailable =
+		swapchainContext.usesImageAvailableSemaphore();
+	for (std::size_t v = 0; v < viewSet.size(); ++v) {
+		const ViewSet::View &view = viewSet[v];
+		const std::size_t s		= view.swapchainIndex;
 
-		this->getLogger().info() << "Resetting in-flight fence...";
-		vkResetFences(deviceContext.getDeviceBackend()->_device, 1,
-					  &_frames[_currentFrameIndex]->_inFlight);
+		if (s >= swapchainCount) {
+			this->getLogger().error()
+				<< "View " << v << " references invalid swapchain index " << s
+				<< ". Skipping view.";
+			continue;
+		}
 
-		this->resetCommandBuffers();
+		auto &imageSet = *swapchainContext._swapchainImages[s];
 
-		auto swapchainExtent =
-			swapchainContext._swapchainImages[i]->getExtent();
+		this->updateUniformBuffer(scene, view.view);
+
+		frame.resetCommandBuffer();
 
 		this->recordCommandBuffer(
 			swapchainContext.getRenderPass(),
-			swapchainContext._swapchainImages[i]->getFramebuffer(imageIndex),
-			swapchainExtent, scene);
+			imageSet.getFramebuffer(acquiredImage[s]),
+			imageSet.getExtent(), scene);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
 		};
-		VkSemaphore signalSemaphores[] = {
-			_frames[_currentFrameIndex]->_render
-		};
 		VkSubmitInfo submitInfo {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		// submitInfo.waitSemaphoreCount = 1;
-		// submitInfo.pWaitSemaphores = &_frames[_currentFrameIndex]._image;
-		submitInfo.pWaitDstStageMask  = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers =
-			&_frames[_currentFrameIndex]->_commandBuffer;
-		// submitInfo.signalSemaphoreCount = 1;
-		// submitInfo.pSignalSemaphores = signalSemaphores;
-
-		this->getLogger().info()
-			<< "Submitting command buffer to graphics queue...";
-		this->getLogger().info()
-			<< "Current frame index: " << _currentFrameIndex;
+		submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.waitSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+		submitInfo.pWaitSemaphores =
+			waitOnImageAvailable ? &frame._imageAvailable[s] : nullptr;
+		submitInfo.pWaitDstStageMask	= waitStages;
+		submitInfo.commandBufferCount	= 1;
+		submitInfo.pCommandBuffers		= &frame._commandBuffer;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores	= &frame._renderFinished[s];
 
 		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo,
-						  _frames[_currentFrameIndex]->_inFlight)
+						  frame._inFlight[s])
 			!= VK_SUCCESS) {
 			this->getLogger().error()
-				<< "Failed to submit draw command buffer! "
-				   "Skipping frame rendering.";
+				<< "Failed to submit draw command buffer for view " << v
+				<< ". Skipping frame rendering.";
 			return;
 		}
+	}
 
+	// 3. Present each swapchain once, with the image acquired for it.
+	for (std::size_t s = 0; s < swapchainCount; ++s) {
 		VkPresentInfoKHR presentInfo {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.sType			  = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores	  = &frame._renderFinished[s];
 
-		// presentInfo.waitSemaphoreCount = 1;
-		// presentInfo.pWaitSemaphores = signalSemaphores;
-		swapchainContext._swapchainImages[i]->fillPresentInfo(presentInfo);
-		presentInfo.pImageIndices = &imageIndex;
+		swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
+		presentInfo.pImageIndices = &acquiredImage[s];
 
 		if (!deviceContext.getDeviceBackend()->processFrame(
-				presentInfo, *swapchainContext._swapchainImages[i].get())) {
-			this->getLogger().error() << "Failed to present swap chain image! "
-										 "Skipping frame rendering.";
-			// The swapchain is out of date (e.g. the window was resized) and
-			// must be recreated.
-			continue;
+				presentInfo, *swapchainContext._swapchainImages[s])) {
+			this->getLogger().error()
+				<< "Failed to present swapchain " << s << ".";
 		}
 	}
+
 	this->getLogger().info() << "Frame drawn successfully.";
 
 	_currentFrameIndex = (_currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -483,17 +498,16 @@ void evan::Renderer::resetCommandBuffers()
 }
 
 void evan::Renderer::updateUniformBuffer(const Scene &scene,
-										 ASwapchainContext &swapchainContext,
-										 int currentIndex)
+										 const utility::graphic::ViewF &view)
 {
 	this->getLogger().info()
 		<< "Updating uniform buffer for current frame index: "
-		<< _currentFrameIndex << " and swapchain image index: " << currentIndex;
+		<< _currentFrameIndex;
 
 	Frame::UniformBufferObject ubo {};
 	ubo.model = glm::mat4(1.0f);
-	ubo.view  = swapchainContext.getView(currentIndex).toViewMatrix();
-	ubo.proj  = swapchainContext.getProjection(currentIndex);
+	ubo.view  = view.toViewMatrix();
+	ubo.proj  = view.getProjectionMatrix();
 
 	memcpy(_frames[_currentFrameIndex]->_uniformBufferMapped, &ubo,
 		   sizeof(ubo));

@@ -49,32 +49,19 @@ void evan::Frame::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
-
-	this->getLogger().info()
-		<< "Destroying uniform buffer and freeing memory...";
-	if (_uniformBuffer != VK_NULL_HANDLE) {
-		vkDestroyBuffer(device, _uniformBuffer, nullptr);
-		_uniformBuffer = VK_NULL_HANDLE;
-	}
-	if (_uniformBufferMemory != VK_NULL_HANDLE) {
-		vkFreeMemory(device, _uniformBufferMemory, nullptr);
-		_uniformBufferMemory = VK_NULL_HANDLE;
-	}
-
 	this->getLogger().info() << "Destroying synchronization objects...";
-	if (_render != VK_NULL_HANDLE) {
-		vkDestroySemaphore(device, _render, nullptr);
-		_render = VK_NULL_HANDLE;
+	for (const auto semaphore: _imageAvailable) {
+		vkDestroySemaphore(device, semaphore, nullptr);
 	}
-	if (_image != VK_NULL_HANDLE) {
-		vkDestroySemaphore(device, _image, nullptr);
-		_image = VK_NULL_HANDLE;
+	for (const auto semaphore: _renderFinished) {
+		vkDestroySemaphore(device, semaphore, nullptr);
 	}
-	if (_inFlight != VK_NULL_HANDLE) {
-		vkDestroyFence(device, _inFlight, nullptr);
-		_inFlight = VK_NULL_HANDLE;
+	for (const auto fence: _inFlight) {
+		vkDestroyFence(device, fence, nullptr);
 	}
+	_imageAvailable.clear();
+	_renderFinished.clear();
+	_inFlight.clear();
 }
 
 void evan::Frame::resetCommandBuffer()
@@ -129,17 +116,23 @@ void evan::Frame::createSyncObjects(VkDevice device)
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	this->getLogger().info() << "Creating image available semaphore...";
+	_inFlight.resize(MAX_SWAPCHAINS);
+	_imageAvailable.resize(MAX_SWAPCHAINS);
+	_renderFinished.resize(MAX_SWAPCHAINS);
 
-	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_image)
-			!= VK_SUCCESS
-		|| vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_render)
-			!= VK_SUCCESS
-		|| vkCreateFence(device, &fenceInfo, nullptr, &_inFlight)
-			!= VK_SUCCESS) {
-		this->getLogger().error()
-			<< "Failed to create synchronization objects for frame!";
-		return;
+	for (int i = 0; i < MAX_SWAPCHAINS; ++i) {
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+							  &_imageAvailable[i])
+				!= VK_SUCCESS
+			|| vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+								 &_renderFinished[i])
+				!= VK_SUCCESS
+			|| vkCreateFence(device, &fenceInfo, nullptr, &_inFlight[i])
+				!= VK_SUCCESS) {
+			this->getLogger().error()
+				<< "Failed to create synchronization objects for frame!";
+			return;
+		}
 	}
 	this->getLogger().info() << "Synchronization objects created successfully.";
 }

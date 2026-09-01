@@ -15,6 +15,8 @@
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
+#include <vector>
+
 namespace evan
 {
 	/**
@@ -122,26 +124,29 @@ namespace evan
 		VkBuffer getUniformBuffer() const;
 
 		/**
-		 * Fence to ensure that the frame is not rendered until the previous
-		 * frame has finished.
+		 * Per-swapchain fences ensuring that a frame's submissions for each
+		 * swapchain are not started until the previous frame using them has
+		 * finished.
 		 */
-		VkFence _inFlight = VK_NULL_HANDLE;
+		std::vector<VkFence> _inFlight;
 
 		/**
-		 * Semaphore to signal when the image is available for rendering.
+		 * Per-swapchain semaphores signaled when a swapchain image is
+		 * available for rendering (only used by backends that signal them,
+		 * e.g. desktop).
 		 */
-		VkSemaphore _image = VK_NULL_HANDLE;
+		std::vector<VkSemaphore> _imageAvailable;
 
 		/**
-		 * Command buffer used to record rendering commands for this frame.
+		 * Vulkan command buffer recorded for this frame.
 		 */
 		VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
 
 		/**
-		 * Semaphore to signal when rendering is finished and the image can be
-		 * presented.
+		 * Per-swapchain semaphores signaled when rendering to a swapchain
+		 * image is finished and the image can be presented.
 		 */
-		VkSemaphore _render = VK_NULL_HANDLE;
+		std::vector<VkSemaphore> _renderFinished;
 
 		/**
 		 * @brief Pointer to the mapped memory of the uniform buffer.

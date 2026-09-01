@@ -60,6 +60,16 @@ const std::vector<const char *> validationLayers = {
  */
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
+/*
+ * @brief Maximum number of swapchain image sets per frame.
+ *
+ * Used to size per-swapchain synchronization resources (fences and
+ * semaphores) for a frame. Current backends use one (desktop) or two
+ * (OpenXR, one per eye); a larger bound leaves room for multi-view.
+ *
+ */
+const int MAX_SWAPCHAINS = 8;
+
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>

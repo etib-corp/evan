@@ -20,6 +20,8 @@
 
 #include "evan/Scene.hpp"
 
+#include <utility/graphic/view.hpp>
+
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
@@ -307,8 +309,7 @@ namespace evan
 		 * rendering the scene in each frame.
 		 */
 		void updateUniformBuffer(const Scene &scene,
-								 ASwapchainContext &swapchainContext,
-								 int currentIndex);
+								 const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Resets the command buffers for the current frame.
