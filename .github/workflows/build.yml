@@ -64,7 +64,14 @@ jobs:
           -DBUILD_FOR_MACOS=${{ matrix.operating-system == 'macos' }}
           -DBUILD_FOR_WINDOWS=${{ matrix.operating-system == 'windows' }}
           -DBUILD_FOR_ANDROID=${{ matrix.operating-system == 'android' }}
+          -DBUILD_TESTING=ON
 
       - name: Build
         run: >
           cmake --build ${{ github.workspace }}/build
+
+      - name: Run tests
+        run: >
+          ctest
+          --test-dir ${{ github.workspace }}/build
+          --output-on-failure

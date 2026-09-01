@@ -84,7 +84,8 @@ namespace evan
 		 */
 		virtual ~AXrAction()
 		{
-			xrDestroyAction(_action);
+			if (_action != XR_NULL_HANDLE)
+				xrDestroyAction(_action);
 			if (_actionSpace != XR_NULL_HANDLE) {
 				xrDestroySpace(_actionSpace);
 			}
@@ -167,7 +168,7 @@ namespace evan
 		private:
 		/** @brief The XrAction handle representing the OpenXR action managed by
 		 * this class. */
-		XrAction _action;
+		XrAction _action = XR_NULL_HANDLE;
 
 		/** @brief The XrSpace handle associated with the action, used for
 		 * spatial interactions. */

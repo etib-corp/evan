@@ -90,7 +90,7 @@ namespace evan
 		 *
 		 * Contains and groups all OpenXR actions managed by `XrManageActions`.
 		 */
-		XrActionSet _actionSet;
+		XrActionSet _actionSet = XR_NULL_HANDLE;
 
 		/**
 		 * @brief Action manager for hand tracking actions.

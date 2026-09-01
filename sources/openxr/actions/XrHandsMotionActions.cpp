@@ -19,12 +19,16 @@ evan::XrHandsMotionActions::~XrHandsMotionActions()
 {
 	this->getLogger().info() << "Destroying hand motion actions and spaces...";
 
-	xrDestroyAction(_handAimAction);
+	if (_handAimAction != XR_NULL_HANDLE)
+		xrDestroyAction(_handAimAction);
+
 	xrDestroySpace(_handAimSpace[0]);
 	xrDestroySpace(_handAimSpace[1]);
 	this->getLogger().info() << "Hand motion actions and spaces destroyed.";
 
-	xrDestroyAction(_handGripAction);
+	if (_handGripAction != XR_NULL_HANDLE)
+		xrDestroyAction(_handGripAction);
+
 	xrDestroySpace(_handGripSpace[0]);
 	xrDestroySpace(_handGripSpace[1]);
 	this->getLogger().info() << "Hand grip actions and spaces destroyed.";

@@ -25,7 +25,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 	for (const auto &texture: textures) {
 		GPUTexture::TextureType textureType;
 
-		switch (texture->_type) {
+		switch (texture->type()) {
 			case utility::graphic::Texture::TextureType::Albedo:
 				textureType = GPUTexture::TextureType::Albedo;
 				break;
@@ -90,7 +90,7 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 	for (const auto &texture: textures) {
 		GPUTexture::TextureType textureType;
 
-		switch (texture->_type) {
+		switch (texture->type()) {
 			case utility::graphic::Texture::TextureType::Albedo:
 				textureType = GPUTexture::TextureType::Albedo;
 				break;

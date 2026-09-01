@@ -3,19 +3,44 @@
 Evan is split into a small set of runtime layers so rendering code, platform
 code, and scene logic stay separated.
 
-## Main Layers
+## Module Layout
 
-- Platform interfaces describe how the engine talks to Android, GLFW, or XR.
-- Device and swapchain classes manage Vulkan resources and frame ownership.
-- Scene, mesh, shader, and material classes describe renderable content.
-- The engine owns the frame loop and coordinates update, draw, and present.
+```mermaid
+graph TD
+    Engine[Engine] --> Platform[Platform]
+    Engine --> Device[DeviceContext]
+    Engine --> Swapchain[SwapchainContext]
+    Engine --> Scene[Scene]
 
-## Data Flow
+    Scene --> RenderObject[RenderObject]
+    RenderObject --> GPUMesh[GPUMesh]
+    Scene --> GPUMaterial[GPUMaterial]
+    Scene --> GPUShader[GPUShader]
 
-1. A platform implementation is created for the target build.
-2. `evan::Engine` receives that platform and prepares Vulkan resources.
-3. Scenes populate meshes and materials.
-4. Each frame updates state, records commands, and presents the image.
+    Platform --> Backend[Backend: OpenXR / GLFW]
+```
+
+- **Engine** owns the frame loop and coordinates update, draw, and present.
+- **Platform** abstracts the target backend (OpenXR or GLFW) and platform.
+- **Device & swapchain** manage Vulkan resources and frame ownership.
+- **Scene** holds renderable objects, meshes, and materials.
+
+## Frame Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Engine
+    participant Platform
+    participant Device as DeviceContext
+    participant Scene
+
+    loop each frame
+        Engine->>Platform: poll events
+        Engine->>Scene: update state
+        Engine->>Device: record command buffers
+        Engine->>Platform: present image
+    end
+```
 
 ## Build Variants
 

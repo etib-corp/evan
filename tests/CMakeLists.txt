@@ -3,10 +3,11 @@ enable_testing()
 
 # Set test directories
 set(TEST_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/headers")
-set(TEST_SOURCES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sources")
 
-# Find all source files in the test sources directory
-file(GLOB_RECURSE TEST_SOURCES "${TEST_SOURCES_DIR}/*.cpp")
+# Explicit test source list (no file(GLOB)) for reproducible builds.
+set(TEST_SOURCES
+    sources/test_engine.cpp
+)
 
 # Fetch GoogleTest
 include(FetchContent)
