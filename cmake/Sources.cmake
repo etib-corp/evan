@@ -20,6 +20,7 @@ set(EVAN_SOURCES_COMMON
     sources/RessourceManager.cpp
     sources/Scene.cpp
     sources/Version.cpp
+    sources/ViewSet.cpp
 )
 
 # OpenXR sources. The Android platform file is only compiled for Android.

@@ -10,6 +10,7 @@
 #include "evan/EvanPlatform.hpp"
 #include "evan/ADeviceBackend.hpp"
 #include "evan/ASwapchainImage.hpp"
+#include "evan/ViewSet.hpp"
 
 #include <utility/graphic/view.hpp>
 
@@ -202,71 +203,90 @@ namespace evan
 		std::vector<std::shared_ptr<ASwapchainImage>> _swapchainImages;
 
 		/**
-		 * @brief Retrieves the view matrix for the specified image index in the
-		 * swapchain.
+		 * @brief Retrieves the set of views to render for this swapchain
+		 * context.
 		 *
-		 * This pure virtual function must be implemented by derived classes to
-		 * return the view matrix associated with the specified image index in
-		 * the swapchain. The view matrix is used in rendering operations to
-		 * transform world coordinates into view space for the corresponding
-		 * image.
+		 * The ViewSet decouples the views (camera poses + projections) from the
+		 * swapchain image sets. Each view references the swapchain image set it
+		 * renders into. This pure virtual function must be implemented by
+		 * derived classes to expose their view configuration.
 		 *
-		 * @param index The index of the image in the swapchain for which to
-		 * retrieve the view matrix.
-		 *
-		 * @return The view matrix as a glm::mat4 for the specified image index
-		 * in the swapchain.
+		 * @return A mutable reference to the ViewSet.
 		 */
-		virtual utility::graphic::ViewF getView(std::size_t index) const = 0;
+		virtual ViewSet &getViewSet() = 0;
 
 		/**
-		 * @brief Sets the view matrix for the specified image index in the
-		 * swapchain.
+		 * @brief Retrieves the set of views to render (const version).
 		 *
-		 * This pure virtual function must be implemented by derived classes to
-		 * set the view matrix associated with the specified image index in the
-		 * swapchain. The view matrix is used in rendering operations to
-		 * transform world coordinates into view space for the corresponding
-		 * image.
+		 * @return A const reference to the ViewSet.
+		 */
+		virtual const ViewSet &getViewSet() const = 0;
+
+		/**
+		 * @brief Retrieves the number of swapchain image sets in the context.
 		 *
-		 * @param index The index of the image in the swapchain for which to
-		 * set the view matrix.
-		 * @param view The view matrix as a glm::mat4 to set for the specified
-		 * image index in the swapchain.
+		 * @return The number of swapchain image sets.
+		 */
+		std::size_t getSwapchainCount() const;
+
+		/**
+		 * @brief Indicates whether aquireImage signals the image-available
+		 * semaphore.
+		 *
+		 * Desktop swapchains signal the semaphore through
+		 * vkAcquireNextImageKHR, while OpenXR swapchains do not (availability
+		 * is handled by waitForImage). The renderer uses this to decide whether
+		 * to wait on the semaphore before submitting.
+		 *
+		 * @return True when the image-available semaphore is signaled.
+		 */
+		virtual bool usesImageAvailableSemaphore() const;
+
+		/**
+		 * @brief Retrieves the view matrix for the specified view index.
+		 *
+		 * This is a convenience accessor delegating to the ViewSet. The view
+		 * matrix is used in rendering operations to transform world coordinates
+		 * into view space for the corresponding view.
+		 *
+		 * @param index The index of the view.
+		 * @return The view matrix for the specified view.
+		 */
+		utility::graphic::ViewF getView(std::size_t index) const;
+
+		/**
+		 * @brief Sets the view state for the specified view index.
+		 *
+		 * Derived classes that maintain additional view state (such as OpenXR
+		 * clipping planes) may override this method. The default implementation
+		 * stores the view in the ViewSet.
+		 *
+		 * @param index The index of the view to set.
+		 * @param view The view state to store.
 		 */
 		virtual void setView(std::size_t index,
-							 const utility::graphic::ViewF &view) = 0;
+							 const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Retrieves the number of views in the swapchain context.
 		 *
-		 * This pure virtual function must be implemented by derived classes to
-		 * return the number of views associated with the swapchain context. The
-		 * number of views is essential for configuring the rendering pipeline
-		 * and ensuring that rendering operations are performed correctly for
-		 * each view.
+		 * This is a convenience accessor delegating to the ViewSet.
 		 *
-		 * @return The number of views in the swapchain context.
+		 * @return The number of views.
 		 */
-		virtual std::size_t getViewCount(void) const = 0;
+		std::size_t getViewCount(void) const;
 
 		/**
-		 * @brief Retrieves the projection matrix for the specified image index
-		 * in the swapchain.
+		 * @brief Retrieves the projection matrix for the specified view index.
 		 *
-		 * This pure virtual function must be implemented by derived classes to
-		 * return the projection matrix associated with the specified image
-		 * index in the swapchain. The projection matrix is used in rendering
-		 * operations to transform view space coordinates into clip space for
-		 * the corresponding image.
+		 * This is a convenience accessor delegating to the ViewSet. The
+		 * projection matrix is used in rendering operations to transform view
+		 * space coordinates into clip space for the corresponding view.
 		 *
-		 * @param index The index of the image in the swapchain for which to
-		 * retrieve the projection matrix.
-		 *
-		 * @return The projection matrix as a glm::mat4 for the specified image
-		 * index in the swapchain.
+		 * @param index The index of the view.
+		 * @return The projection matrix for the specified view.
 		 */
-		virtual glm::mat4 getProjection(std::size_t index) const = 0;
+		glm::mat4 getProjection(std::size_t index) const;
 
 		/**
 		 * @brief Retrieves the current viewport size in pixels.

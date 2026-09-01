@@ -174,94 +174,32 @@ namespace evan
 		}
 
 		/**
-		 * @brief Retrieves the projection matrix for the specified index.
+		 * @brief Retrieves the set of views to render (mutable).
 		 *
-		 * This function overrides the pure virtual function from
-		 * ASwapchainContext to provide the projection matrix for the specified
-		 * index. The projection matrix is essential for rendering operations,
-		 * as it defines how 3D objects are projected onto the 2D screen.
-		 * Implement this function to return the appropriate projection matrix
-		 * based on the rendering context and the specific requirements of the
-		 * application.
-		 *
-		 * @param index The index for which to retrieve the projection matrix.
-		 *
-		 * @return glm::mat4 The projection matrix corresponding to the
-		 * specified index. Implement this function to return the appropriate
-		 * projection matrix based on the rendering context and the specific
-		 * requirements of the application, such as the field of view, aspect
-		 * ratio, and near/far clipping planes.
-		 *
-		 * @note This function is crucial for configuring the graphics pipeline
-		 * and ensuring that rendering operations are performed correctly.
-		 * Proper implementation of this function allows the application to
-		 * provide the necessary projection matrix for rendering 3D objects in
-		 * the scene.
+		 * @return A mutable reference to the ViewSet.
 		 */
-		glm::mat4 getProjection(std::size_t index) const override;
+		ViewSet &getViewSet() override;
 
 		/**
-		 * @brief Retrieves the view matrix for the specified index.
+		 * @brief Retrieves the set of views to render (const).
 		 *
-		 * This function overrides the pure virtual function from
-		 * ASwapchainContext to provide the view matrix for the specified index.
-		 * The view matrix is essential for rendering operations, as it defines
-		 * the position and orientation of the camera in the 3D scene. Implement
-		 * this function to return the appropriate view matrix based on the
-		 * rendering context and the specific requirements of the application.
-		 *
-		 * @param index The index for which to retrieve the view matrix.
-		 *
-		 * @return glm::mat4 The view matrix corresponding to the specified
-		 * index. Implement this function to return the appropriate view matrix
-		 * based on the rendering context and the specific requirements of the
-		 * application, such as the camera position, target, and up vector.
-		 *
-		 * @note This function is crucial for configuring the graphics pipeline
-		 * and ensuring that rendering operations are performed correctly.
-		 * Proper implementation of this function allows the application to
-		 * provide the necessary view matrix for rendering 3D objects in the
-		 * scene, enabling the correct positioning and orientation of the
-		 * camera.
+		 * @return A const reference to the ViewSet.
 		 */
-		utility::graphic::ViewF getView(std::size_t index) const override;
+		const ViewSet &getViewSet() const override;
 
 		/**
-		 * @brief Sets the view matrix for the specified image index in the
-		 * swapchain.
+		 * @brief Desktop swapchains signal the image-available semaphore
+		 * through vkAcquireNextImageKHR.
 		 *
-		 * This function overrides the pure virtual function from
-		 * ASwapchainContext to set the view matrix associated with the
-		 * specified image index in the swapchain. The view matrix is used in
-		 * rendering operations to transform world coordinates into view space
-		 * for the corresponding image.
-		 *
-		 * @param index The index of the image in the swapchain for which to
-		 * set the view matrix.
-		 * @param view The view matrix as a glm::mat4 to set for the specified
-		 * image index in the swapchain.
+		 * @return True.
 		 */
-		void setView(std::size_t index,
-					 const utility::graphic::ViewF &view) override;
-
-		/**
-		 * @brief Retrieves the number of views in the swapchain context.
-		 *
-		 * This function overrides the pure virtual function from
-		 * ASwapchainContext to return the number of views associated with the
-		 * swapchain context. The number of views is essential for configuring
-		 * the rendering pipeline and ensuring that rendering operations are
-		 * performed correctly for each view.
-		 *
-		 * @return The number of views in the swapchain context.
-		 */
-		std::size_t getViewCount(void) const override;
+		bool usesImageAvailableSemaphore() const override;
 
 		private:
 		/**
-		 * @brief View state for the swapchain context
+		 * @brief The set of views rendered by this swapchain context.
 		 */
-		utility::graphic::ViewF _view;
+		ViewSet _viewSet;
 
 		/**
 		 * @brief GLFW reference window for the swapchain context

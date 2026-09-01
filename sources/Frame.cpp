@@ -41,13 +41,18 @@ void evan::Frame::destroy(VkDevice device)
 	vkFreeMemory(device, _uniformBufferMemory, nullptr);
 
 	this->getLogger().info() << "Destroying synchronization objects...";
-	vkDestroySemaphore(device, _render, nullptr);
-
-	this->getLogger().info() << "Destroying image semaphore...";
-	vkDestroySemaphore(device, _image, nullptr);
-
-	this->getLogger().info() << "Destroying in-flight fence...";
-	vkDestroyFence(device, _inFlight, nullptr);
+	for (const auto semaphore: _imageAvailable) {
+		vkDestroySemaphore(device, semaphore, nullptr);
+	}
+	for (const auto semaphore: _renderFinished) {
+		vkDestroySemaphore(device, semaphore, nullptr);
+	}
+	for (const auto fence: _inFlight) {
+		vkDestroyFence(device, fence, nullptr);
+	}
+	_imageAvailable.clear();
+	_renderFinished.clear();
+	_inFlight.clear();
 }
 
 void evan::Frame::resetCommandBuffer()
@@ -102,17 +107,23 @@ void evan::Frame::createSyncObjects(VkDevice device)
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	this->getLogger().info() << "Creating image available semaphore...";
+	_inFlight.resize(MAX_SWAPCHAINS);
+	_imageAvailable.resize(MAX_SWAPCHAINS);
+	_renderFinished.resize(MAX_SWAPCHAINS);
 
-	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_image)
-			!= VK_SUCCESS
-		|| vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_render)
-			!= VK_SUCCESS
-		|| vkCreateFence(device, &fenceInfo, nullptr, &_inFlight)
-			!= VK_SUCCESS) {
-		this->getLogger().error()
-			<< "Failed to create synchronization objects for frame!";
-		return;
+	for (int i = 0; i < MAX_SWAPCHAINS; ++i) {
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+							  &_imageAvailable[i])
+				!= VK_SUCCESS
+			|| vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+								 &_renderFinished[i])
+				!= VK_SUCCESS
+			|| vkCreateFence(device, &fenceInfo, nullptr, &_inFlight[i])
+				!= VK_SUCCESS) {
+			this->getLogger().error()
+				<< "Failed to create synchronization objects for frame!";
+			return;
+		}
 	}
 	this->getLogger().info() << "Synchronization objects created successfully.";
 }

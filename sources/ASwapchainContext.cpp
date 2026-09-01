@@ -171,6 +171,37 @@ VkRenderPass evan::ASwapchainContext::getRenderPass() const
 	return _renderPass;
 }
 
+std::size_t evan::ASwapchainContext::getSwapchainCount() const
+{
+	return _swapchainImages.size();
+}
+
+bool evan::ASwapchainContext::usesImageAvailableSemaphore() const
+{
+	return false;
+}
+
+utility::graphic::ViewF evan::ASwapchainContext::getView(std::size_t index) const
+{
+	return getViewSet().getView(index);
+}
+
+void evan::ASwapchainContext::setView(std::size_t index,
+						const utility::graphic::ViewF &view)
+{
+	getViewSet().setView(index, view);
+}
+
+std::size_t evan::ASwapchainContext::getViewCount(void) const
+{
+	return getViewSet().size();
+}
+
+glm::mat4 evan::ASwapchainContext::getProjection(std::size_t index) const
+{
+	return getViewSet().getProjection(index);
+}
+
 VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 	const std::vector<int64_t> &swapchainFormats)
 {

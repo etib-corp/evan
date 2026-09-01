@@ -112,6 +112,8 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 			<< "Failed to locate OpenXR views: " << locateResult;
 		return false;
 	}
+
+	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).syncViewSet();
 	return true;
 }
 
