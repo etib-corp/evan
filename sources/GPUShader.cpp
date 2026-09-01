@@ -52,6 +52,7 @@ evan::GPUShader::GPUShader(VkDevice device,
 evan::GPUShader::~GPUShader()
 {
 	this->getLogger().info() << "Destroying GPUShader...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -60,14 +61,29 @@ evan::GPUShader::~GPUShader()
 
 void evan::GPUShader::destroy()
 {
+	this->cleanup();
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+void evan::GPUShader::cleanup()
+{
+	if (_logicalDevice == VK_NULL_HANDLE) {
+		return;
+	}
+
 	if (_vertexShaderModule != VK_NULL_HANDLE) {
 		this->getLogger().info() << "Destroying vertex shader module...";
 		vkDestroyShaderModule(_logicalDevice, _vertexShaderModule, nullptr);
+		_vertexShaderModule = VK_NULL_HANDLE;
 	}
 
 	if (_fragmentShaderModule != VK_NULL_HANDLE) {
 		this->getLogger().info() << "Destroying fragment shader module...";
 		vkDestroyShaderModule(_logicalDevice, _fragmentShaderModule, nullptr);
+		_fragmentShaderModule = VK_NULL_HANDLE;
 	}
 }
 

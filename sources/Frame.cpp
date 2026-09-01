@@ -7,15 +7,18 @@
 
 #include "evan/Frame.hpp"
 
-evan::Frame::Frame(VkCommandPool commandPool,
-				   const ADeviceBackend &deviceBackend)
+evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
+	: _deviceContext(deviceContext)
 {
 	this->getLogger().info()
 		<< "Creating frame with command pool and device backend...";
 
-	this->createCommandBuffer(deviceBackend._device, commandPool);
-	this->createSyncObjects(deviceBackend._device);
-	this->createUniformBuffer(deviceBackend);
+	auto deviceBackend = deviceContext->getDeviceBackend();
+
+	this->createCommandBuffer(deviceBackend->_device,
+							  deviceContext->getCommandPool());
+	this->createSyncObjects(deviceBackend->_device);
+	this->createUniformBuffer(*deviceBackend);
 
 	this->getLogger().info() << "Frame created successfully.";
 }
@@ -23,6 +26,7 @@ evan::Frame::Frame(VkCommandPool commandPool,
 evan::Frame::~Frame()
 {
 	this->getLogger().info() << "Destroying frame...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -31,23 +35,46 @@ evan::Frame::~Frame()
 
 void evan::Frame::destroy(VkDevice device)
 {
-	this->getLogger().info() << "Destroying Vulkan resources for frame...";
+	(void)device;
+	this->cleanup();
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
+
+void evan::Frame::cleanup()
+{
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
 
 	this->getLogger().info()
 		<< "Destroying uniform buffer and freeing memory...";
-	vkDestroyBuffer(device, _uniformBuffer, nullptr);
-
-	this->getLogger().info() << "Freeing uniform buffer memory...";
-	vkFreeMemory(device, _uniformBufferMemory, nullptr);
+	if (_uniformBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _uniformBuffer, nullptr);
+		_uniformBuffer = VK_NULL_HANDLE;
+	}
+	if (_uniformBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _uniformBufferMemory, nullptr);
+		_uniformBufferMemory = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info() << "Destroying synchronization objects...";
-	vkDestroySemaphore(device, _render, nullptr);
-
-	this->getLogger().info() << "Destroying image semaphore...";
-	vkDestroySemaphore(device, _image, nullptr);
-
-	this->getLogger().info() << "Destroying in-flight fence...";
-	vkDestroyFence(device, _inFlight, nullptr);
+	if (_render != VK_NULL_HANDLE) {
+		vkDestroySemaphore(device, _render, nullptr);
+		_render = VK_NULL_HANDLE;
+	}
+	if (_image != VK_NULL_HANDLE) {
+		vkDestroySemaphore(device, _image, nullptr);
+		_image = VK_NULL_HANDLE;
+	}
+	if (_inFlight != VK_NULL_HANDLE) {
+		vkDestroyFence(device, _inFlight, nullptr);
+		_inFlight = VK_NULL_HANDLE;
+	}
 }
 
 void evan::Frame::resetCommandBuffer()

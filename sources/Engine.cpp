@@ -56,14 +56,13 @@ evan::Engine::Engine(
 	_ressourceManager =
 		std::make_shared<RessourceManager>(ressourceProvider, _deviceContext);
 	_renderer = std::make_shared<Renderer>(
-		*_deviceContext, _swapchainContext->getRenderPass(),
+		_deviceContext, _swapchainContext->getRenderPass(),
 		_deviceContext->getMsaaSamples(), _ressourceManager);
 	_ressourceManager->init(_renderer);
 	_currentScene = 0;
 
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_renderer->createFrame(_deviceContext->getCommandPool(),
-							   *deviceBackend);
+		_renderer->createFrame(_deviceContext);
 	}
 }
 
@@ -79,11 +78,16 @@ evan::Engine::~Engine()
 		<< "Waiting for device to be idle before cleanup...";
 	vkDeviceWaitIdle(device);
 
-	_renderer->destroy(device);
 	_swapchainContext->destroy(device);
 	for (auto &[_, scene]: _scenes) {
 		scene->destroy(device);
 	}
+	// Release materials, textures and shaders before the renderer destroys the
+	// descriptor pool and uniform buffers they reference.
+	_ressourceManager->cleanup();
+	_renderer->destroy(device);
+	_renderer.reset();
+	_ressourceManager.reset();
 	_deviceContext.reset();
 	this->getLogger().info()
 		<< "Engine destroyed and resources cleaned up successfully.";

@@ -16,6 +16,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 							   const utility::graphic::Material &material,
 							   uint32_t shaderID)
 	: _shaderID(shaderID)
+	, _deviceContext(deviceContext)
 {
 	this->getLogger().info()
 		<< "Initializing GPUMaterial with shader ID: " << shaderID << "...";
@@ -45,7 +46,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 				textureType = GPUTexture::TextureType::Albedo;
 		}
 		_textures.emplace_back(std::make_shared<GPUTexture>(
-			*deviceContext, *texture, textureType));
+			deviceContext, *texture, textureType));
 	}
 
 	this->createDescriptorSets(
@@ -58,6 +59,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 evan::GPUMaterial::~GPUMaterial()
 {
 	this->getLogger().info() << "Destroying GPUMaterial...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -66,7 +68,8 @@ evan::GPUMaterial::~GPUMaterial()
 
 void evan::GPUMaterial::destroy(VkDevice device)
 {
-	this->getLogger().info() << "Destroying GPUMaterial...";
+	(void)device;
+	this->cleanup();
 }
 
 void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
@@ -84,6 +87,10 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 
 	auto deviceBackend = deviceContext->getDeviceBackend();
 	auto textures	   = material.getTextures();
+
+	// Free the old descriptor sets before the textures they reference are
+	// destroyed, and before the new descriptor sets are allocated.
+	this->freeDescriptorSets(deviceBackend->_device);
 
 	_textures.clear();
 
@@ -110,12 +117,9 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 				textureType = GPUTexture::TextureType::Albedo;
 		}
 		_textures.emplace_back(std::make_shared<GPUTexture>(
-			*deviceContext, *texture, textureType));
+			deviceContext, *texture, textureType));
 	}
 
-	vkFreeDescriptorSets(deviceBackend->_device, renderer.getDescriptorPool(),
-						 static_cast<uint32_t>(_descriptorSets.size()),
-						 _descriptorSets.data());
 	this->createDescriptorSets(
 		deviceBackend->_device, renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
@@ -146,6 +150,28 @@ uint32_t evan::GPUMaterial::getUploadedVersion() const
 // Protected methods //
 ///////////////////////
 
+void evan::GPUMaterial::cleanup()
+{
+	VkDevice device = VK_NULL_HANDLE;
+	if (_deviceContext && _deviceContext->getDeviceBackend()) {
+		device = _deviceContext->getDeviceBackend()->_device;
+	}
+
+	this->freeDescriptorSets(device);
+	_textures.clear();
+}
+
+void evan::GPUMaterial::freeDescriptorSets(VkDevice device)
+{
+	if (!_descriptorSets.empty() && _descriptorPool != VK_NULL_HANDLE
+		&& device != VK_NULL_HANDLE) {
+		vkFreeDescriptorSets(device, _descriptorPool,
+							 static_cast<uint32_t>(_descriptorSets.size()),
+							 _descriptorSets.data());
+	}
+	_descriptorSets.clear();
+}
+
 void evan::GPUMaterial::createDescriptorSets(
 	VkDevice logicalDevice, VkDescriptorSetLayout descriptorSetLayout,
 	VkDescriptorPool descriptorPool,
@@ -167,11 +193,13 @@ void evan::GPUMaterial::createDescriptorSets(
 	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	allocInfo.pSetLayouts		 = layouts.data();
 
+	_descriptorPool = descriptorPool;
 	_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
 	if (vkAllocateDescriptorSets(logicalDevice, &allocInfo,
 								 _descriptorSets.data())
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to allocate descriptor sets !";
+		_descriptorSets.clear();
 		return;
 	}
 
