@@ -41,14 +41,16 @@ std::shared_ptr<evan::ASwapchainContext>
 		std::make_shared<DesktopSwapchainContext>(deviceContext, _window);
 
 	auto viewportSize = swapchainContext->getViewportSize();
+	VkExtent2D extent { static_cast<uint32_t>(viewportSize.x),
+						static_cast<uint32_t>(viewportSize.y) };
+
 	utility::graphic::ViewF view;
-	view.setViewportSize(
-		utility::math::Vector2F{viewportSize.x / 2, viewportSize.y / 2});
-	this->getLogger().error()
+	ASwapchainContext::updateViewForExtent(view, extent);
+	view.setClippingPlanes(1.0f, 4000.0f);
+
+	this->getLogger().info()
 		<< "Setting up view for Desktop platform with viewport size: "
 		<< viewportSize;
-	view.setClippingPlanes(1.0f, 4000.0f);
-	view.setPerspective(M_PI_2, viewportSize.x / viewportSize.y);
 
 	this->getLogger().info() << "Created view for Desktop platform: " << view;
 
