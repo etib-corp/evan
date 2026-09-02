@@ -26,6 +26,7 @@ option(BUILD_FOR_WINDOWS "Build for Windows" OFF)
 option(BUILD_FOR_MACOS "Build for macOS" OFF)
 option(BUILD_DOCS "Build Doxygen documentation" OFF)
 option(BUILD_DOCS_ONLY "Configure only the documentation target" OFF)
+option(BUILD_ALL_DOCS "Build documentation for all libraries" OFF)
 option(BUILD_BENCHMARKS "Build the benchmark harness" OFF)
 option(DEV_MODE "Enable development mode" OFF)
 
@@ -339,10 +340,10 @@ endif()
 
 # 09. Documentations
 
-if(BUILD_DOCS)
+if(BUILD_ALL_DOCS OR BUILD_DOCS_ONLY)
     message(STATUS "Building documentation...")
     include(cmake/Docs.cmake)
-    add_project_docs()
+    add_subdirectory(docs)
 else()
     message(STATUS "Skipping documentation...")
 endif()
