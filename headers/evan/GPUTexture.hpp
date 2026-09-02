@@ -69,6 +69,77 @@ namespace evan
 		};
 
 		/**
+		 * @struct SamplerSettings
+		 * @brief Consumer-overridable sampler parameters.
+		 *
+		 * Allows callers to override the default sampler configuration used
+		 * when a GPUTexture is created. Defaults reproduce the previous
+		 * built-in behaviour (trilinear filtering, repeat addressing, device
+		 * maximum anisotropy and a max LOD covering every generated mip
+		 * level).
+		 */
+		struct SamplerSettings {
+			/**
+			 * @brief Constructs sampler settings with the default values.
+			 *
+			 * Defaults reproduce the previous built-in behaviour (trilinear
+			 * filtering, repeat addressing, device maximum anisotropy and a
+			 * max LOD covering every generated mip level).
+			 */
+			SamplerSettings()
+				: minLod(0.0f),
+				  maxLod(-1.0f),
+				  anisotropyEnable(VK_TRUE),
+				  maxAnisotropy(0.0f),
+				  addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+				  addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT),
+				  addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+			{
+			}
+
+			/**
+			 * @brief Minimum LOD that can be sampled.
+			 */
+			float minLod;
+
+			/**
+			 * @brief Maximum LOD that can be sampled.
+			 *
+			 * A negative value means "automatic": the sampler covers every
+			 * generated mip level (mipLevels - 1).
+			 */
+			float maxLod;
+
+			/**
+			 * @brief Whether anisotropic filtering is enabled.
+			 */
+			VkBool32 anisotropyEnable;
+
+			/**
+			 * @brief Maximum anisotropy value.
+			 *
+			 * A value of 0 means "automatic": the device's maximum supported
+			 * anisotropy is used.
+			 */
+			float maxAnisotropy;
+
+			/**
+			 * @brief Addressing mode for the U (width) axis.
+			 */
+			VkSamplerAddressMode addressModeU;
+
+			/**
+			 * @brief Addressing mode for the V (height) axis.
+			 */
+			VkSamplerAddressMode addressModeV;
+
+			/**
+			 * @brief Addressing mode for the W (depth) axis.
+			 */
+			VkSamplerAddressMode addressModeW;
+		};
+
+		/**
 		 * @struct GenerateMipmapsProperties
 		 * @brief Holds properties required for generating mipmaps for a Vulkan
 		 * image.
@@ -133,6 +204,8 @@ namespace evan
 		 * @param type The type of texture being created (e.g., albedo, normal,
 		 * roughness), which determines the format and usage flags for the
 		 * Vulkan image.
+		 * @param settings Optional sampler settings (min/max LOD, anisotropy,
+		 * address modes) used to override the default sampler configuration.
 		 *
 		 * @note The constructor performs several Vulkan operations, including:
 		 * - Creating a Vulkan image with the appropriate format and usage flags
@@ -147,7 +220,8 @@ namespace evan
 		 */
 		GPUTexture(const DeviceContext &deviceContext,
 				   const utility::graphic::Texture &texture,
-				   TextureType type = TextureType::Albedo);
+				   TextureType type = TextureType::Albedo,
+				   const SamplerSettings &settings = SamplerSettings {});
 
 		/**
 		 * @brief Destructs the GPUTexture object by cleaning up Vulkan
@@ -174,6 +248,41 @@ namespace evan
 		 * behavior in the Vulkan application.
 		 */
 		void destroy(VkDevice device);
+
+		/**
+		 * @brief Computes the number of mipmap levels for a texture of the
+		 * given dimensions.
+		 *
+		 * @param width The width of the texture in pixels.
+		 * @param height The height of the texture in pixels.
+		 *
+		 * @return The number of mipmap levels (including the base level).
+		 */
+		static uint32_t computeMipLevels(uint32_t width, uint32_t height);
+
+		/**
+		 * @brief Computes the maximum sampleable LOD for a texture with the
+		 * given number of mipmap levels.
+		 *
+		 * LOD is zero-based: a texture with `mipLevels` levels has valid LODs
+		 * in the range [0, mipLevels - 1].
+		 *
+		 * @param mipLevels The number of mipmap levels.
+		 *
+		 * @return The maximum LOD value covering the last mip level.
+		 */
+		static float computeMaxLod(uint32_t mipLevels);
+
+		/**
+		 * @brief Retrieves the number of mipmap levels generated for this
+		 * texture.
+		 *
+		 * @return The number of mipmap levels.
+		 */
+		[[nodiscard]] uint32_t getMipLevels() const
+		{
+			return _mipLevel;
+		}
 
 		/**
 		 * @brief The Vulkan image view associated with this GPUTexture.
@@ -262,7 +371,8 @@ namespace evan
 		 * to
 		 */
 		void createSampler(const ADeviceBackend &deviceBackend,
-						   VkSamplerCreateInfo samplerInfo);
+						   VkSamplerCreateInfo samplerInfo,
+						   const SamplerSettings &settings = SamplerSettings {});
 
 		/**
 		 * @brief The Vulkan image associated with this GPUTexture, which holds
@@ -349,6 +459,16 @@ namespace evan
 		 * on the properties of the Vulkan physical device. This structure can
 		 * be used
 		 */
+		/**
+		 * @brief Applies consumer sampler settings over a default sampler
+		 * configuration.
+		 *
+		 * @param samplerInfo The sampler configuration to update in place.
+		 * @param settings The sampler settings to apply.
+		 */
+		void applySamplerSettings(VkSamplerCreateInfo &samplerInfo,
+								  const SamplerSettings &settings);
+
 		VkSamplerCreateInfo
 			getDefaultSamplerInfo(const VkPhysicalDeviceProperties &properties);
 	};
