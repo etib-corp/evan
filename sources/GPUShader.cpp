@@ -52,6 +52,7 @@ evan::GPUShader::GPUShader(VkDevice device,
 evan::GPUShader::~GPUShader()
 {
 	this->getLogger().info() << "Destroying GPUShader...";
+	destroy();
 }
 
 ////////////////////
@@ -63,11 +64,13 @@ void evan::GPUShader::destroy()
 	if (_vertexShaderModule != VK_NULL_HANDLE) {
 		this->getLogger().info() << "Destroying vertex shader module...";
 		vkDestroyShaderModule(_logicalDevice, _vertexShaderModule, nullptr);
+		_vertexShaderModule = VK_NULL_HANDLE;
 	}
 
 	if (_fragmentShaderModule != VK_NULL_HANDLE) {
 		this->getLogger().info() << "Destroying fragment shader module...";
 		vkDestroyShaderModule(_logicalDevice, _fragmentShaderModule, nullptr);
+		_fragmentShaderModule = VK_NULL_HANDLE;
 	}
 }
 
