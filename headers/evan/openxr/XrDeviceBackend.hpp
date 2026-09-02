@@ -232,6 +232,17 @@ namespace evan
 		std::vector<std::shared_ptr<utility::event::Event>> pollActions();
 
 		/**
+		 * @brief Retrieves the OpenXR session handle.
+		 *
+		 * @return XrSession The active OpenXR session, or XR_NULL_HANDLE if
+		 * the session has not been created.
+		 */
+		XrSession getSession() const
+		{
+			return _session;
+		}
+
+		/**
 		 * The OpenXR instance, which represents the
 		 * connection between the application and the
 		 * OpenXR runtime. It is used to create and manage
