@@ -89,9 +89,9 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 evan::DeviceContext::~DeviceContext()
 {
 	this->getLogger().info() << "Cleaning up device context...";
-	vkDestroyCommandPool(_deviceBackend->_device, _commandPool, nullptr);
+	vkDestroyCommandPool(_deviceBackend->getDevice(), _commandPool, nullptr);
 	if (enableValidationLayers && _debugMessenger != VK_NULL_HANDLE) {
-		this->destroyDebugUtilsMessengerEXT(_deviceBackend->_VkInstance,
+		this->destroyDebugUtilsMessengerEXT(_deviceBackend->getInstance(),
 											_debugMessenger);
 	}
 	_deviceBackend.reset();
@@ -128,7 +128,7 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 		<< "Determining maximum usable sample count for MSAA...";
 
 	VkPhysicalDeviceProperties physicalDeviceProperties;
-	vkGetPhysicalDeviceProperties(_deviceBackend->_physicalDevice,
+	vkGetPhysicalDeviceProperties(_deviceBackend->getPhysicalDevice(),
 								  &physicalDeviceProperties);
 	VkSampleCountFlags counts =
 		physicalDeviceProperties.limits.framebufferColorSampleCounts
@@ -194,7 +194,7 @@ void evan::DeviceContext::createCommandPool()
 		<< queueFamilyIndices.graphicsFamily.value();
 
 	VkResult result =
-		vkCreateCommandPool(_deviceBackend->_device, &commandPoolCreateInfo,
+		vkCreateCommandPool(_deviceBackend->getDevice(), &commandPoolCreateInfo,
 							nullptr, &_commandPool);
 	if (result != VK_SUCCESS) {
 		this->getLogger().error()
@@ -211,7 +211,7 @@ void evan::DeviceContext::createGraphicsQueue()
 
 	this->getLogger().info()
 		<< "Graphics queue family index: " << indices.graphicsFamily.value();
-	vkGetDeviceQueue(_deviceBackend->_device, indices.graphicsFamily.value(), 0,
+	vkGetDeviceQueue(_deviceBackend->getDevice(), indices.graphicsFamily.value(), 0,
 					 &_graphicsQueue);
 }
 
@@ -267,13 +267,13 @@ void evan::DeviceContext::setupDebugMessenger()
 		return;
 	}
 
-	if (!checkDebugUtilsSupport(_deviceBackend->_VkInstance)) {
+	if (!checkDebugUtilsSupport(_deviceBackend->getInstance())) {
 		this->getLogger().warning() << "Debug utils extension not supported, "
 									   "skipping debug messenger setup.";
 		return;
 	}
 
-	if (!checkDebugUtilsEnabled(_deviceBackend->_VkInstance)) {
+	if (!checkDebugUtilsEnabled(_deviceBackend->getInstance())) {
 		this->getLogger().warning() << "Debug utils extension not enabled on "
 									   "the instance, skipping debug messenger "
 									   "setup.";
@@ -284,7 +284,7 @@ void evan::DeviceContext::setupDebugMessenger()
 
 	this->populateDebugMessengerCreateInfo(createInfo, defaultDebugCallback);
 	if (this->createDebugUtilsMessengerEXT(
-			_deviceBackend->_VkInstance, &createInfo, nullptr, &_debugMessenger)
+			_deviceBackend->getInstance(), &createInfo, nullptr, &_debugMessenger)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to set up debug messenger!";
 		return;
