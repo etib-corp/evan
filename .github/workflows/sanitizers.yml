@@ -129,7 +129,11 @@ jobs:
           --capture
           --directory ${{ github.workspace }}/build
           --output-file coverage.info
-          --exclude '*/_deps/*' '*/tests/*' '*/googletest*'
+          --no-external
+          --ignore-errors unused
+          --exclude '*/_deps/*'
+          --exclude '*/tests/*'
+          --exclude '*/googletest*'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5.0.0
