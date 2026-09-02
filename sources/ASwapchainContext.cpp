@@ -33,7 +33,7 @@ void evan::ASwapchainContext::createRenderPass(
 
 	VkAttachmentDescription depthAttachment {};
 	depthAttachment.format =
-		ASwapchainImage::findDepthFormat(deviceBackend->_physicalDevice);
+		ASwapchainImage::findDepthFormat(deviceBackend->getPhysicalDevice());
 	depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -154,7 +154,7 @@ void evan::ASwapchainContext::createRenderPass(
 		<< " attachments, " << renderPassInfo.subpassCount << " subpass, and "
 		<< renderPassInfo.dependencyCount << " dependency.";
 
-	if (vkCreateRenderPass(deviceBackend->_device, &renderPassInfo, nullptr,
+	if (vkCreateRenderPass(deviceBackend->getDevice(), &renderPassInfo, nullptr,
 						   &_renderPass)
 		!= VK_SUCCESS) {
 		this->getLogger().error()
