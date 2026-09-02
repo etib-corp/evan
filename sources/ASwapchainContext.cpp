@@ -7,6 +7,8 @@
 
 #include "evan/ASwapchainContext.hpp"
 
+#include <numbers>
+
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend,
 	VkSampleCountFlagBits msaaSamples)
@@ -181,6 +183,11 @@ bool evan::ASwapchainContext::usesImageAvailableSemaphore() const
 	return false;
 }
 
+bool evan::ASwapchainContext::needsSwapchainRecreation() const
+{
+	return false;
+}
+
 utility::graphic::ViewF evan::ASwapchainContext::getView(std::size_t index) const
 {
 	return getViewSet().getView(index);
@@ -290,4 +297,21 @@ utility::math::Vector2F evan::ASwapchainContext::getViewportSize() const
 		<< "Retrieved viewport size from swapchain image: Width = "
 		<< viewportSize.x << ", Height = " << viewportSize.y;
 	return viewportSize;
+}
+
+void evan::ASwapchainContext::updateViewForExtent(
+	utility::graphic::ViewF &view, VkExtent2D extent)
+{
+	const auto width  = static_cast<float>(extent.width);
+	const auto height = static_cast<float>(extent.height);
+
+	view.setViewportSize(utility::math::Vector2F { width, height });
+
+	auto verticalFov = view.getVerticalFovRadians();
+	if (verticalFov <= 0.0f) {
+		verticalFov = std::numbers::pi_v<float> * 0.5f;
+	}
+
+	const float aspectRatio = height > 0.0f ? width / height : 1.0f;
+	view.setPerspective(verticalFov, aspectRatio);
 }

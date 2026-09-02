@@ -9,6 +9,9 @@
 
 #include "evan/DeviceContext.hpp"
 
+std::unordered_map<GLFWwindow *, evan::DesktopSwapchainContext *>
+	evan::DesktopSwapchainContext::_contexts {};
+
 evan::DesktopSwapchainContext::DesktopSwapchainContext(
 	const DeviceContext &deviceContext, GLFWwindow *window)
 	: _referenceWindow(window)
@@ -24,11 +27,22 @@ evan::DesktopSwapchainContext::DesktopSwapchainContext(
 		deviceContext, window, _renderPass));
 
 	_viewSet.resize(1);
+
+	this->getLogger().info()
+		<< "Registering GLFW framebuffer size callback for proactive swapchain "
+		   "recreation...";
+	_contexts[window] = this;
+	glfwSetFramebufferSizeCallback(
+		window, &DesktopSwapchainContext::framebufferSizeCallback);
 }
 
 evan::DesktopSwapchainContext::~DesktopSwapchainContext()
 {
 	this->getLogger().info() << "Destroying DesktopSwapchainContext...";
+	if (_referenceWindow) {
+		glfwSetFramebufferSizeCallback(_referenceWindow, nullptr);
+		_contexts.erase(_referenceWindow);
+	}
 }
 
 ////////////////////
@@ -59,33 +73,45 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 	this->getLogger().info() << "Recreating swapchain and associated resources "
 								"for DesktopSwapchainContext...";
 
+	auto device = deviceContext.getDeviceBackend()->_device;
+
+	this->getLogger().info()
+		<< "Waiting for the device to be idle before recreating the "
+		   "swapchain...";
+	vkDeviceWaitIdle(device);
+
+	VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE;
+	if (!_swapchainImages.empty()) {
+		oldSwapchain =
+			dynamic_cast<DesktopSwapchainImage *>(_swapchainImages[0].get())
+				->_swapchain;
+	}
+
+	this->getLogger().info()
+		<< "Creating new swapchain image with the previous swapchain as "
+		   "oldSwapchain...";
+	auto newSwapchainImage = std::make_shared<DesktopSwapchainImage>(
+		deviceContext, _referenceWindow, renderpass, oldSwapchain);
+
 	this->getLogger().info() << "Destroying existing swapchain images for "
 								"DesktopSwapchainContext...";
 	for (const auto &swapchainImage: _swapchainImages) {
 		this->getLogger().info() << "Destroying swapchain image and releasing "
 									"associated resources...";
-		swapchainImage->destroy(deviceContext.getDeviceBackend()->_device);
+		swapchainImage->destroy(device);
 	}
-
-	this->getLogger().info()
-		<< "Creating new swapchain images for DesktopSwapchainContext...";
 	_swapchainImages.clear();
-
-	auto newSwapchainImage = std::make_shared<DesktopSwapchainImage>(
-		deviceContext, _referenceWindow, renderpass);
-
 	_swapchainImages.push_back(newSwapchainImage);
 
-	auto viewportSize = this->getViewportSize();
-	this->getLogger().error()
-		<< "Setting up view for Desktop platform with viewport size: "
-		<< viewportSize;
-
+	this->getLogger().info()
+		<< "Updating view for the new swapchain extent while preserving the "
+		   "camera transform...";
 	auto view = this->getViewSet()[0].view;
-	view.setViewportSize(
-		utility::math::Vector2F{viewportSize.x / 2, viewportSize.y / 2});
-	view.setPerspective(M_PI_2, viewportSize.x / viewportSize.y);
+	ASwapchainContext::updateViewForExtent(
+		view, newSwapchainImage->getExtent());
 	this->getViewSet().setView(0, view);
+
+	_framebufferResized = false;
 }
 
 VkResult evan::DesktopSwapchainContext::aquireImage(
@@ -118,4 +144,20 @@ const evan::ViewSet &evan::DesktopSwapchainContext::getViewSet() const
 bool evan::DesktopSwapchainContext::usesImageAvailableSemaphore() const
 {
 	return true;
+}
+
+bool evan::DesktopSwapchainContext::needsSwapchainRecreation() const
+{
+	return _framebufferResized;
+}
+
+void evan::DesktopSwapchainContext::framebufferSizeCallback(
+	GLFWwindow *window, int width, int height)
+{
+	(void)width;
+	(void)height;
+	auto it = _contexts.find(window);
+	if (it != _contexts.end()) {
+		it->second->_framebufferResized = true;
+	}
 }

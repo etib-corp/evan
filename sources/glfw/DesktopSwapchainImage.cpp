@@ -14,7 +14,7 @@
 
 evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	const DeviceContext &deviceContext, GLFWwindow *window,
-	VkRenderPass renderpass)
+	VkRenderPass renderpass, VkSwapchainKHR oldSwapchain)
 {
 	this->getLogger().info() << "Initializing DesktopSwapchainImage...";
 
@@ -76,7 +76,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	createInfo.presentMode	  = presentMode;
 	createInfo.clipped		  = VK_TRUE;
 
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
+	createInfo.oldSwapchain = oldSwapchain;
 
 	this->getLogger().info()
 		<< "Creating swapchain with the following parameters:";

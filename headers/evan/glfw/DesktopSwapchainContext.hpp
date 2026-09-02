@@ -12,6 +12,7 @@
 #include "evan/glfw/DesktopSwapchainImage.hpp"
 
 #include <memory>
+#include <unordered_map>
 
 namespace evan
 {
@@ -195,6 +196,15 @@ namespace evan
 		 */
 		bool usesImageAvailableSemaphore() const override;
 
+		/**
+		 * @brief Desktop swapchains must be recreated when the GLFW window is
+		 * resized.
+		 *
+		 * @return True when a framebuffer resize has been detected since the
+		 * last recreation.
+		 */
+		bool needsSwapchainRecreation() const override;
+
 		private:
 		/**
 		 * @brief The set of views rendered by this swapchain context.
@@ -205,5 +215,31 @@ namespace evan
 		 * @brief GLFW reference window for the swapchain context
 		 */
 		GLFWwindow *_referenceWindow;
+
+		/**
+		 * @brief Set when the GLFW framebuffer size callback fires, signaling
+		 * that the swapchain must be recreated for the new extent.
+		 */
+		bool _framebufferResized = false;
+
+		/**
+		 * @brief Maps GLFW windows to their owning swapchain context so the
+		 * framebuffer size callback can locate the context without using the
+		 * GLFW user pointer (which is reserved for the platform).
+		 */
+		static std::unordered_map<GLFWwindow *, DesktopSwapchainContext *>
+			_contexts;
+
+		/**
+		 * @brief GLFW framebuffer size callback.
+		 *
+		 * Marks the owning context's swapchain as needing recreation.
+		 *
+		 * @param window The GLFW window that was resized.
+		 * @param width The new framebuffer width in pixels.
+		 * @param height The new framebuffer height in pixels.
+		 */
+		static void framebufferSizeCallback(GLFWwindow *window, int width,
+											int height);
 	};
 }	 // namespace evan
