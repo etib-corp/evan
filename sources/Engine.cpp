@@ -75,7 +75,7 @@ evan::Engine::~Engine()
 		<< "Destroying engine and cleaning up resources...";
 
 	auto deviceBackend = _deviceContext->getDeviceBackend();
-	auto device		   = deviceBackend->_device;
+	auto device		   = deviceBackend->getDevice();
 
 	this->getLogger().info()
 		<< "Waiting for device to be idle before cleanup...";

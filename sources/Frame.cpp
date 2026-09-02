@@ -13,8 +13,8 @@ evan::Frame::Frame(VkCommandPool commandPool,
 	this->getLogger().info()
 		<< "Creating frame with command pool and device backend...";
 
-	this->createCommandBuffer(deviceBackend._device, commandPool);
-	this->createSyncObjects(deviceBackend._device);
+	this->createCommandBuffer(deviceBackend.getDevice(), commandPool);
+	this->createSyncObjects(deviceBackend.getDevice());
 	this->createUniformBuffer(deviceBackend);
 
 	this->getLogger().info() << "Frame created successfully.";
@@ -154,6 +154,6 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 
 	this->getLogger().info() << "Uniform buffer created and memory allocated "
 								"successfully. Mapping memory...";
-	vkMapMemory(deviceBackend._device, _uniformBufferMemory, 0, bufferSize, 0,
+	vkMapMemory(deviceBackend.getDevice(), _uniformBufferMemory, 0, bufferSize, 0,
 				&_uniformBufferMapped);
 }

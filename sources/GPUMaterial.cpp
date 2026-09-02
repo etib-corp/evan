@@ -49,7 +49,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 	}
 
 	this->createDescriptorSets(
-		deviceBackend->_device, renderer.getDescriptorSetLayout(),
+		deviceBackend->getDevice(), renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
 
 	_uploadedVersion = material.getVersion();
@@ -113,11 +113,11 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 			*deviceContext, *texture, textureType));
 	}
 
-	vkFreeDescriptorSets(deviceBackend->_device, renderer.getDescriptorPool(),
+	vkFreeDescriptorSets(deviceBackend->getDevice(), renderer.getDescriptorPool(),
 						 static_cast<uint32_t>(_descriptorSets.size()),
 						 _descriptorSets.data());
 	this->createDescriptorSets(
-		deviceBackend->_device, renderer.getDescriptorSetLayout(),
+		deviceBackend->getDevice(), renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
 
 	_uploadedVersion = material.getVersion();

@@ -22,7 +22,7 @@ evan::RessourceManager::RessourceManager(
 	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Loading shader ID " << id;
 		_shaders[id] = std::make_shared<GPUShader>(
-			_deviceContext->getDeviceBackend()->_device, *shader);
+			_deviceContext->getDeviceBackend()->getDevice(), *shader);
 	}
 }
 
@@ -62,14 +62,14 @@ void evan::RessourceManager::sync(bool refresh)
 			this->getLogger().info()
 				<< "Creating new GPUShader for shader ID " << id;
 			_shaders[id] = std::make_shared<GPUShader>(
-				_deviceContext->getDeviceBackend()->_device, *shader);
+				_deviceContext->getDeviceBackend()->getDevice(), *shader);
 		}
 		if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUShader for shader ID " << id;
 			_shaders[id]->destroy();
 			_shaders[id] = std::make_shared<GPUShader>(
-				_deviceContext->getDeviceBackend()->_device, *shader);
+				_deviceContext->getDeviceBackend()->getDevice(), *shader);
 		}
 	}
 
