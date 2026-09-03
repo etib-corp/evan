@@ -120,7 +120,7 @@ std::vector<XrPath> evan::InteractionProfile::enumerateBoundSourcesForAction(
 
 	uint32_t sourceCount = 0;
 	XrResult result		 = xrEnumerateBoundSourcesForAction(
-		session, &enumerateInfo, 0, &sourceCount, nullptr);
+		 session, &enumerateInfo, 0, &sourceCount, nullptr);
 	if (result != XR_SUCCESS || sourceCount == 0) {
 		return paths;
 	}

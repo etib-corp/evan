@@ -74,10 +74,16 @@ jobs:
           -DBUILD_TESTING=ON
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: Run clang-tidy on headers and sources
+      - name: Run clang-tidy on built sources
+        # Lint only the translation units present in the compile database. Each
+        # TU's headers are analyzed transitively. This avoids parsing headers
+        # that are not part of the configured backend build (e.g. OpenXR
+        # headers in a GLFW-only build), which previously produced spurious
+        # missing-header errors.
         run: >
-          find ${{ github.workspace }}/headers ${{ github.workspace }}/sources
-          \( -name '*.hpp' -o -name '*.cpp' \)
+          jq -r '.[].file'
+          ${{ github.workspace }}/build/compile_commands.json
+          | grep "${{ github.workspace }}/sources"
           | xargs clang-tidy
           -p ${{ github.workspace }}/build
           --quiet
