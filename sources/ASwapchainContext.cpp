@@ -181,13 +181,14 @@ bool evan::ASwapchainContext::usesImageAvailableSemaphore() const
 	return false;
 }
 
-utility::graphic::ViewF evan::ASwapchainContext::getView(std::size_t index) const
+utility::graphic::ViewF
+	evan::ASwapchainContext::getView(std::size_t index) const
 {
 	return getViewSet().getView(index);
 }
 
 void evan::ASwapchainContext::setView(std::size_t index,
-						const utility::graphic::ViewF &view)
+									  const utility::graphic::ViewF &view)
 {
 	getViewSet().setView(index, view);
 }

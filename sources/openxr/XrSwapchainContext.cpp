@@ -111,8 +111,8 @@ void evan::XrSwapchainContext::recreateSwapchain(
 		swapchainCreateInfo.type	  = XR_TYPE_SWAPCHAIN_CREATE_INFO;
 		swapchainCreateInfo.arraySize = 1;
 		swapchainCreateInfo.format	  = selectSwapchainFormat(
-			deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
-				deviceContext.getDeviceBackend()->countSwapchainFormats()));
+			   deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
+				   deviceContext.getDeviceBackend()->countSwapchainFormats()));
 		swapchainCreateInfo.width	  = viewConfig.recommendedImageRectWidth;
 		swapchainCreateInfo.height	  = viewConfig.recommendedImageRectHeight;
 		swapchainCreateInfo.mipCount  = 1;

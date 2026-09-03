@@ -365,7 +365,7 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		createInfo.pNext =
 			(VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
 	} else {
-		createInfo.enabledLayerCount = 0;
+		createInfo.enabledLayerCount   = 0;
 		createInfo.ppEnabledLayerNames = nullptr;
 	}
 
