@@ -83,7 +83,7 @@ void evan::ASwapchainImage::createImageViews(
 			<< "Creating image view for swapchain image " << i
 			<< " with image handle: " << (uintptr_t)_images[i];
 		_imageViews[i] = deviceBackend.createImageView(
-			_images[i], _format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+			_images[i], _format, VK_IMAGE_ASPECT_COLOR_BIT, 1).value;
 	}
 }
 
@@ -120,7 +120,8 @@ void evan::ASwapchainImage::createColorResources(
 
 	deviceBackend.createImage(imageProperties);
 	_colorView = deviceBackend.createImageView(_colorImage, colorFormat,
-											   VK_IMAGE_ASPECT_COLOR_BIT, 1);
+											   VK_IMAGE_ASPECT_COLOR_BIT, 1)
+					 .value;
 }
 
 void evan::ASwapchainImage::createDepthResources(
@@ -170,8 +171,10 @@ void evan::ASwapchainImage::createDepthResources(
 		<< "\n properties: " << VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	deviceContext.getDeviceBackend()->createImage(depthImageProperties);
-	_depthView = deviceContext.getDeviceBackend()->createImageView(
-		_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	_depthView = deviceContext.getDeviceBackend()
+					 ->createImageView(_depthImage, depthFormat,
+									  VK_IMAGE_ASPECT_DEPTH_BIT, 1)
+					 .value;
 
 	this->getLogger().info() << "Transitioning depth image layout to "
 								"DEPTH_STENCIL_ATTACHMENT_OPTIMAL...";

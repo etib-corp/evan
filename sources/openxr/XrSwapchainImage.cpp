@@ -39,9 +39,10 @@ evan::XrSwapchainImage::XrSwapchainImage(
 	}
 	for (size_t i = 0; i < _swapchainImages.size(); ++i) {
 		_imageViews[i] =
-			properties.deviceContext.getDeviceBackend()->createImageView(
-				_swapchainImages[i].image, _format, VK_IMAGE_ASPECT_COLOR_BIT,
-				1);
+			properties.deviceContext.getDeviceBackend()
+				->createImageView(_swapchainImages[i].image, _format,
+								  VK_IMAGE_ASPECT_COLOR_BIT, 1)
+				.value;
 	}
 
 	this->createColorResources(*properties.deviceContext.getDeviceBackend(),
