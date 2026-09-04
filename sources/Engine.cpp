@@ -261,7 +261,7 @@ void evan::Engine::addScene(size_t sceneIndex)
 	}
 }
 
-void evan::Engine::update()
+evan::Error evan::Engine::update()
 {
 	updateDeltaTime();
 	this->getLogger().info() << "Updating engine state...";
@@ -271,16 +271,18 @@ void evan::Engine::update()
 		handleViewportInput(_capturedViewportEvents);
 		_capturedViewportEvents.clear();
 	}
+
+	return Error::Ok;
 }
 
-void evan::Engine::render()
+evan::Error evan::Engine::render()
 {
 	this->getLogger().info() << "Starting render process...";
 
 	if (_scenes.empty()) {
 		this->getLogger().warning()
 			<< "No scenes available to render. Skipping render process.";
-		return;
+		return Error::Ok;
 	}
 
 	this->getLogger().info()
@@ -289,11 +291,16 @@ void evan::Engine::render()
 	if (currentSceneIt == _scenes.end()) {
 		this->getLogger().warning()
 			<< "Current scene not found. Skipping render process.";
-		return;
+		return Error::RuntimeError;
 	}
 
-	_renderer->drawFrame(*_deviceContext, *_swapchainContext,
-						 *currentSceneIt->second);
+	return _renderer->drawFrame(*_deviceContext, *_swapchainContext,
+								*currentSceneIt->second);
+}
+
+evan::Error evan::Engine::getLastError() const
+{
+	return _platform->getLastError();
 }
 
 std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
