@@ -15,7 +15,7 @@ evan::ADeviceBackend::~ADeviceBackend()
 {
 }
 
-void evan::ADeviceBackend::createBuffer(
+evan::Error evan::ADeviceBackend::createBuffer(
 	const CreateBufferProperties &properties) const
 {
 	VkBufferCreateInfo bufferInfo {};
@@ -27,12 +27,13 @@ void evan::ADeviceBackend::createBuffer(
 	this->getLogger().info()
 		<< "Creating buffer with size: " << properties._size
 		<< " and usage flags: " << properties._usage;
-	if (vkCreateBuffer(_device, &bufferInfo, nullptr, &properties._buffer)
-		!= VK_SUCCESS) {
+	VkResult result =
+		vkCreateBuffer(_device, &bufferInfo, nullptr, &properties._buffer);
+	if (result != VK_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to create buffer with size: " << properties._size
 			<< " and usage flags: " << properties._usage;
-		return;
+		return mapVkResult(result);
 	}
 
 	VkMemoryRequirements memRequirements;
@@ -48,11 +49,11 @@ void evan::ADeviceBackend::createBuffer(
 	this->getLogger().info()
 		<< "Allocating buffer memory with size: " << memRequirements.size
 		<< " and memory type index: " << allocInfo.memoryTypeIndex;
-	if (vkAllocateMemory(_device, &allocInfo, nullptr,
-						 &properties._bufferMemory)
-		!= VK_SUCCESS) {
+	result = vkAllocateMemory(_device, &allocInfo, nullptr,
+							  &properties._bufferMemory);
+	if (result != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to allocate buffer memory!";
-		return;
+		return mapVkResult(result);
 	}
 
 	this->getLogger().info() << "Successfully allocated buffer memory!";
@@ -60,9 +61,10 @@ void evan::ADeviceBackend::createBuffer(
 	vkBindBufferMemory(_device, properties._buffer, properties._bufferMemory,
 					   0);
 	this->getLogger().info() << "Successfully bound buffer to memory!";
+	return Error::Ok;
 }
 
-void evan::ADeviceBackend::transitionImageLayout(
+evan::Error evan::ADeviceBackend::transitionImageLayout(
 	const TransitionImageLayoutProperties &properties) const
 {
 	this->getLogger().info()
@@ -134,7 +136,7 @@ void evan::ADeviceBackend::transitionImageLayout(
 		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	} else {
 		this->getLogger().error() << "unsupported layout transition!";
-		return;
+		return Error::RuntimeError;
 	}
 
 	if (properties._newLayout
@@ -164,6 +166,7 @@ void evan::ADeviceBackend::transitionImageLayout(
 
 	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
+	return Error::Ok;
 }
 
 VkCommandBuffer evan::ADeviceBackend::beginSingleTimeCommands(
@@ -230,7 +233,7 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 		<< "Successfully ended single time command buffer!";
 }
 
-void evan::ADeviceBackend::createImage(
+evan::Error evan::ADeviceBackend::createImage(
 	const CreateImageProperties &properties) const
 {
 	this->getLogger().info()
@@ -271,10 +274,11 @@ void evan::ADeviceBackend::createImage(
 
 	this->getLogger().info() << "Creating image...";
 
-	if (vkCreateImage(_device, &imageInfo, nullptr, &properties._image)
-		!= VK_SUCCESS) {
+	VkResult result =
+		vkCreateImage(_device, &imageInfo, nullptr, &properties._image);
+	if (result != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to create image!";
-		return;
+		return mapVkResult(result);
 	}
 
 	this->getLogger().info() << "Successfully created image!";
@@ -294,10 +298,11 @@ void evan::ADeviceBackend::createImage(
 
 	this->getLogger().info() << "Allocating image memory...";
 
-	if (vkAllocateMemory(_device, &allocInfo, nullptr, &properties._imageMemory)
-		!= VK_SUCCESS) {
+	result = vkAllocateMemory(_device, &allocInfo, nullptr,
+							  &properties._imageMemory);
+	if (result != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to allocate image memory!";
-		return;
+		return mapVkResult(result);
 	}
 
 	this->getLogger().info() << "Successfully allocated image memory!";
@@ -306,9 +311,10 @@ void evan::ADeviceBackend::createImage(
 	vkBindImageMemory(_device, properties._image, properties._imageMemory, 0);
 
 	this->getLogger().info() << "Successfully bound image to memory!";
+	return Error::Ok;
 }
 
-void evan::ADeviceBackend::copyBufferToImage(
+evan::Error evan::ADeviceBackend::copyBufferToImage(
 	const CopyBufferToImageProperties &properties) const
 {
 	this->getLogger().info()
@@ -354,9 +360,10 @@ void evan::ADeviceBackend::copyBufferToImage(
 
 	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
+	return Error::Ok;
 }
 
-void evan::ADeviceBackend::copyBuffer(
+evan::Error evan::ADeviceBackend::copyBuffer(
 	const CopyBufferProperties &properties) const
 {
 	this->getLogger().info()
@@ -373,9 +380,10 @@ void evan::ADeviceBackend::copyBuffer(
 
 	this->endSingleTimeCommands(properties._commandPool,
 								properties._graphicsQueue, commandBuffer);
+	return Error::Ok;
 }
 
-VkImageView
+evan::Result<VkImageView>
 	evan::ADeviceBackend::createImageView(VkImage image, VkFormat format,
 										  VkImageAspectFlags aspectFlags,
 										  uint32_t mipLevels) const
@@ -409,12 +417,12 @@ VkImageView
 	if (vkCreateImageView(_device, &viewInfo, nullptr, &imageView)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to create texture image view!";
-		return VK_NULL_HANDLE;
+		return { Error::RuntimeError, VK_NULL_HANDLE };
 	}
 
 	this->getLogger().info() << "Successfully created image view!";
 
-	return imageView;
+	return { Error::Ok, imageView };
 }
 
 ///////////////////////

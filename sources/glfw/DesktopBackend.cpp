@@ -118,21 +118,21 @@ evan::DesktopBackend::~DesktopBackend()
 // Public Methods //
 ////////////////////
 
-bool evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo,
-										ASwapchainImage &swapchainImage)
+evan::Error evan::DesktopBackend::processFrame(VkPresentInfoKHR presentInfo,
+											   ASwapchainImage &swapchainImage)
 {
 	this->getLogger().info() << "Processing frame for DesktopBackend...";
 	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		this->getLogger().info() << "Swap chain is out of date or suboptimal.";
-		return false;
+		return mapVkResult(result);
 	} else if (result != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to present swap chain image!";
-		return false;
+		return mapVkResult(result);
 	}
 	this->getLogger().info() << "Frame presented successfully.";
-	return true;
+	return Error::Ok;
 }
 
 uint32_t evan::DesktopBackend::countSwapchainFormats() const

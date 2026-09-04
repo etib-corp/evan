@@ -8,6 +8,7 @@
 #pragma once
 
 #include "evan/EvanPlatform.hpp"
+#include "evan/Error.hpp"
 
 #include <utility/event/event.hpp>
 
@@ -95,5 +96,24 @@ namespace evan
 		 */
 		virtual std::shared_ptr<ASwapchainContext> createSwapchainContext(
 			const DeviceContext &deviceContext) const = 0;
+
+		/**
+		 * @brief Get the last error recorded by the platform.
+		 *
+		 * Platforms record a sticky error while polling events (e.g.
+		 * evan::Error::RuntimeLost when the OpenXR session is lost).
+		 *
+		 * @return The last normalized error recorded by the platform.
+		 */
+		Error getLastError() const
+		{
+			return _lastError;
+		}
+
+		protected:
+		/**
+		 * @brief Sticky error recorded by the platform while polling events.
+		 */
+		Error _lastError = Error::Ok;
 	};
 }	 // namespace evan

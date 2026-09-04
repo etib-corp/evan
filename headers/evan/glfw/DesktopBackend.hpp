@@ -99,13 +99,13 @@ namespace evan
 		 *
 		 * @param swapchainContext The swap chain context for the current frame.
 		 *
-		 * @return Always returns true, because no specific preprocessing is
-		 * needed for the Desktop backend.
+		 * @return Always returns evan::Error::Ok, because no specific
+		 * preprocessing is needed for the Desktop backend.
 		 */
-		bool preprocessFrame(ASwapchainContext &swapchainContext) override
+		Error preprocessFrame(ASwapchainContext &swapchainContext) override
 		{
 			// No specific preprocessing needed for Desktop backend
-			return true;
+			return Error::Ok;
 		}
 
 		/**
@@ -126,11 +126,10 @@ namespace evan
 		 * for the current frame. This parameter can be used to access the image
 		 * and perform any necessary operations on it before rendering.
 		 *
-		 * @return true if the frame was processed successfully, false
-		 * otherwise.
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		bool processFrame(VkPresentInfoKHR presentInfo,
-						  ASwapchainImage &swapchainImage) override;
+		Error processFrame(VkPresentInfoKHR presentInfo,
+						   ASwapchainImage &swapchainImage) override;
 
 		/**
 		 * @brief Postprocesses a frame after rendering.
@@ -146,13 +145,13 @@ namespace evan
 		 * which may include information about the swap chain and presentation
 		 * details.
 		 *
-		 * @return Always returns true, because no specific postprocessing is
-		 * needed for the Desktop backend.
+		 * @return Always returns evan::Error::Ok, because no specific
+		 * postprocessing is needed for the Desktop backend.
 		 */
-		bool postprocessFrame(ASwapchainContext &swapchainContext) override
+		Error postprocessFrame(ASwapchainContext &swapchainContext) override
 		{
 			// No specific postprocessing needed for Desktop backend
-			return true;
+			return Error::Ok;
 		}
 
 		/**
