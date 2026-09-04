@@ -43,7 +43,7 @@ std::shared_ptr<evan::ASwapchainContext>
 	auto viewportSize = swapchainContext->getViewportSize();
 	utility::graphic::ViewF view;
 	view.setViewportSize(
-		utility::math::Vector2F{viewportSize.x / 2, viewportSize.y / 2});
+		utility::math::Vector2F { viewportSize.x / 2, viewportSize.y / 2 });
 	this->getLogger().error()
 		<< "Setting up view for Desktop platform with viewport size: "
 		<< viewportSize;

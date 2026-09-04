@@ -103,7 +103,8 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			sessionBeginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
 			sessionBeginInfo.primaryViewConfigurationType =
 				XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-			if (xrBeginSession(xrDeviceBackend._session, &sessionBeginInfo) != XR_SUCCESS) {
+			if (xrBeginSession(xrDeviceBackend._session, &sessionBeginInfo)
+				!= XR_SUCCESS) {
 				this->getLogger().error() << "Failed to begin session";
 				break;
 			}

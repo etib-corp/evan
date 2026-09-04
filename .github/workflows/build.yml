@@ -9,6 +9,9 @@ on:
 env:
   LUNARG_VULKAN_SDK_VERSION: 1.4.304.1
   JAVA_TUMERIN_JDK_VERSION: 21
+  ANDROID_NDK_VERSION: r27d
+  ANDROID_ABI: arm64-v8a
+  ANDROID_PLATFORM: android-24
 
 jobs:
   build:
@@ -59,6 +62,13 @@ jobs:
           distribution: "temurin"
           java-version: ${{ env.JAVA_TUMERIN_JDK_VERSION }}
 
+      - name: Setup Android NDK
+        if: matrix.operating-system == 'android'
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+
       - name: Configure CMake
         run: >
           cmake -B ${{ github.workspace }}/build -S ${{ github.workspace }}
@@ -68,13 +78,15 @@ jobs:
           -DBUILD_FOR_MACOS=${{ matrix.operating-system == 'macos' }}
           -DBUILD_FOR_WINDOWS=${{ matrix.operating-system == 'windows' }}
           -DBUILD_FOR_ANDROID=${{ matrix.operating-system == 'android' }}
-          -DBUILD_TESTING=ON
+          -DBUILD_TESTING=${{ matrix.operating-system != 'android' }}
+          ${{ matrix.operating-system == 'android' && format('-DCMAKE_TOOLCHAIN_FILE={0}/build/cmake/android.toolchain.cmake -DANDROID_ABI={1} -DANDROID_PLATFORM={2}', steps.setup-ndk.outputs.ndk-path, env.ANDROID_ABI, env.ANDROID_PLATFORM) || '' }}
 
       - name: Build
         run: >
           cmake --build ${{ github.workspace }}/build
 
       - name: Run tests
+        if: matrix.operating-system != 'android'
         run: >
           ctest
           --test-dir ${{ github.workspace }}/build

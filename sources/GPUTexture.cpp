@@ -190,8 +190,8 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 		._graphicsQueue = graphicsQueue,
 		._image			= _image,
 		._imageFormat	= type == TextureType::FontAtlas
-			? VK_FORMAT_R8_UNORM
-			: VK_FORMAT_R8G8B8A8_SRGB,
+			  ? VK_FORMAT_R8_UNORM
+			  : VK_FORMAT_R8G8B8A8_SRGB,
 		._texWidth		= (uint32_t)texWidth,
 		._texHeight		= (uint32_t)texHeight,
 		._mipLevels		= _mipLevel
@@ -319,7 +319,7 @@ void evan::GPUTexture::generateMipmaps(
 		blit.srcSubresource.baseArrayLayer = 0;
 		blit.srcSubresource.layerCount	   = 1;
 		blit.dstOffsets[0]				   = { 0, 0, 0 };
-		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1,
+		blit.dstOffsets[1]				   = { mipWidth > 1 ? mipWidth / 2 : 1,
 							   mipHeight > 1 ? mipHeight / 2 : 1, 1 };
 		blit.dstSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.dstSubresource.mipLevel	   = i;

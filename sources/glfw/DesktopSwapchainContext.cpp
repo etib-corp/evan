@@ -83,7 +83,7 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 
 	auto view = this->getViewSet()[0].view;
 	view.setViewportSize(
-		utility::math::Vector2F{viewportSize.x / 2, viewportSize.y / 2});
+		utility::math::Vector2F { viewportSize.x / 2, viewportSize.y / 2 });
 	view.setPerspective(M_PI_2, viewportSize.x / viewportSize.y);
 	this->getViewSet().setView(0, view);
 }

@@ -85,8 +85,8 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		return preprocessError;
 	}
 
-	auto &frame			= *_frames[_currentFrameIndex];
-	const ViewSet &viewSet = swapchainContext.getViewSet();
+	auto &frame						 = *_frames[_currentFrameIndex];
+	const ViewSet &viewSet			 = swapchainContext.getViewSet();
 	const std::size_t swapchainCount = swapchainContext.getSwapchainCount();
 
 	this->getLogger().info()
@@ -132,7 +132,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		swapchainContext.usesImageAvailableSemaphore();
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const ViewSet::View &view = viewSet[v];
-		const std::size_t s		= view.swapchainIndex;
+		const std::size_t s		  = view.swapchainIndex;
 
 		if (s >= swapchainCount) {
 			this->getLogger().error()
@@ -147,10 +147,9 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		frame.resetCommandBuffer();
 
-		this->recordCommandBuffer(
-			swapchainContext.getRenderPass(),
-			imageSet.getFramebuffer(acquiredImage[s]),
-			imageSet.getExtent(), scene);
+		this->recordCommandBuffer(swapchainContext.getRenderPass(),
+								  imageSet.getFramebuffer(acquiredImage[s]),
+								  imageSet.getExtent(), scene);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -180,9 +179,9 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// 3. Present each swapchain once, with the image acquired for it.
 	for (std::size_t s = 0; s < swapchainCount; ++s) {
 		VkPresentInfoKHR presentInfo {};
-		presentInfo.sType			  = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores	  = &frame._renderFinished[s];
+		presentInfo.pWaitSemaphores	   = &frame._renderFinished[s];
 
 		swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &acquiredImage[s];
