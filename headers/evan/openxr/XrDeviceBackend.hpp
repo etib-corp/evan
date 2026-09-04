@@ -64,10 +64,10 @@ namespace evan
 		 * @param[in,out] swapchainContext Reference to the swapchain context
 		 * that will be populated with view information for rendering.
 		 *
-		 * @return true if frame preprocessing completed successfully and
-		 * rendering should proceed, false if the session is not running, if any
-		 * OpenXR calls fail, or if the runtime indicates rendering should be
-		 * skipped for this frame.
+		 * @return evan::Error::Ok if rendering should proceed,
+		 * evan::Error::NotReady if the session is not running or the runtime
+		 * indicates rendering should be skipped, or a mapped error if an
+		 * OpenXR call fails.
 		 *
 		 * @details
 		 * The method performs the following operations:
@@ -81,12 +81,12 @@ namespace evan
 		 *
 		 * @note The swapchainContext must be castable to
 		 * evan::XrSwapchainContext.
-		 * @note On early return (false), the frame may still be submitted to
-		 * the runtime with empty content if shouldRender is false.
+		 * @note On early return (evan::Error::NotReady), the frame may still be
+		 * submitted to the runtime with empty content if shouldRender is false.
 		 *
 		 * @see xrWaitFrame, xrBeginFrame, xrEndFrame, xrLocateViews
 		 */
-		bool preprocessFrame(ASwapchainContext &swapchainContext) override;
+		Error preprocessFrame(ASwapchainContext &swapchainContext) override;
 
 		/**
 		 * @brief Processes a frame by releasing the OpenXR swapchain image.
@@ -99,18 +99,14 @@ namespace evan
 		 * @param swapchainImage Reference to the swapchain image to be
 		 * released. Must be castable to evan::XrSwapchainImage.
 		 *
-		 * @return true if the swapchain image was successfully released, false
-		 * otherwise.
-		 *
-		 * @retval true The OpenXR swapchain image was released successfully.
-		 * @retval false The xrReleaseSwapchainImage call failed. Error details
-		 * are logged to stderr.
+		 * @return evan::Error::Ok if the swapchain image was released
+		 * successfully, or a mapped error otherwise.
 		 *
 		 * @see XrSwapchainImageReleaseInfo
 		 * @see xrReleaseSwapchainImage
 		 */
-		bool processFrame(VkPresentInfoKHR presentInfo,
-						  ASwapchainImage &swapchainImage) override;
+		Error processFrame(VkPresentInfoKHR presentInfo,
+						   ASwapchainImage &swapchainImage) override;
 
 		/**
 		 * @brief Postprocesses a frame and submits it to the OpenXR compositor.
@@ -122,9 +118,8 @@ namespace evan
 		 * @param swapchainContext Reference to the swapchain context to
 		 * postprocess. Must be a valid evan::XrSwapchainContext instance.
 		 *
-		 * @return true if the frame was successfully submitted to the OpenXR
-		 * runtime, false if xrEndFrame() failed or returned XR_SUCCESS was not
-		 * achieved.
+		 * @return evan::Error::Ok if the frame was successfully submitted to
+		 * the OpenXR runtime, or a mapped error if xrEndFrame() failed.
 		 *
 		 * @details
 		 * - Updates projection layer views in the swapchain context
@@ -138,7 +133,7 @@ namespace evan
 		 * during processing. Ensure the provided context is of the correct
 		 * derived type.
 		 */
-		bool postprocessFrame(ASwapchainContext &swapchainContext) override;
+		Error postprocessFrame(ASwapchainContext &swapchainContext) override;
 
 		/**
 		 * @brief Finds the queue family indices for graphics and presentation
