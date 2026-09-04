@@ -127,6 +127,7 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// uniform buffer is updated per view, not per acquired image index.
 	const bool waitOnImageAvailable =
 		swapchainContext.usesImageAvailableSemaphore();
+	VkFence previousViewFence = VK_NULL_HANDLE;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const ViewSet::View &view = viewSet[v];
 		const std::size_t s		= view.swapchainIndex;
@@ -136,6 +137,18 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				<< "View " << v << " references invalid swapchain index " << s
 				<< ". Skipping view.";
 			continue;
+		}
+
+		// The command buffer and the uniform buffer are shared across the
+		// views of a frame. Before recording the next view, wait for the
+		// previous view's submission to complete, otherwise the previous
+		// submission's command buffer would be reset while still in flight
+		// and its uniform data overwritten (both eyes would end up rendered
+		// with the same, most recently written, view).
+		if (previousViewFence != VK_NULL_HANDLE
+			&& previousViewFence != frame._inFlight[s]) {
+			vkWaitForFences(device, 1, &previousViewFence, VK_TRUE,
+							UINT64_MAX);
 		}
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
@@ -171,6 +184,8 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				<< ". Skipping frame rendering.";
 			return;
 		}
+
+		previousViewFence = frame._inFlight[s];
 	}
 
 	// 3. Present each swapchain once, with the image acquired for it.
