@@ -210,7 +210,8 @@ void evan::GPUTexture::createImageView(const ADeviceBackend &deviceBackend)
 										 type == TextureType::FontAtlas
 											 ? VK_FORMAT_R8_UNORM
 											 : VK_FORMAT_R8G8B8A8_SRGB,
-										 VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel);
+										 VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel)
+			   .value;
 }
 
 void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
