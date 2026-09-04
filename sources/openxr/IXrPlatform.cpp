@@ -7,6 +7,7 @@
 
 #include "evan/openxr/IXrPlatform.hpp"
 #include "evan/openxr/XrDeviceBackend.hpp"
+#include "evan/openxr/XrError.hpp"
 
 ////////////////////
 // Public Methods //
@@ -21,6 +22,7 @@ std::vector<std::shared_ptr<utility::event::Event>>
 	evan::IXrPlatform::pollEvents(ADeviceBackend &deviceBackend)
 {
 	this->getLogger().info() << "Polling OpenXR events";
+	_lastError = Error::Ok;
 
 	XrEventDataBuffer eventDataBuffer { XR_TYPE_EVENT_DATA_BUFFER };
 	evan::XrDeviceBackend &xrDeviceBackend =
@@ -46,6 +48,7 @@ std::vector<std::shared_ptr<utility::event::Event>>
 				this->getLogger().info()
 					<< "Instance loss pending event received";
 				_shouldClose = true;
+				_lastError	 = Error::RuntimeLost;
 				break;
 			}
 			default:
@@ -119,6 +122,7 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 			break;
 		case XR_SESSION_STATE_LOSS_PENDING:
 			_shouldClose = true;
+			_lastError	 = mapSessionState(eventData.state);
 			break;
 		case XR_SESSION_STATE_FOCUSED:
 			break;
