@@ -142,13 +142,29 @@ size_t evan::Engine::addText(std::shared_ptr<utility::graphic::Text> text)
 size_t evan::Engine::addPrimitive(
 	std::shared_ptr<utility::graphic::Primitive> primitive)
 {
+	if (!primitive || primitive->getMeshes().empty()) {
+		this->getLogger().warning()
+			<< "Attempted to add an empty primitive. Skipping.";
+		return 0;
+	}
+
 	this->getLogger().info() << "Drawing primitive with "
 							 << primitive->getMeshes().size() << " meshes.";
-	this->getLogger().warning()
-		<< "drawPrimitive is not fully implemented yet. "
-		   "This is a placeholder implementation.";
-	return 0;	 // Placeholder implementation - replace with actual primitive
-				 // addition logic
+
+	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
+
+	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
+	for (const auto &mesh: primitive->getMeshes()) {
+		rawObjects.emplace(material_id, *mesh);
+	}
+
+	std::shared_ptr<RenderObject> primitiveObject =
+		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
+	auto objectID =
+		_scenes[_currentScene]->addObject(_nextObjectID++, primitiveObject);
+	_ressourceManager->sync();
+
+	return objectID;
 }
 
 size_t evan::Engine::addModel(std::shared_ptr<utility::graphic::Model> model)
@@ -179,8 +195,32 @@ size_t evan::Engine::addObject(
 	std::shared_ptr<utility::graphic::Renderable> object,
 	const std::string &renderMethod)
 {
-	return 0;	 // Placeholder implementation - replace with actual renderable
-				 // object addition logic
+	if (!object || object->getMeshes().empty()) {
+		this->getLogger().warning()
+			<< "Attempted to add an empty renderable object. Skipping.";
+		return 0;
+	}
+
+	this->getLogger().info()
+		<< "Drawing renderable object with " << object->getMeshes().size()
+		<< " meshes using render method: " << renderMethod;
+
+	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
+
+	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
+	for (const auto &mesh: object->getMeshes()) {
+		rawObjects.emplace(material_id, *mesh);
+	}
+
+	const std::string pipelineLayer = renderMethod.empty() ? "mesh" : renderMethod;
+	std::shared_ptr<RenderObject> renderObject =
+		std::make_shared<RenderObject>(_deviceContext, rawObjects,
+									   pipelineLayer);
+	auto objectID =
+		_scenes[_currentScene]->addObject(_nextObjectID++, renderObject);
+	_ressourceManager->sync();
+
+	return objectID;
 }
 
 size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
