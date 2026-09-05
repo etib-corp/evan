@@ -158,7 +158,7 @@ namespace evan
 		 * Ensure that the extension is available and enabled for proper
 		 * functionality of the debug messenger.
 		 */
-		VkDebugUtilsMessengerEXT _debugMessenger;
+		VkDebugUtilsMessengerEXT _debugMessenger = VK_NULL_HANDLE;
 
 		private:
 		/**
@@ -222,6 +222,34 @@ namespace evan
 		 * @return `true` if the extension is supported, `false` otherwise.
 		 */
 		bool checkDebugUtilsSupport(VkInstance instance);
+
+		/**
+		 * @brief Checks if the `VK_EXT_debug_utils` extension is enabled on
+		 * the given Vulkan instance.
+		 *
+		 * This function verifies that the extension has actually been enabled
+		 * when the instance was created. It does so by resolving the
+		 * `vkCreateDebugUtilsMessengerEXT` entry point through
+		 * `vkGetInstanceProcAddr`, which only returns a valid function pointer
+		 * when the extension is enabled on the instance.
+		 *
+		 * @param instance The Vulkan instance to check.
+		 * @return `true` if the extension is enabled, `false` otherwise.
+		 */
+		bool checkDebugUtilsEnabled(VkInstance instance);
+
+		/**
+		 * @brief Destroys a previously created Vulkan debug messenger.
+		 *
+		 * This function resolves the `vkDestroyDebugUtilsMessengerEXT` entry
+		 * point and uses it to destroy the debug messenger associated with the
+		 * given instance.
+		 *
+		 * @param instance The Vulkan instance the messenger was created from.
+		 * @param debugMessenger The debug messenger handle to destroy.
+		 */
+		void destroyDebugUtilsMessengerEXT(
+			VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger);
 
 		/**
 		 * @brief Sets up the Vulkan debug messenger for the device context.

@@ -29,13 +29,14 @@
 
 int main(void)
 {
-	auto platform = std::make_shared<evan::MacOsDesktopPlatform>("macos base", 800, 600);
+	auto platform =
+		std::make_shared<evan::MacOsDesktopPlatform>("macos base", 800, 600);
 
 	auto systemIO = std::make_shared<utility::DefaultSystemIO>();
-	auto ressourceProvider = std::make_shared<utility::RessourceProvider>(*systemIO);
+	auto ressourceProvider =
+		std::make_shared<utility::RessourceProvider>(*systemIO);
 
-	evan::Engine engine(ressourceProvider,
-						 platform);
+	evan::Engine engine(ressourceProvider, platform);
 
 	while (!platform->shouldClose()) {
 		engine.update();

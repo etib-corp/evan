@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure CMake
+        run: >
+          cmake
+          -B ${{ github.workspace }}/build
+          -S ${{ github.workspace }}
+          -DBUILD_FOR_GLFW=ON
+          -DBUILD_FOR_LINUX=ON
+
+      - name: Build
+        run: >
+          cmake
+          --build ${{ github.workspace }}/build
+
+      - name: Package with CPack
+        run: >
+          cpack
+          --config ${{ github.workspace }}/build/CPackConfig.cmake
+          -B ${{ github.workspace }}/packages
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          files: ${{ github.workspace }}/packages/*
+          generate_release_notes: true

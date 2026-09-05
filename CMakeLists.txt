@@ -26,6 +26,7 @@ option(BUILD_FOR_WINDOWS "Build for Windows" OFF)
 option(BUILD_FOR_MACOS "Build for macOS" OFF)
 option(BUILD_DOCS "Build Doxygen documentation" OFF)
 option(BUILD_DOCS_ONLY "Configure only the documentation target" OFF)
+option(BUILD_ALL_DOCS "Build documentation for all libraries" OFF)
 option(BUILD_BENCHMARKS "Build the benchmark harness" OFF)
 option(DEV_MODE "Enable development mode" OFF)
 
@@ -193,6 +194,21 @@ if(NOT BUILD_DOCS_ONLY)
         find_library(jnigraphics-lib jnigraphics)
     endif()
 
+    # Android system libraries are only available when an Android NDK
+    # toolchain is in use. Guard each link so a missing NDK does not hard-fail
+    # configuration (e.g. host builds without the NDK installed).
+    if(BUILD_FOR_OPENXR AND BUILD_FOR_ANDROID)
+        if(log-lib)
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${log-lib})
+        endif()
+        if(android-lib)
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${android-lib})
+        endif()
+        if(jnigraphics-lib)
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${jnigraphics-lib})
+        endif()
+    endif()
+
     # OpenXR dependency options
     if(BUILD_FOR_OPENXR)
         set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -232,15 +248,6 @@ if(NOT BUILD_DOCS_ONLY)
         target_link_libraries(${PROJECT_NAME}
             PUBLIC
                 OpenXR::openxr_loader
-        )
-    endif()
-
-    if(BUILD_FOR_OPENXR AND BUILD_FOR_ANDROID)
-        target_link_libraries(${PROJECT_NAME}
-            PRIVATE
-                ${log-lib}
-                ${android-lib}
-                ${jnigraphics-lib}
         )
     endif()
 
@@ -339,10 +346,10 @@ endif()
 
 # 09. Documentations
 
-if(BUILD_DOCS)
+if(BUILD_ALL_DOCS OR BUILD_DOCS_ONLY)
     message(STATUS "Building documentation...")
     include(cmake/Docs.cmake)
-    add_project_docs()
+    add_subdirectory(docs)
 else()
     message(STATUS "Skipping documentation...")
 endif()
