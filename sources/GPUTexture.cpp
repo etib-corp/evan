@@ -12,7 +12,8 @@
 
 evan::GPUTexture::GPUTexture(const DeviceContext &deviceContext,
 							 const utility::graphic::Texture &texture,
-							 TextureType type)
+							 TextureType type,
+							 const SamplerSettings &settings)
 	: type(type)
 {
 	this->getLogger().info() << "Creating GPUTexture...";
@@ -50,7 +51,7 @@ evan::GPUTexture::GPUTexture(const DeviceContext &deviceContext,
 				.unnormalizedCoordinates = VK_FALSE,
 			});
 	} else {
-		this->createSampler(*deviceBackend, VkSamplerCreateInfo {});
+		this->createSampler(*deviceBackend, VkSamplerCreateInfo {}, settings);
 	}
 }
 
@@ -118,9 +119,7 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	if (texture.type() == utility::graphic::Texture::TextureType::FontAtlas) {
 		_mipLevel = 1;	  // Font atlases typically don't use mipmaps
 	} else {
-		_mipLevel = static_cast<uint32_t>(
-						std::floor(std::log2((std::max)(texWidth, texHeight))))
-			+ 1;
+		_mipLevel = computeMipLevels(texWidth, texHeight);
 	}
 	this->getLogger().info() << "Calculated mip levels: " << _mipLevel;
 
@@ -214,7 +213,8 @@ void evan::GPUTexture::createImageView(const ADeviceBackend &deviceBackend)
 }
 
 void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
-									 VkSamplerCreateInfo samplerInfo)
+									 VkSamplerCreateInfo samplerInfo,
+									 const SamplerSettings &settings)
 {
 	auto samplerInfoStr =
 		"Sampler info - sType: " + std::to_string(samplerInfo.sType)
@@ -238,12 +238,18 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 	VkPhysicalDeviceProperties properties {};
 	vkGetPhysicalDeviceProperties(deviceBackend._physicalDevice, &properties);
 
-	samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-
 	// Check if samplerInfo is "empty" by testing its sType field.
 	// If sType is not set, it's likely uninitialized.
 	if (samplerInfo.sType == 0) {
 		samplerInfo = this->getDefaultSamplerInfo(properties);
+		this->applySamplerSettings(samplerInfo, settings);
+	}
+
+	// Enforce the hardware anisotropy limit for every sampler configuration.
+	if (samplerInfo.anisotropyEnable == VK_TRUE) {
+		samplerInfo.maxAnisotropy =
+			(std::min)(samplerInfo.maxAnisotropy,
+					   properties.limits.maxSamplerAnisotropy);
 	}
 
 	if (vkCreateSampler(deviceBackend._device, &samplerInfo, nullptr, &sampler)
@@ -389,7 +395,42 @@ VkSamplerCreateInfo evan::GPUTexture::getDefaultSamplerInfo(
 	samplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias				= 0.0f;
 	samplerInfo.minLod					= 0.0f;
-	samplerInfo.maxLod					= 1;
+	samplerInfo.maxLod					= computeMaxLod(_mipLevel);
 
 	return samplerInfo;
+}
+
+uint32_t evan::GPUTexture::computeMipLevels(uint32_t width, uint32_t height)
+{
+	const uint32_t maxDimension = (std::max)(width, height);
+
+	if (maxDimension == 0) {
+		return 1;
+	}
+	return static_cast<uint32_t>(std::floor(std::log2(maxDimension))) + 1;
+}
+
+float evan::GPUTexture::computeMaxLod(uint32_t mipLevels)
+{
+	if (mipLevels == 0) {
+		return 0.0f;
+	}
+	return static_cast<float>(mipLevels - 1);
+}
+
+void evan::GPUTexture::applySamplerSettings(VkSamplerCreateInfo &samplerInfo,
+											const SamplerSettings &settings)
+{
+	samplerInfo.minLod			 = settings.minLod;
+	samplerInfo.anisotropyEnable = settings.anisotropyEnable;
+	samplerInfo.addressModeU	 = settings.addressModeU;
+	samplerInfo.addressModeV	 = settings.addressModeV;
+	samplerInfo.addressModeW	 = settings.addressModeW;
+
+	if (settings.maxLod >= 0.0f) {
+		samplerInfo.maxLod = settings.maxLod;
+	}
+	if (settings.maxAnisotropy > 0.0f) {
+		samplerInfo.maxAnisotropy = settings.maxAnisotropy;
+	}
 }
