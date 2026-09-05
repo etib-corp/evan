@@ -546,6 +546,43 @@ namespace evan
 									uint32_t mipLevels) const;
 
 		/**
+		 * @brief Retrieves the Vulkan logical device handle.
+		 *
+		 * This narrow accessor exposes the logical device to consumers
+		 * without allowing them to mutate it or bypass the abstraction.
+		 * Backends that do not own a Vulkan device (e.g., headless or
+		 * non-Vulkan) may override it to return VK_NULL_HANDLE or throw.
+		 *
+		 * @return VkDevice The logical device used for rendering operations.
+		 */
+		virtual VkDevice getDevice() const
+		{
+			return _device;
+		}
+
+		/**
+		 * @brief Retrieves the Vulkan instance handle.
+		 *
+		 * @return VkInstance The Vulkan instance owned by this backend.
+		 */
+		virtual VkInstance getInstance() const
+		{
+			return _VkInstance;
+		}
+
+		/**
+		 * @brief Retrieves the Vulkan physical device handle.
+		 *
+		 * @return VkPhysicalDevice The physical device selected by this
+		 * backend.
+		 */
+		virtual VkPhysicalDevice getPhysicalDevice() const
+		{
+			return _physicalDevice;
+		}
+
+		protected:
+		/**
 		 * The physical device, which represents a
 		 * Vulkan-compatible GPU. It is used to query
 		 * the capabilities of the GPU and to create
@@ -567,8 +604,6 @@ namespace evan
 		 * resources and to query the capabilities of the Vulkan implementation.
 		 */
 		VkInstance _VkInstance = VK_NULL_HANDLE;
-
-		protected:
 		/**
 		 * @brief Creates a Vulkan instance and initializes the device backend.
 		 *

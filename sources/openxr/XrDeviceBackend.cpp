@@ -7,6 +7,7 @@
 
 #include "evan/openxr/XrDeviceBackend.hpp"
 #include "evan/openxr/XrSwapchainContext.hpp"
+#include "evan/CheckedCast.hpp"
 
 #include <array>
 
@@ -102,8 +103,9 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 		XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 	viewLocateInfo.displayTime = _predictedDisplayTime;
 	viewLocateInfo.space	   = _space;
-	std::vector<XrView> &views =
-		dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)._views;
+	auto &xrContext =
+		evan::checkedCast<evan::XrSwapchainContext>(swapchainContext);
+	std::vector<XrView> &views = xrContext._views;
 	XrResult locateResult = xrLocateViews(_session, &viewLocateInfo, &viewState,
 										  static_cast<uint32_t>(views.size()),
 										  &viewCount, views.data());
@@ -113,7 +115,7 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 		return false;
 	}
 
-	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).syncViewSet();
+	xrContext.syncViewSet();
 	return true;
 }
 
@@ -122,8 +124,8 @@ bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
 {
 	this->getLogger().info() << "Processing frame for OpenXR session";
 
-	XrSwapchain swapchain =
-		dynamic_cast<evan::XrSwapchainImage &>(swapchainImage)._swapchain;
+	auto &xrImage = evan::checkedCast<evan::XrSwapchainImage>(swapchainImage);
+	XrSwapchain swapchain = xrImage._swapchain;
 	XrSwapchainImageReleaseInfo releaseInfo {
 		XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO
 	};
@@ -141,11 +143,10 @@ bool evan::XrDeviceBackend::postprocessFrame(
 {
 	this->getLogger().info() << "Postprocessing frame for OpenXR session";
 
-	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)
-		.updateProjectionLayerViews();
-	auto &projectionLayerViews =
-		dynamic_cast<evan::XrSwapchainContext &>(swapchainContext)
-			.getProjectionLayerViews();
+	auto &xrContext =
+		evan::checkedCast<evan::XrSwapchainContext>(swapchainContext);
+	xrContext.updateProjectionLayerViews();
+	auto &projectionLayerViews = xrContext.getProjectionLayerViews();
 	XrCompositionLayerProjection layer { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 	layer.space		= _space;
 	layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
@@ -522,9 +523,10 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
-	auto xrPlatform = dynamic_cast<const IXrPlatform *>(&platform);
+	const IXrPlatform &xrPlatform =
+		evan::checkedCast<const IXrPlatform>(platform);
 
-	createInfo.next = xrPlatform->getInstanceCreateInfo();
+	createInfo.next = xrPlatform.getInstanceCreateInfo();
 
 	XrResult result = xrCreateInstance(&createInfo, &_XrInstance);
 	if (result != XR_SUCCESS) {

@@ -237,23 +237,16 @@ namespace evan
 		void createPresentQueue();
 
 		/**
-		 * The Vulkan surface associated with the Desktop backend, used for
-		 * rendering and presentation. This member variable holds the handle to
-		 * the Vulkan surface that is created for the Desktop backend, allowing
-		 * it to be used in various Vulkan operations such as creating a
-		 * swapchain or presenting rendered images to the screen.
+		 * @brief Retrieves the Vulkan surface associated with the Desktop
+		 * backend.
+		 *
+		 * @return VkSurfaceKHR The Vulkan surface used for rendering and
+		 * presentation.
 		 */
-		VkSurfaceKHR _surface;
-
-		/**
-		 * The Vulkan presentation queue associated with the Desktop backend,
-		 * used for presenting rendered images to the screen. This member
-		 * variable holds the handle to the Vulkan queue that is responsible for
-		 * presenting images from the swapchain to the display surface. It is
-		 * created based on the queue family indices determined during device
-		 * selection and is essential for the presentation process in Vulkan.
-		 */
-		VkQueue _presentQueue;
+		VkSurfaceKHR getSurface() const
+		{
+			return _surface;
+		}
 
 		protected:
 		/**
@@ -321,6 +314,25 @@ namespace evan
 		void pickPhysicalDevice() override;
 
 		private:
+		/**
+		 * The Vulkan surface associated with the Desktop backend, used for
+		 * rendering and presentation. This member variable holds the handle to
+		 * the Vulkan surface that is created for the Desktop backend, allowing
+		 * it to be used in various Vulkan operations such as creating a
+		 * swapchain or presenting rendered images to the screen.
+		 */
+		VkSurfaceKHR _surface = VK_NULL_HANDLE;
+
+		/**
+		 * The Vulkan presentation queue associated with the Desktop backend,
+		 * used for presenting rendered images to the screen. This member
+		 * variable holds the handle to the Vulkan queue that is responsible for
+		 * presenting images from the swapchain to the display surface. It is
+		 * created based on the queue family indices determined during device
+		 * selection and is essential for the presentation process in Vulkan.
+		 */
+		VkQueue _presentQueue = VK_NULL_HANDLE;
+
 		/**
 		 * @brief Checks if the specified Vulkan physical device is suitable for
 		 * use.

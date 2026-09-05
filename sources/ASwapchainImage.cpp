@@ -130,7 +130,7 @@ void evan::ASwapchainImage::createDepthResources(
 		<< "Creating depth resources for swapchain images...";
 
 	VkPhysicalDevice physicalDevice =
-		deviceContext.getDeviceBackend()->_physicalDevice;
+		deviceContext.getDeviceBackend()->getPhysicalDevice();
 
 	VkSampleCountFlagBits msaaSamples = deviceContext.getMsaaSamples();
 	VkCommandPool commandPool		  = deviceContext.getCommandPool();

@@ -7,6 +7,7 @@
 
 #include "evan/glfw/DesktopSwapchainContext.hpp"
 
+#include "evan/CheckedCast.hpp"
 #include "evan/DeviceContext.hpp"
 
 evan::DesktopSwapchainContext::DesktopSwapchainContext(
@@ -64,7 +65,7 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 	for (const auto &swapchainImage: _swapchainImages) {
 		this->getLogger().info() << "Destroying swapchain image and releasing "
 									"associated resources...";
-		swapchainImage->destroy(deviceContext.getDeviceBackend()->_device);
+		swapchainImage->destroy(deviceContext.getDeviceBackend()->getDevice());
 	}
 
 	this->getLogger().info()
@@ -95,8 +96,8 @@ VkResult evan::DesktopSwapchainContext::aquireImage(
 	this->getLogger().info() << "Acquiring next available image from swapchain "
 								"for DesktopSwapchainContext...";
 	VkSwapchainKHR swapchain =
-		dynamic_cast<DesktopSwapchainImage *>(_swapchainImages[index].get())
-			->_swapchain;
+		evan::checkedCast<DesktopSwapchainImage>(*_swapchainImages[index])
+			._swapchain;
 
 	this->getLogger().info()
 		<< "Calling vkAcquireNextImageKHR to acquire image from swapchain...";

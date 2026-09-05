@@ -48,7 +48,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 							   properties.deviceContext.getMsaaSamples());
 	this->createDepthResources(properties.deviceContext);
 	this->createFramebuffers(
-		properties.deviceContext.getDeviceBackend()->_device,
+		properties.deviceContext.getDeviceBackend()->getDevice(),
 		properties.renderPass);
 }
 

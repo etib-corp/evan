@@ -7,6 +7,8 @@
 
 #include "evan/glfw/DesktopSwapchainImage.hpp"
 
+#include "evan/CheckedCast.hpp"
+
 #include <algorithm>
 #include <limits>
 
@@ -18,13 +20,13 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 {
 	this->getLogger().info() << "Initializing DesktopSwapchainImage...";
 
-	auto backend =
-		(evan::DesktopBackend *)(deviceContext.getDeviceBackend().get());
+	auto &backend = evan::checkedCast<evan::DesktopBackend>(
+		*deviceContext.getDeviceBackend());
 
 	this->getLogger().info()
 		<< "Querying swap chain support details for DesktopSwapchainImage...";
 	evan::SwapChainSupportDetails swapChainSupport =
-		backend->querySwapChainSupport();
+		backend.querySwapChainSupport();
 
 	VkSurfaceFormatKHR surfaceFormat =
 		this->chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -44,7 +46,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 
 	VkSwapchainCreateInfoKHR createInfo {};
 	createInfo.sType   = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = backend->_surface;
+	createInfo.surface = backend.getSurface();
 
 	createInfo.minImageCount	= imageCount;
 	createInfo.imageFormat		= surfaceFormat.format;
@@ -53,7 +55,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	evan::QueueFamilyIndices indices = backend->findQueueFamilies();
+	evan::QueueFamilyIndices indices = backend.findQueueFamilies();
 	uint32_t queueFamilyIndices[]	 = { indices.graphicsFamily.value(),
 										 indices.presentFamily.value() };
 
@@ -106,7 +108,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 			   "created successfully.";
 	}
 
-	if (vkCreateSwapchainKHR(backend->_device, &createInfo, nullptr,
+	if (vkCreateSwapchainKHR(backend.getDevice(), &createInfo, nullptr,
 							 &_swapchain)
 		!= VK_SUCCESS) {
 		this->getLogger().error()
@@ -120,11 +122,11 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	_extent = extent;
 	_format = surfaceFormat.format;
 
-	this->createImages(backend->_device, _swapchain);
-	this->createImageViews(*backend);
-	this->createColorResources(*backend, deviceContext.getMsaaSamples());
+	this->createImages(backend.getDevice(), _swapchain);
+	this->createImageViews(backend);
+	this->createColorResources(backend, deviceContext.getMsaaSamples());
 	this->createDepthResources(deviceContext);
-	this->createFramebuffers(backend->_device, renderpass);
+	this->createFramebuffers(backend.getDevice(), renderpass);
 }
 
 evan::DesktopSwapchainImage::~DesktopSwapchainImage()

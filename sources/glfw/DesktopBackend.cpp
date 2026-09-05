@@ -6,6 +6,7 @@
 */
 
 #include "evan/glfw/DesktopBackend.hpp"
+#include "evan/CheckedCast.hpp"
 
 /**
  * @brief Default debug callback function for Vulkan validation layers.
@@ -87,18 +88,19 @@ evan::DesktopBackend::DesktopBackend(const IPlatform &platform)
 
 	this->getLogger().info()
 		<< "Setting up GLFW platform for DesktopBackend...";
-	auto glfwPlatform = dynamic_cast<const IDesktopPlatform *>(&platform);
+	const IDesktopPlatform &glfwPlatform =
+		evan::checkedCast<const IDesktopPlatform>(platform);
 
 	this->createInstance(platform, "Evan", appVersion);
 
 	this->getLogger().info() << "Creating Vulkan surface for DesktopBackend...";
-	_surface = glfwPlatform->createSurface(_VkInstance);
+	_surface = glfwPlatform.createSurface(_VkInstance);
 
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
 	this->createPresentQueue();
 
-	this->setupCallbackEvent(*glfwPlatform);
+	this->setupCallbackEvent(glfwPlatform);
 }
 
 evan::DesktopBackend::~DesktopBackend()
@@ -673,16 +675,17 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting up GLFW input callbacks for DesktopBackend...";
 
-	auto glfwPlatform = dynamic_cast<const IDesktopPlatform *>(&platform);
+	const IDesktopPlatform &glfwPlatform =
+		evan::checkedCast<const IDesktopPlatform>(platform);
 
 	this->getLogger().info() << "Setting GLFW window user pointer to the "
 								"platform instance for callback access...";
-	glfwSetWindowUserPointer(glfwPlatform->_window, (void *)glfwPlatform);
+	glfwSetWindowUserPointer(glfwPlatform._window, (void *)&glfwPlatform);
 
 	this->getLogger().info()
 		<< "Setting GLFW key callback for keyboard input events...";
 	glfwSetKeyCallback(
-		glfwPlatform->_window,
+		glfwPlatform._window,
 		[](GLFWwindow *window, int key, int scancode, int action, int mods) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
@@ -700,7 +703,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW mouse button callback for mouse input events...";
 	glfwSetMouseButtonCallback(
-		glfwPlatform->_window,
+		glfwPlatform._window,
 		[](GLFWwindow *window, int button, int action, int mods) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
@@ -717,7 +720,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW cursor position callback for mouse motion events...";
 	glfwSetCursorPosCallback(
-		glfwPlatform->_window,
+		glfwPlatform._window,
 		[](GLFWwindow *window, double xpos, double ypos) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
@@ -731,7 +734,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW scroll callback for mouse wheel events...";
 	glfwSetScrollCallback(
-		glfwPlatform->_window,
+		glfwPlatform._window,
 		[](GLFWwindow *window, double xoffset, double yoffset) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
@@ -745,7 +748,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info() << "Setting GLFW cursor enter callback for cursor "
 								"enter/leave events...";
 	glfwSetCursorEnterCallback(
-		glfwPlatform->_window, [](GLFWwindow *window, int entered) {
+		glfwPlatform._window, [](GLFWwindow *window, int entered) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
 
@@ -757,7 +760,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW drop callback for file drop events...";
 	glfwSetDropCallback(
-		glfwPlatform->_window,
+		glfwPlatform._window,
 		[](GLFWwindow *window, int count, const char **paths) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
@@ -775,7 +778,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW character callback for text input events...";
 	glfwSetCharCallback(
-		glfwPlatform->_window, [](GLFWwindow *window, unsigned int codepoint) {
+		glfwPlatform._window, [](GLFWwindow *window, unsigned int codepoint) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
 

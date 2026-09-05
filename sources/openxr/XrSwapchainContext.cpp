@@ -7,6 +7,8 @@
 
 #include "evan/openxr/XrSwapchainContext.hpp"
 
+#include "evan/CheckedCast.hpp"
+
 #include <algorithm>
 
 evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
@@ -16,15 +18,16 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	createRenderPass(deviceContext.getDeviceBackend(),
 					 deviceContext.getMsaaSamples());
 
+	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
+		*deviceContext.getDeviceBackend());
+
 	uint32_t swapchainFormatCount =
 		deviceContext.getDeviceBackend()->countSwapchainFormats();
 	auto swapchainFormats =
 		deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
 			swapchainFormatCount);
 
-	_viewsConfigurations =
-		dynamic_cast<XrDeviceBackend *>(deviceContext.getDeviceBackend().get())
-			->enumerateViewConfigurations();
+	_viewsConfigurations = backend.enumerateViewConfigurations();
 	_views.resize(_viewsConfigurations.size(), { XR_TYPE_VIEW });
 
 	_viewSet.resize(_viewsConfigurations.size());
@@ -51,9 +54,7 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 			| XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
 		XrSwapchain swapchain;
-		auto session = dynamic_cast<evan::XrDeviceBackend *>(
-						   deviceContext.getDeviceBackend().get())
-						   ->_session;
+		auto session = backend.getSession();
 		XrResult result =
 			xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain);
 		if (result != XR_SUCCESS) {
@@ -97,10 +98,13 @@ void evan::XrSwapchainContext::recreateSwapchain(
 	this->getLogger().info() << "Recreating swapchain and associated resources "
 								"for XrSwapchainContext";
 
+	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
+		*deviceContext.getDeviceBackend());
+
 	for (const auto &swapchainImage: _swapchainImages) {
 		this->getLogger().info()
 			<< "Destroying swapchain image and releasing resources";
-		swapchainImage->destroy(deviceContext.getDeviceBackend()->_device);
+		swapchainImage->destroy(deviceContext.getDeviceBackend()->getDevice());
 	}
 	_swapchainImages.clear();
 
@@ -123,9 +127,7 @@ void evan::XrSwapchainContext::recreateSwapchain(
 			| XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
 		XrSwapchain swapchain;
-		auto session = dynamic_cast<evan::XrDeviceBackend *>(
-						   deviceContext.getDeviceBackend().get())
-						   ->_session;
+		auto session = backend.getSession();
 		XrResult result =
 			xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain);
 		if (result != XR_SUCCESS) {
@@ -155,8 +157,8 @@ VkResult evan::XrSwapchainContext::aquireImage(
 	this->getLogger().info() << "Acquiring swapchain image";
 
 	XrSwapchain swapchain =
-		dynamic_cast<XrSwapchainImage *>(_swapchainImages[index].get())
-			->_swapchain;
+		evan::checkedCast<XrSwapchainImage>(*_swapchainImages[index])
+			._swapchain;
 	XrSwapchainImageAcquireInfo acquire_info {};
 	acquire_info.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
 	XrResult result =
@@ -174,8 +176,8 @@ void evan::XrSwapchainContext::waitForImage(uint32_t index)
 	this->getLogger().info() << "Waiting for swapchain image";
 
 	XrSwapchain swapchain =
-		dynamic_cast<XrSwapchainImage *>(_swapchainImages[index].get())
-			->_swapchain;
+		evan::checkedCast<XrSwapchainImage>(*_swapchainImages[index])
+			._swapchain;
 	XrSwapchainImageWaitInfo wait_info {};
 	wait_info.type	  = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
 	wait_info.timeout = XR_INFINITE_DURATION;
