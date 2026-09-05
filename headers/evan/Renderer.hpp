@@ -81,8 +81,8 @@ namespace evan
 		 * render pass are valid and properly initialized before constructing
 		 * the Renderer.
 		 */
-		Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
-				 VkSampleCountFlagBits msaaSamples,
+		Renderer(std::shared_ptr<DeviceContext> deviceContext,
+				 VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples,
 				 std::shared_ptr<RessourceManager> ressourceManager);
 
 		~Renderer();
@@ -160,8 +160,7 @@ namespace evan
 		 * the command pool and device backend are properly initialized before
 		 * calling this method to avoid issues during frame creation.
 		 */
-		void createFrame(VkCommandPool commandPool,
-						 const ADeviceBackend &deviceBackend);
+		void createFrame(std::shared_ptr<DeviceContext> deviceContext);
 
 		/**
 		 * @brief Retrieves the Vulkan descriptor pool associated with the
@@ -250,6 +249,14 @@ namespace evan
 		 * ensure proper synchronization between rendering operations.
 		 */
 		std::vector<std::shared_ptr<Frame>> _frames;
+
+		/**
+		 * @brief The device context used to create this renderer's resources.
+		 *
+		 * Kept alive for the lifetime of the Renderer so that frames created
+		 * from it can safely destroy their Vulkan resources on destruction.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
 
 		/**
 		 * @brief The index of the current frame being rendered.

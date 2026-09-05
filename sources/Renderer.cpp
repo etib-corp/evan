@@ -9,10 +9,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
+evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
+						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
 						 std::shared_ptr<RessourceManager> ressourceManager)
 	: _ressourceManager(ressourceManager)
+	, _deviceContext(deviceContext)
 {
 	this->getLogger().info() << "Initializing Renderer...";
 
@@ -21,19 +23,18 @@ evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
 
 	this->getLogger().info() << "Current frame index: " << _currentFrameIndex;
 
-	this->createDescriptorSetLayout(deviceContext.getDeviceBackend()->_device);
-	this->createGraphicsPipelines(deviceContext.getDeviceBackend()->_device,
+	this->createDescriptorSetLayout(deviceContext->getDeviceBackend()->_device);
+	this->createGraphicsPipelines(deviceContext->getDeviceBackend()->_device,
 								  renderPass, msaaSamples);
 	this->createDescriptorPool(
-		deviceContext.getDeviceBackend()->_device,
+		deviceContext->getDeviceBackend()->_device,
 		1000);	  // TODO: Change this with the AssetManager when it will be
 				  // implemented
 	this->getLogger().info() << "Renderer initialized successfully.";
 
 	this->getLogger().info() << "Creating frames for rendering...";
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_frames.emplace_back(std::make_shared<Frame>(
-			deviceContext.getCommandPool(), *deviceContext.getDeviceBackend()));
+		_frames.emplace_back(std::make_shared<Frame>(deviceContext));
 	}
 	this->getLogger().info() << "Frames created successfully.";
 }
@@ -212,11 +213,10 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
 }
 
-void evan::Renderer::createFrame(VkCommandPool commandPool,
-								 const ADeviceBackend &deviceBackend)
+void evan::Renderer::createFrame(std::shared_ptr<DeviceContext> deviceContext)
 {
-	this->getLogger().info() << "Creating frame with command pool...";
-	_frames.emplace_back(std::make_shared<Frame>(commandPool, deviceBackend));
+	this->getLogger().info() << "Creating frame with device context...";
+	_frames.emplace_back(std::make_shared<Frame>(deviceContext));
 }
 
 /////////////

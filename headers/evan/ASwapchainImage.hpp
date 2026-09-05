@@ -324,7 +324,7 @@ namespace evan
 		 * rendering to determine the visibility of objects
 		 * based on their distance from the camera.
 		 */
-		VkImage _depthImage;
+		VkImage _depthImage = VK_NULL_HANDLE;
 
 		/**
 		 * The image view for the depth image, which provides
@@ -333,7 +333,7 @@ namespace evan
 		 * the graphics pipeline and allows shaders to read from or
 		 * write to the depth image during rendering operations.
 		 */
-		VkImageView _depthView;
+		VkImageView _depthView = VK_NULL_HANDLE;
 
 		/**
 		 * The memory allocated for the depth image, which is used to
@@ -341,7 +341,7 @@ namespace evan
 		 * managed by the Vulkan API and is associated with the depth
 		 * image to enable efficient access during rendering operations.
 		 */
-		VkDeviceMemory _depthMemory;
+		VkDeviceMemory _depthMemory = VK_NULL_HANDLE;
 
 		/**
 		 * The color image, which is used to store the
@@ -350,7 +350,7 @@ namespace evan
 		 * part of the swapchain and is used as the
 		 * target for rendering operations.
 		 */
-		VkImage _colorImage;
+		VkImage _colorImage = VK_NULL_HANDLE;
 
 		/**
 		 * The image view for the color image, which
@@ -360,7 +360,7 @@ namespace evan
 		 * allows shaders to read from or write to the color
 		 * image during rendering operations.
 		 */
-		VkImageView _colorView;
+		VkImageView _colorView = VK_NULL_HANDLE;
 
 		/**
 		 * The memory allocated for the color image, which is used to
@@ -368,7 +368,7 @@ namespace evan
 		 * managed by the Vulkan API and is associated with the color image
 		 * to enable efficient access during rendering operations.
 		 */
-		VkDeviceMemory _colorMemory;
+		VkDeviceMemory _colorMemory = VK_NULL_HANDLE;
 
 		/**
 		 * A vector of Vulkan images that represent the swapchain images.
@@ -387,7 +387,7 @@ namespace evan
 		 * the surface capabilities and the desired
 		 * resolution for rendering.
 		 */
-		VkExtent2D _extent;
+		VkExtent2D _extent = { 0, 0 };
 
 		/**
 		 * The format of the swapchain images, which specifies
@@ -395,7 +395,7 @@ namespace evan
 		 * determined based on the surface capabilities and the
 		 * desired format for rendering output.
 		 */
-		VkFormat _format;
+		VkFormat _format = VK_FORMAT_UNDEFINED;
 
 		/**
 		 * A vector of Vulkan images that represent the

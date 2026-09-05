@@ -20,6 +20,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 
 	auto backend =
 		(evan::DesktopBackend *)(deviceContext.getDeviceBackend().get());
+	_device = backend->_device;
 
 	this->getLogger().info()
 		<< "Querying swap chain support details for DesktopSwapchainImage...";
@@ -130,6 +131,7 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 evan::DesktopSwapchainImage::~DesktopSwapchainImage()
 {
 	this->getLogger().info() << "Destroying DesktopSwapchainImage...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -138,41 +140,78 @@ evan::DesktopSwapchainImage::~DesktopSwapchainImage()
 
 void evan::DesktopSwapchainImage::destroy(VkDevice device)
 {
+	(void)device;
+	this->cleanup();
+}
+
+/////////////////////
+// Private Methods //
+/////////////////////
+
+void evan::DesktopSwapchainImage::cleanup()
+{
 	this->getLogger().info()
 		<< "Destroying swapchain image and releasing associated resources for "
 		   "DesktopSwapchainImage...";
 
+	if (_device == VK_NULL_HANDLE) {
+		return;
+	}
+
 	this->getLogger().info()
 		<< "Destroying framebuffers for DesktopSwapchainImage...";
 	for (auto framebuffer: _framebuffers) {
-		this->getLogger().info()
-			<< "Destroying framebuffer and releasing associated resources...";
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
+		if (framebuffer != VK_NULL_HANDLE) {
+			vkDestroyFramebuffer(_device, framebuffer, nullptr);
+		}
 	}
+	_framebuffers.clear();
 
 	this->getLogger().info()
 		<< "Destroying image views for DesktopSwapchainImage...";
 	for (auto imageView: _imageViews) {
-		this->getLogger().info()
-			<< "Destroying image view and releasing associated resources...";
-		vkDestroyImageView(device, imageView, nullptr);
+		if (imageView != VK_NULL_HANDLE) {
+			vkDestroyImageView(_device, imageView, nullptr);
+		}
 	}
+	_imageViews.clear();
 
 	this->getLogger().info()
 		<< "Destroying swapchain for DesktopSwapchainImage...";
-	vkDestroySwapchainKHR(device, _swapchain, nullptr);
+	if (_swapchain != VK_NULL_HANDLE) {
+		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+		_swapchain = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info()
 		<< "Destroying color resources for DesktopSwapchainImage...";
-	vkDestroyImageView(device, _colorView, nullptr);
-	vkDestroyImage(device, _colorImage, nullptr);
-	vkFreeMemory(device, _colorMemory, nullptr);
+	if (_colorView != VK_NULL_HANDLE) {
+		vkDestroyImageView(_device, _colorView, nullptr);
+		_colorView = VK_NULL_HANDLE;
+	}
+	if (_colorImage != VK_NULL_HANDLE) {
+		vkDestroyImage(_device, _colorImage, nullptr);
+		_colorImage = VK_NULL_HANDLE;
+	}
+	if (_colorMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_device, _colorMemory, nullptr);
+		_colorMemory = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info()
 		<< "Destroying depth resources for DesktopSwapchainImage...";
-	vkDestroyImageView(device, _depthView, nullptr);
-	vkDestroyImage(device, _depthImage, nullptr);
-	vkFreeMemory(device, _depthMemory, nullptr);
+	if (_depthView != VK_NULL_HANDLE) {
+		vkDestroyImageView(_device, _depthView, nullptr);
+		_depthView = VK_NULL_HANDLE;
+	}
+	if (_depthImage != VK_NULL_HANDLE) {
+		vkDestroyImage(_device, _depthImage, nullptr);
+		_depthImage = VK_NULL_HANDLE;
+	}
+	if (_depthMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_device, _depthMemory, nullptr);
+		_depthMemory = VK_NULL_HANDLE;
+	}
 }
 
 void evan::DesktopSwapchainImage::fillPresentInfo(
