@@ -67,14 +67,25 @@ void evan::GPUTexture::destroy(VkDevice device)
 {
 	this->getLogger().info() << "Destroying Vulkan resources for GPUTexture...";
 
-	this->getLogger().info() << "Destroying image view...";
-	vkDestroyImage(device, _image, nullptr);
+	if (view != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, view, nullptr);
+		view = VK_NULL_HANDLE;
+	}
 
-	this->getLogger().info() << "Freeing image memory...";
-	vkFreeMemory(device, _memory, nullptr);
+	if (_image != VK_NULL_HANDLE) {
+		vkDestroyImage(device, _image, nullptr);
+		_image = VK_NULL_HANDLE;
+	}
 
-	this->getLogger().info() << "Destroying sampler...";
-	vkDestroySampler(device, sampler, nullptr);
+	if (_memory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _memory, nullptr);
+		_memory = VK_NULL_HANDLE;
+	}
+
+	if (sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(device, sampler, nullptr);
+		sampler = VK_NULL_HANDLE;
+	}
 }
 
 ///////////////////////

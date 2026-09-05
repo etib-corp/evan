@@ -30,6 +30,27 @@ evan::RessourceManager::~RessourceManager()
 {
 	this->getLogger().info()
 		<< "Destroying RessourceManager and cleaning up GPU resources...";
+
+	if (!_deviceContext) {
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+
+	for (auto &[id, material]: _materials) {
+		material->destroy(device);
+	}
+	_materials.clear();
+
+	for (auto &[id, texture]: _textures) {
+		texture->destroy(device);
+	}
+	_textures.clear();
+
+	for (auto &[id, shader]: _shaders) {
+		shader->destroy();
+	}
+	_shaders.clear();
 }
 
 ////////////////////
@@ -55,21 +76,22 @@ void evan::RessourceManager::sync(bool refresh)
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Texture>> textures =
 		_ressourceProvider->getTextures();
 
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+
 	this->getLogger().info() << "Synchronizing shaders...";
 	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Synchronizing shader ID " << id;
-		if (_shaders.find(id) == _shaders.end()) {
+		auto it = _shaders.find(id);
+
+		if (it == _shaders.end()) {
 			this->getLogger().info()
 				<< "Creating new GPUShader for shader ID " << id;
-			_shaders[id] = std::make_shared<GPUShader>(
-				_deviceContext->getDeviceBackend()->_device, *shader);
-		}
-		if (refresh) {
+			_shaders[id] = std::make_shared<GPUShader>(device, *shader);
+		} else if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUShader for shader ID " << id;
-			_shaders[id]->destroy();
-			_shaders[id] = std::make_shared<GPUShader>(
-				_deviceContext->getDeviceBackend()->_device, *shader);
+			it->second->destroy();
+			_shaders[id] = std::make_shared<GPUShader>(device, *shader);
 		}
 	}
 
@@ -78,49 +100,53 @@ void evan::RessourceManager::sync(bool refresh)
 		this->getLogger().info() << "Synchronizing material ID " << id;
 		auto shaderID =
 			_ressourceProvider->getShaderID(material->getShaderName());
+		auto it = _materials.find(id);
 
-		if (_materials.find(id) == _materials.end()) {
+		if (it == _materials.end()) {
+			if (shaderID == 0) {
+				this->getLogger().warning()
+					<< "Shader '" << material->getShaderName()
+					<< "' not found for material ID " << id;
+				continue;	 // Skip this material if its shader is not found
+			}
 			this->getLogger().info()
 				<< "Creating new GPUMaterial for material ID " << id;
-
+			_materials[id] = std::make_shared<GPUMaterial>(
+				_deviceContext, *_renderer, *material, shaderID);
+		} else if (refresh) {
 			if (shaderID == 0) {
 				this->getLogger().warning()
 					<< "Shader '" << material->getShaderName()
 					<< "' not found for material ID " << id;
 				continue;	 // Skip this material if its shader is not found
 			}
-			_materials[id] = std::make_shared<GPUMaterial>(
-				_deviceContext, *_renderer, *material, shaderID);
-		}
-		if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUMaterial for material ID " << id;
-			if (shaderID == 0) {
-				this->getLogger().warning()
-					<< "Shader '" << material->getShaderName()
-					<< "' not found for material ID " << id;
-				continue;	 // Skip this material if its shader is not found
-			}
+			it->second->destroy(device);
 			_materials[id] = std::make_shared<GPUMaterial>(
 				_deviceContext, *_renderer, *material, shaderID);
+		} else {
+			_materials[id]->update(_deviceContext, *_renderer, *material,
+								   shaderID);
 		}
-		_materials[id]->update(_deviceContext, *_renderer, *material, shaderID);
 	}
 
 	this->getLogger().info() << "Synchronizing textures...";
 	for (const auto &[id, texture]: textures) {
 		this->getLogger().info() << "Synchronizing texture ID " << id;
-		if (_textures.find(id) == _textures.end()) {
+		auto it = _textures.find(id);
+
+		if (it == _textures.end()) {
 			// It only creates a Albedo texture for now,
 			// but it will be extended in the future to support
 			// other types of textures (normal, roughness, etc.) based on the
 			// material properties.
 			_textures[id] =
 				std::make_shared<GPUTexture>(*_deviceContext, *texture);
-		}
-		if (refresh) {
+		} else if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUTexture for texture ID " << id;
+			it->second->destroy(device);
 			_textures[id] =
 				std::make_shared<GPUTexture>(*_deviceContext, *texture);
 		}

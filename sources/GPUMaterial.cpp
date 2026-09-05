@@ -48,6 +48,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 			*deviceContext, *texture, textureType));
 	}
 
+	_descriptorPool = renderer.getDescriptorPool();
 	this->createDescriptorSets(
 		deviceBackend->_device, renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
@@ -67,6 +68,18 @@ evan::GPUMaterial::~GPUMaterial()
 void evan::GPUMaterial::destroy(VkDevice device)
 {
 	this->getLogger().info() << "Destroying GPUMaterial...";
+
+	if (!_descriptorSets.empty() && _descriptorPool != VK_NULL_HANDLE) {
+		vkFreeDescriptorSets(device, _descriptorPool,
+							 static_cast<uint32_t>(_descriptorSets.size()),
+							 _descriptorSets.data());
+		_descriptorSets.clear();
+	}
+
+	for (const auto &texture: _textures) {
+		texture->destroy(device);
+	}
+	_textures.clear();
 }
 
 void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
@@ -83,8 +96,17 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 	}
 
 	auto deviceBackend = deviceContext->getDeviceBackend();
+	auto device		   = deviceBackend->_device;
 	auto textures	   = material.getTextures();
 
+	vkFreeDescriptorSets(device, renderer.getDescriptorPool(),
+						 static_cast<uint32_t>(_descriptorSets.size()),
+						 _descriptorSets.data());
+	_descriptorSets.clear();
+
+	for (const auto &texture: _textures) {
+		texture->destroy(device);
+	}
 	_textures.clear();
 
 	for (const auto &texture: textures) {
@@ -113,11 +135,8 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 			*deviceContext, *texture, textureType));
 	}
 
-	vkFreeDescriptorSets(deviceBackend->_device, renderer.getDescriptorPool(),
-						 static_cast<uint32_t>(_descriptorSets.size()),
-						 _descriptorSets.data());
 	this->createDescriptorSets(
-		deviceBackend->_device, renderer.getDescriptorSetLayout(),
+		device, renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
 
 	_uploadedVersion = material.getVersion();

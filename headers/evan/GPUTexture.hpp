@@ -178,13 +178,13 @@ namespace evan
 		/**
 		 * @brief The Vulkan image view associated with this GPUTexture.
 		 */
-		VkImageView view;
+		VkImageView view = VK_NULL_HANDLE;
 
 		/**
 		 * @brief The Vulkan sampler associated with this GPUTexture,
 		 * which defines how the texture is sampled in shader programs.
 		 */
-		VkSampler sampler;
+		VkSampler sampler = VK_NULL_HANDLE;
 
 		/**
 		 * @brief The type of texture represented by this GPUTexture instance,
@@ -268,14 +268,14 @@ namespace evan
 		 * @brief The Vulkan image associated with this GPUTexture, which holds
 		 * the texture data in GPU memory for use in rendering operations.
 		 */
-		VkImage _image;
+		VkImage _image = VK_NULL_HANDLE;
 
 		/**
 		 * @brief The Vulkan device memory allocated for the image associated
 		 * with this GPUTexture, which is used to store the texture data in GPU
 		 * memory.
 		 */
-		VkDeviceMemory _memory;
+		VkDeviceMemory _memory = VK_NULL_HANDLE;
 
 		/**
 		 * @brief The number of mipmap levels generated for the Vulkan image
@@ -285,7 +285,7 @@ namespace evan
 		 * allowing shaders to sample from different mipmap levels based on the
 		 * distance and angle of the textured surface relative to the camera.
 		 */
-		uint32_t _mipLevel;
+		uint32_t _mipLevel = 0;
 
 		private:
 		/**
