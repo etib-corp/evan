@@ -118,7 +118,19 @@ void evan::XrManageActions::bindActionSets(XrDeviceBackend &deviceBackend)
 	this->getLogger().info()
 		<< "Binding action sets to OpenXR interaction profile";
 
-	std::vector<XrActionSuggestedBinding> bindings {
+	const auto &options			  = deviceBackend.getOpenXrOptions();
+	const auto &candidateProfiles = options.interactionProfileCandidates.empty()
+		? InteractionProfile::getDefaultProfileCandidates()
+		: options.interactionProfileCandidates;
+	const std::string fallbackProfile =
+		"/interaction_profiles/khr/simple_controller";
+	const std::string interactionProfile =
+		InteractionProfile::getPreferredInteractionProfilePath(
+			deviceBackend._XrInstance, candidateProfiles, fallbackProfile);
+	this->getLogger().info()
+		<< "Selected interaction profile: " << interactionProfile;
+
+	std::vector<XrActionSuggestedBinding> coreBindings {
 		{ _handsMotionActions->_handAimAction,
 		  InteractionProfile::stringToPath(deviceBackend._XrInstance,
 										   "/user/hand/left/input/aim/pose") },
@@ -152,28 +164,46 @@ void evan::XrManageActions::bindActionSets(XrDeviceBackend &deviceBackend)
 		{ _manageThumbStickActions->_rightHandThumbStickActions->getAction(),
 		  InteractionProfile::stringToPath(
 			  deviceBackend._XrInstance, "/user/hand/right/input/thumbstick") },
-
-		// ERROR: When trying to bind the menu and system buttons, all the
-		// actions stop working and no events are generated.
-		// {_manageButtonsActions->_buttonMenuAction->getAction(),
-		// InteractionProfile::stringToPath(deviceBackend._XrInstance,
-		// "/user/hand/right/input/menu/click")},
-		// {_manageButtonsActions->_buttonSystemAction->getAction(),
-		// InteractionProfile::stringToPath(deviceBackend._XrInstance,
-		// "/user/hand/right/input/system/click")},
 	};
+
+	// Menu/system bindings are optional because some runtimes reserve these
+	// inputs. They are appended to the same suggestion so that, when they are
+	// rejected, the core bindings can be re-suggested on their own.
+	std::vector<XrActionSuggestedBinding> bindings = coreBindings;
+	if (options.enableMenuSystemBindings) {
+		bindings.push_back(
+			{ _manageButtonsActions->_buttonMenuAction->getAction(),
+			  InteractionProfile::stringToPath(
+				  deviceBackend._XrInstance,
+				  "/user/hand/left/input/menu/click") });
+		bindings.push_back(
+			{ _manageButtonsActions->_buttonSystemAction->getAction(),
+			  InteractionProfile::stringToPath(
+				  deviceBackend._XrInstance,
+				  "/user/hand/right/input/system/click") });
+	}
 
 	XrInteractionProfileSuggestedBinding suggestedBindings {
 		XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING
 	};
 	suggestedBindings.interactionProfile = InteractionProfile::stringToPath(
-		deviceBackend._XrInstance,
-		"/interaction_profiles/oculus/touch_controller");
+		deviceBackend._XrInstance, interactionProfile);
 	suggestedBindings.countSuggestedBindings =
 		static_cast<uint32_t>(bindings.size());
 	suggestedBindings.suggestedBindings = bindings.data();
 	XrResult result						= xrSuggestInteractionProfileBindings(
 		deviceBackend._XrInstance, &suggestedBindings);
+	if (result != XR_SUCCESS && bindings.size() != coreBindings.size()) {
+		this->getLogger().warning()
+			<< "Failed to suggest interaction profile bindings including "
+			   "menu/system, retrying without them: "
+			<< result;
+		suggestedBindings.countSuggestedBindings =
+			static_cast<uint32_t>(coreBindings.size());
+		suggestedBindings.suggestedBindings = coreBindings.data();
+		result = xrSuggestInteractionProfileBindings(deviceBackend._XrInstance,
+													 &suggestedBindings);
+	}
 	if (result != XR_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to suggest interaction profile bindings: " << result;
