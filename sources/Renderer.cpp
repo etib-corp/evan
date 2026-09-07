@@ -23,11 +23,11 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 
 	this->getLogger().info() << "Current frame index: " << _currentFrameIndex;
 
-	this->createDescriptorSetLayout(deviceContext->getDeviceBackend()->_device);
-	this->createGraphicsPipelines(deviceContext->getDeviceBackend()->_device,
+	this->createDescriptorSetLayout(deviceContext->getDeviceBackend()->getDevice());
+	this->createGraphicsPipelines(deviceContext->getDeviceBackend()->getDevice(),
 								  renderPass, msaaSamples);
 	this->createDescriptorPool(
-		deviceContext->getDeviceBackend()->_device,
+		deviceContext->getDeviceBackend()->getDevice(),
 		1000);	  // TODO: Change this with the AssetManager when it will be
 				  // implemented
 	this->getLogger().info() << "Renderer initialized successfully.";
@@ -76,7 +76,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 {
 	this->getLogger().info() << "Drawing frame...";
 
-	auto device = deviceContext.getDeviceBackend()->_device;
+	auto device = deviceContext.getDeviceBackend()->getDevice();
 
 	Error preprocessError =
 		deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);

@@ -7,6 +7,7 @@
 
 #include "evan/glfw/DesktopSwapchainContext.hpp"
 
+#include "evan/CheckedCast.hpp"
 #include "evan/DeviceContext.hpp"
 
 std::unordered_map<GLFWwindow *, evan::DesktopSwapchainContext *>
@@ -73,7 +74,7 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 	this->getLogger().info() << "Recreating swapchain and associated resources "
 								"for DesktopSwapchainContext...";
 
-	auto device = deviceContext.getDeviceBackend()->_device;
+	auto device = deviceContext.getDeviceBackend()->getDevice();
 
 	this->getLogger().info()
 		<< "Waiting for the device to be idle before recreating the "
@@ -98,7 +99,7 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 	for (const auto &swapchainImage: _swapchainImages) {
 		this->getLogger().info() << "Destroying swapchain image and releasing "
 									"associated resources...";
-		swapchainImage->destroy(device);
+		swapchainImage->destroy(deviceContext.getDeviceBackend()->getDevice());
 	}
 	_swapchainImages.clear();
 	_swapchainImages.push_back(newSwapchainImage);
@@ -121,8 +122,8 @@ VkResult evan::DesktopSwapchainContext::aquireImage(
 	this->getLogger().info() << "Acquiring next available image from swapchain "
 								"for DesktopSwapchainContext...";
 	VkSwapchainKHR swapchain =
-		dynamic_cast<DesktopSwapchainImage *>(_swapchainImages[index].get())
-			->_swapchain;
+		evan::checkedCast<DesktopSwapchainImage>(*_swapchainImages[index])
+			._swapchain;
 
 	this->getLogger().info()
 		<< "Calling vkAcquireNextImageKHR to acquire image from swapchain...";

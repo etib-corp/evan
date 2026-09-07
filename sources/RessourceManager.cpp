@@ -22,7 +22,7 @@ evan::RessourceManager::RessourceManager(
 	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Loading shader ID " << id;
 		_shaders[id] = std::make_shared<GPUShader>(
-			_deviceContext->getDeviceBackend()->_device, *shader);
+			_deviceContext->getDeviceBackend()->getDevice(), *shader);
 	}
 }
 
@@ -35,7 +35,7 @@ evan::RessourceManager::~RessourceManager()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	for (auto &[id, material]: _materials) {
 		material->destroy(device);
@@ -84,7 +84,7 @@ void evan::RessourceManager::sync(bool refresh)
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
 		_ressourceProvider->getShaders();
@@ -101,12 +101,17 @@ void evan::RessourceManager::sync(bool refresh)
 		if (it == _shaders.end()) {
 			this->getLogger().info()
 				<< "Creating new GPUShader for shader ID " << id;
-			_shaders[id] = std::make_shared<GPUShader>(device, *shader);
-		} else if (refresh) {
+			_shaders[id] = std::make_shared<GPUShader>(
+				_deviceContext->getDeviceBackend()->getDevice(), *shader);
+		}
+		if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUShader for shader ID " << id;
-			it->second->destroy();
-			_shaders[id] = std::make_shared<GPUShader>(device, *shader);
+			if (auto it = _shaders.find(id); it != _shaders.end()) {
+				it->second->destroy();
+			}
+			_shaders[id] = std::make_shared<GPUShader>(
+				_deviceContext->getDeviceBackend()->getDevice(), *shader);
 		}
 	}
 

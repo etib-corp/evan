@@ -50,13 +50,13 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 		<< "Mapping staging buffer memory and copying vertex data...";
 
 	void *data = nullptr;
-	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0,
+	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize, 0,
 				&data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 
 	this->getLogger().info() << "Unmapping staging buffer memory...";
 
-	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
+	vkUnmapMemory(deviceBackend->getDevice(), stagingBufferMemory);
 
 	ADeviceBackend::CreateBufferProperties vertexBufferProperties = {
 		._size	= bufferSize,
@@ -69,7 +69,7 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 	deviceBackend->createBuffer(vertexBufferProperties);
 
 	ADeviceBackend::CopyBufferProperties copyBufferProperties = {
-		._logicalDevice = deviceBackend->_device,
+		._logicalDevice = deviceBackend->getDevice(),
 		._commandPool	= deviceContext->getCommandPool(),
 		._graphicsQueue = deviceContext->getGraphicsQueue(),
 		._srcBuffer		= stagingBuffer,
@@ -81,8 +81,8 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 	this->getLogger().info() << "Vertex buffer created and data copied "
 								"successfully. Cleaning up staging buffer...";
 
-	vkDestroyBuffer(deviceBackend->_device, stagingBuffer, nullptr);
-	vkFreeMemory(deviceBackend->_device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(deviceBackend->getDevice(), stagingBuffer, nullptr);
+	vkFreeMemory(deviceBackend->getDevice(), stagingBufferMemory, nullptr);
 
 	this->getLogger().info() << "Vertex buffer created successfully.";
 
@@ -115,7 +115,7 @@ void evan::GPUMesh::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info()
 		<< "Destroying vertex buffer and freeing memory...";
@@ -204,12 +204,12 @@ void evan::GPUMesh::createIndexBuffer(
 
 	this->getLogger().info()
 		<< "Mapping staging buffer memory and copying index data...";
-	vkMapMemory(deviceBackend->_device, stagingBufferMemory, 0, bufferSize, 0,
+	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize, 0,
 				&data);
 	memcpy(data, indices.data(), (size_t)bufferSize);
 
 	this->getLogger().info() << "Unmapping staging buffer memory...";
-	vkUnmapMemory(deviceBackend->_device, stagingBufferMemory);
+	vkUnmapMemory(deviceBackend->getDevice(), stagingBufferMemory);
 
 	ADeviceBackend::CreateBufferProperties indexBufferProperties = {
 		._size = bufferSize,
@@ -222,7 +222,7 @@ void evan::GPUMesh::createIndexBuffer(
 	deviceBackend->createBuffer(indexBufferProperties);
 
 	ADeviceBackend::CopyBufferProperties copyBufferProperties = {
-		._logicalDevice = deviceBackend->_device,
+		._logicalDevice = deviceBackend->getDevice(),
 		._commandPool	= deviceContext->getCommandPool(),
 		._graphicsQueue = deviceContext->getGraphicsQueue(),
 		._srcBuffer		= stagingBuffer,
@@ -233,7 +233,7 @@ void evan::GPUMesh::createIndexBuffer(
 
 	this->getLogger().info()
 		<< "Destroying staging buffer and freeing memory...";
-	vkDestroyBuffer(deviceBackend->_device, stagingBuffer, nullptr);
+	vkDestroyBuffer(deviceBackend->getDevice(), stagingBuffer, nullptr);
 	this->getLogger().info() << "Freeing staging buffer memory...";
-	vkFreeMemory(deviceBackend->_device, stagingBufferMemory, nullptr);
+	vkFreeMemory(deviceBackend->getDevice(), stagingBufferMemory, nullptr);
 }

@@ -17,7 +17,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 							   nullptr);
 
 	_swapchain = properties.swapchain;
-	_device	   = properties.deviceContext.getDeviceBackend()->_device;
+	_device	   = properties.deviceContext.getDeviceBackend()->getDevice();
 	_height	   = properties.createInfo.height;
 	_width	   = properties.createInfo.width;
 
@@ -50,7 +50,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 							   properties.deviceContext.getMsaaSamples());
 	this->createDepthResources(properties.deviceContext);
 	this->createFramebuffers(
-		properties.deviceContext.getDeviceBackend()->_device,
+		properties.deviceContext.getDeviceBackend()->getDevice(),
 		properties.renderPass);
 }
 

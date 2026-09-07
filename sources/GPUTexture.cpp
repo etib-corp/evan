@@ -81,7 +81,7 @@ void evan::GPUTexture::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info() << "Destroying image view...";
 	if (view != VK_NULL_HANDLE) {
@@ -161,12 +161,12 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 
 	this->getLogger().info()
 		<< "Mapping staging buffer memory and copying pixel data...";
-	vkMapMemory(deviceBackend._device, stagingBufferMemory, 0, imageSize, 0,
+	vkMapMemory(deviceBackend.getDevice(), stagingBufferMemory, 0, imageSize, 0,
 				&data);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
 
 	this->getLogger().info() << "Unmapping staging buffer memory...";
-	vkUnmapMemory(deviceBackend._device, stagingBufferMemory);
+	vkUnmapMemory(deviceBackend.getDevice(), stagingBufferMemory);
 
 	ADeviceBackend::CreateImageProperties imageProperties = {
 		._width		 = (uint32_t)texWidth,
@@ -221,8 +221,8 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	this->generateMipmaps(propertiesMipmap, deviceBackend);
 
 	this->getLogger().info() << "Cleaning up staging buffer...";
-	vkDestroyBuffer(deviceBackend._device, stagingBuffer, nullptr);
-	vkFreeMemory(deviceBackend._device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(deviceBackend.getDevice(), stagingBuffer, nullptr);
+	vkFreeMemory(deviceBackend.getDevice(), stagingBufferMemory, nullptr);
 }
 
 void evan::GPUTexture::createImageView(const ADeviceBackend &deviceBackend)
@@ -260,7 +260,7 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 	}
 
 	VkPhysicalDeviceProperties properties {};
-	vkGetPhysicalDeviceProperties(deviceBackend._physicalDevice, &properties);
+	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(), &properties);
 
 	// Check if samplerInfo is "empty" by testing its sType field.
 	// If sType is not set, it's likely uninitialized.
@@ -276,7 +276,7 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 					   properties.limits.maxSamplerAnisotropy);
 	}
 
-	if (vkCreateSampler(deviceBackend._device, &samplerInfo, nullptr, &sampler)
+	if (vkCreateSampler(deviceBackend.getDevice(), &samplerInfo, nullptr, &sampler)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to create texture sampler!";
 		return;
@@ -294,7 +294,7 @@ void evan::GPUTexture::generateMipmaps(
 	this->getLogger().info() << "Generating mipmaps for GPUTexture...";
 
 	VkFormatProperties formatProperties;
-	vkGetPhysicalDeviceFormatProperties(deviceBackend._physicalDevice,
+	vkGetPhysicalDeviceFormatProperties(deviceBackend.getPhysicalDevice(),
 										properties._imageFormat,
 										&formatProperties);
 

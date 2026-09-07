@@ -7,6 +7,7 @@
 
 #include "evan/openxr/IXrPlatform.hpp"
 #include "evan/openxr/XrDeviceBackend.hpp"
+#include "evan/CheckedCast.hpp"
 #include "evan/openxr/XrError.hpp"
 
 ////////////////////
@@ -26,7 +27,7 @@ std::vector<std::shared_ptr<utility::event::Event>>
 
 	XrEventDataBuffer eventDataBuffer { XR_TYPE_EVENT_DATA_BUFFER };
 	evan::XrDeviceBackend &xrDeviceBackend =
-		dynamic_cast<evan::XrDeviceBackend &>(deviceBackend);
+		evan::checkedCast<evan::XrDeviceBackend>(deviceBackend);
 
 	std::vector<std::shared_ptr<utility::event::Event>> events =
 		xrDeviceBackend.pollActions();
