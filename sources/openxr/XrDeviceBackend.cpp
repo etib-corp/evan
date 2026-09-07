@@ -6,6 +6,7 @@
 */
 
 #include "evan/openxr/XrDeviceBackend.hpp"
+#include "evan/openxr/XrError.hpp"
 #include "evan/openxr/XrSwapchainContext.hpp"
 #include "evan/CheckedCast.hpp"
 
@@ -61,14 +62,14 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 // Public Methods //
 ////////////////////
 
-bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
+evan::Error evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Preprocessing frame for OpenXR session";
 
 	if (!_sessionRunning) {
 		this->getLogger().warning()
 			<< "Cannot preprocess frame: XR session is not running";
-		return false;
+		return Error::NotReady;
 	}
 	XrFrameState frameState { XR_TYPE_FRAME_STATE };
 	XrFrameWaitInfo frameWaitInfo {
@@ -78,13 +79,13 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 	if (result != XR_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to wait for OpenXR frame: " << result;
-		return false;
+		return mapXrResult(result);
 	}
 	XrFrameBeginInfo frameBeginInfo { XR_TYPE_FRAME_BEGIN_INFO };
 	result = xrBeginFrame(_session, &frameBeginInfo);
 	if (result != XR_SUCCESS) {
 		this->getLogger().error() << "Failed to begin OpenXR frame: " << result;
-		return false;
+		return mapXrResult(result);
 	}
 	_predictedDisplayTime = frameState.predictedDisplayTime;
 	if (frameState.shouldRender == XR_FALSE) {
@@ -94,7 +95,7 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 		frameEndInfo.layerCount			  = 0;
 		frameEndInfo.layers				  = nullptr;
 		xrEndFrame(_session, &frameEndInfo);
-		return false;
+		return Error::NotReady;
 	}
 	XrViewState viewState { XR_TYPE_VIEW_STATE };
 	uint32_t viewCount = 0;
@@ -112,15 +113,15 @@ bool evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 	if (locateResult != XR_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to locate OpenXR views: " << locateResult;
-		return false;
+		return mapXrResult(locateResult);
 	}
 
-	xrContext.syncViewSet();
-	return true;
+	dynamic_cast<evan::XrSwapchainContext &>(swapchainContext).syncViewSet();
+	return Error::Ok;
 }
 
-bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
-										 ASwapchainImage &swapchainImage)
+evan::Error evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
+												 ASwapchainImage &swapchainImage)
 {
 	this->getLogger().info() << "Processing frame for OpenXR session";
 
@@ -133,12 +134,12 @@ bool evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
 	if (result != XR_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to release OpenXR swapchain image: " << result;
-		return false;
+		return mapXrResult(result);
 	}
-	return true;
+	return Error::Ok;
 }
 
-bool evan::XrDeviceBackend::postprocessFrame(
+evan::Error evan::XrDeviceBackend::postprocessFrame(
 	ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Postprocessing frame for OpenXR session";
@@ -164,9 +165,9 @@ bool evan::XrDeviceBackend::postprocessFrame(
 	XrResult result = xrEndFrame(_session, &frameEndInfo);
 	if (result != XR_SUCCESS) {
 		this->getLogger().error() << "Failed to end OpenXR frame: " << result;
-		return false;
+		return mapXrResult(result);
 	}
-	return true;
+	return Error::Ok;
 }
 
 evan::QueueFamilyIndices evan::XrDeviceBackend::findQueueFamilies()

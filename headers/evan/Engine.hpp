@@ -271,7 +271,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		void update();
+		Error update();
 
 		/**
 		 * @brief Renders the current scene. This method is responsible for
@@ -289,7 +289,18 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		void render();	  // For rendering the current scene.
+		Error render();	  // For rendering the current scene.
+
+		/**
+		 * @brief Returns the last error recorded by the platform.
+		 *
+		 * Platforms record a sticky error while polling events (e.g.
+		 * evan::Error::RuntimeLost when the OpenXR session is lost). Call this
+		 * after pollEvents() to decide whether to tear down cleanly.
+		 *
+		 * @return The last normalized error recorded by the platform.
+		 */
+		Error getLastError() const;
 
 		/**
 		 * @brief Polls for events from the platform. This method is responsible
