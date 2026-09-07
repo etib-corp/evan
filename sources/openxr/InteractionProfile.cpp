@@ -149,3 +149,56 @@ std::vector<std::string>
 	}
 	return sourcePathStrings;
 }
+
+const std::vector<std::string> &
+	evan::InteractionProfile::getDefaultProfileCandidates()
+{
+	static const std::vector<std::string> candidates {
+		"/interaction_profiles/oculus/touch_controller",
+		"/interaction_profiles/microsoft/mixed_reality/motion_controller",
+		"/interaction_profiles/hp/mixed_reality/motion_controller",
+		"/interaction_profiles/valve/index_controller",
+		"/interaction_profiles/khr/simple_controller",
+	};
+	return candidates;
+}
+
+std::string evan::InteractionProfile::getPreferredInteractionProfilePath(
+	XrInstance instance, const std::vector<std::string> &candidateProfiles,
+	const std::string &fallbackProfile)
+{
+	if (instance == XR_NULL_HANDLE) {
+		return fallbackProfile;
+	}
+
+	for (const auto &candidateProfile: candidateProfiles) {
+		if (isInteractionProfileSupported(instance, candidateProfile)) {
+			return candidateProfile;
+		}
+	}
+	return fallbackProfile;
+}
+
+bool evan::InteractionProfile::isInteractionProfileSupported(
+	XrInstance instance, const std::string &profilePath)
+{
+	if (instance == XR_NULL_HANDLE) {
+		return false;
+	}
+
+	XrPath interactionProfile = stringToPath(instance, profilePath);
+	if (interactionProfile == XR_NULL_PATH) {
+		return false;
+	}
+
+	XrInteractionProfileSuggestedBinding suggestedBindings {
+		XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING
+	};
+	suggestedBindings.interactionProfile	 = interactionProfile;
+	suggestedBindings.countSuggestedBindings = 0;
+	suggestedBindings.suggestedBindings		 = nullptr;
+
+	XrResult result =
+		xrSuggestInteractionProfileBindings(instance, &suggestedBindings);
+	return result == XR_SUCCESS;
+}
