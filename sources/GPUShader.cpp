@@ -52,7 +52,7 @@ evan::GPUShader::GPUShader(VkDevice device,
 evan::GPUShader::~GPUShader()
 {
 	this->getLogger().info() << "Destroying GPUShader...";
-	this->cleanup();
+	destroy();
 }
 
 ////////////////////

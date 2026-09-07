@@ -467,7 +467,9 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 			this->getLogger().error() << "Failed to create graphics pipeline !";
 			return;
 		}
-		shader->destroy();
+		// The GPUShader modules are owned by the RessourceManager. They are
+		// released when the manager replaces or drops the wrapper, so do not
+		// destroy them here or RessourceManager would double-free them.
 	}
 	this->getLogger().info() << "Graphics pipelines created successfully.";
 }
