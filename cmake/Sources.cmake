@@ -10,6 +10,7 @@ set(EVAN_SOURCES_COMMON
     sources/ASwapchainImage.cpp
     sources/DeviceContext.cpp
     sources/Engine.cpp
+    sources/Error.cpp
     sources/Frame.cpp
     sources/GPUMaterial.cpp
     sources/GPUMesh.cpp
@@ -28,6 +29,7 @@ set(EVAN_SOURCES_OPENXR
     sources/openxr/IXrPlatform.cpp
     sources/openxr/InteractionProfile.cpp
     sources/openxr/XrDeviceBackend.cpp
+    sources/openxr/XrError.cpp
     sources/openxr/XrManageActions.cpp
     sources/openxr/XrSwapchainContext.cpp
     sources/openxr/XrSwapchainImage.cpp
