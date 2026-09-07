@@ -49,6 +49,7 @@ set(EVAN_SOURCES_GLFW
     sources/glfw/DesktopBackend.cpp
     sources/glfw/DesktopSwapchainContext.cpp
     sources/glfw/DesktopSwapchainImage.cpp
+    sources/glfw/GlfwContext.cpp
     sources/glfw/IDesktopPlatform.cpp
     sources/glfw/platform/LinuxDesktopPlatform.cpp
     sources/glfw/platform/MacOsDesktopPlatform.cpp
