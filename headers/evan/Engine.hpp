@@ -351,26 +351,6 @@ namespace evan
 		void switchScene(size_t sceneIndex);
 
 		/**
-		 * @brief Updates the scene with the specified index using new texture
-		 * paths and mesh data. This method allows users to update an existing
-		 * scene in the engine by providing new data, such as texture paths and
-		 * mesh data.
-		 *
-		 * @param sceneIndex The index of the scene to update.
-		 * @param texturePaths A vector of strings representing the file paths
-		 * to the textures used in the scene. These textures may be associated
-		 * with the materials used by the meshes.
-		 * @param meshData A map where the key is a string representing the mesh
-		 * name, and the value is a vector of GPUMesh objects representing the
-		 * mesh data for that mesh name. Each GPUMesh object contains
-		 * information about the vertices, indices, and material ID associated
-		 * with that mesh.
-		 */
-		void updateScene(size_t sceneIndex,
-						 std::vector<std::string> texturePaths,
-						 std::map<std::string, std::vector<GPUMesh>> meshData);
-
-		/**
 		 * @brief Checks if the engine should capture viewport input. This
 		 * method returns a boolean value indicating whether the engine is
 		 * currently set to capture input events for the viewport, such as mouse
