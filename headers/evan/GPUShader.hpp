@@ -46,8 +46,9 @@ namespace evan
 		 * @brief Destroys the shader modules associated with this GPUShader
 		 * object.
 		 *
-		 * @note This method should be called when the shader modules are no
-		 * longer needed to free up resources.
+		 * @note This method is idempotent: after a module is destroyed its
+		 * handle is reset to VK_NULL_HANDLE, so calling destroy() multiple
+		 * times is safe. It is also invoked automatically by the destructor.
 		 */
 		void destroy();
 

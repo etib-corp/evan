@@ -130,14 +130,20 @@ namespace evan
 		 * @param scene A reference to the Scene, which contains the data to be
 		 * rendered in the frame, including meshes, materials, and textures.
 		 *
+		 * @return evan::Error::Ok on success. evan::Error::Suboptimal or
+		 * evan::Error::SwapchainOutOfDate when the swapchain was recreated and
+		 * the caller should retry on the next frame. Any other value is fatal
+		 * (e.g. evan::Error::DeviceLost) and the caller should stop cleanly.
+		 *
 		 * @note This method should be called for each frame that needs to be
 		 * rendered. Ensure that the DeviceContext, ASwapchainContext, and Scene
 		 * are properly initialized and contain valid data before calling this
 		 * method to avoid rendering issues or exceptions during command buffer
 		 * recording and submission.
 		 */
-		void drawFrame(const DeviceContext &deviceContext,
-					   ASwapchainContext &swapchainContext, const Scene &scene);
+		Error drawFrame(const DeviceContext &deviceContext,
+						ASwapchainContext &swapchainContext,
+						const Scene &scene);
 
 		/**
 		 * @brief Creates a frame for rendering.

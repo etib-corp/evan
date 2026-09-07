@@ -60,7 +60,17 @@ std::vector<std::shared_ptr<utility::event::Event>>
 	evan::IDesktopPlatform::pollEvents(ADeviceBackend &deviceBackend)
 {
 	this->getLogger().info() << "Polling events for Desktop platform...";
+	_lastError = Error::Ok;
 	glfwPollEvents();
+
+	// Surface GLFW errors into the normalized taxonomy.
+	const char *glfwErrorDescription = nullptr;
+	if (glfwGetError(&glfwErrorDescription) != GLFW_NO_ERROR) {
+		this->getLogger().error()
+			<< "GLFW error: "
+			<< (glfwErrorDescription ? glfwErrorDescription : "unknown");
+		_lastError = Error::RuntimeError;
+	}
 
 	std::vector<std::shared_ptr<utility::event::Event>> events;
 
