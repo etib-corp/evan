@@ -113,6 +113,12 @@ namespace evan
 		XrSwapchainImage(const CreateXrSwapchainImageProperties &properties);
 
 		/**
+		 * @brief Releases the swapchain image resources if they were not
+		 * already destroyed through destroy().
+		 */
+		~XrSwapchainImage() override;
+
+		/**
 		 * @brief Destroys the swapchain images and releases associated
 		 * resources.
 		 *
@@ -164,7 +170,7 @@ namespace evan
 		/**
 		 * The OpenXR swapchain handle associated with the swapchain images.
 		 */
-		XrSwapchain _swapchain;
+		XrSwapchain _swapchain = XR_NULL_HANDLE;
 
 		/**
 		 * The dimensions (width and height) of the swapchain images, which are
@@ -201,6 +207,21 @@ namespace evan
 
 		private:
 		/**
+		 * @brief Releases every resource owned by this swapchain image.
+		 *
+		 * Idempotent: each handle is null-checked and reset after being
+		 * destroyed, so it is safe to call from both the destructor and the
+		 * public destroy() method.
+		 */
+		void cleanup();
+
+		/**
+		 * The Vulkan logical device used to destroy the image views,
+		 * framebuffers and color/depth resources.
+		 */
+		VkDevice _device = VK_NULL_HANDLE;
+
+		/**
 		 * A vector of Vulkan swapchain image structures
 		 * (XrSwapchainImageVulkan2KHR) that represent the individual images in
 		 * the swapchain. These structures contain information about the Vulkan
@@ -218,6 +239,6 @@ namespace evan
 		 * swapchain image information during rendering and presentation
 		 * operations.
 		 */
-		XrSwapchainImageBaseHeader *_swapchainImagesBase;
+		XrSwapchainImageBaseHeader *_swapchainImagesBase = nullptr;
 	};
 }	 // namespace evan

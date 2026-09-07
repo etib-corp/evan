@@ -61,6 +61,19 @@ evan::GPUShader::~GPUShader()
 
 void evan::GPUShader::destroy()
 {
+	this->cleanup();
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+void evan::GPUShader::cleanup()
+{
+	if (_logicalDevice == VK_NULL_HANDLE) {
+		return;
+	}
+
 	if (_vertexShaderModule != VK_NULL_HANDLE) {
 		this->getLogger().info() << "Destroying vertex shader module...";
 		vkDestroyShaderModule(_logicalDevice, _vertexShaderModule, nullptr);

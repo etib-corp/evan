@@ -10,6 +10,7 @@
 #include "evan/EvanPlatform.hpp"
 
 #include "evan/ADeviceBackend.hpp"
+#include "evan/DeviceContext.hpp"
 
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
@@ -86,7 +87,7 @@ namespace evan
 		 * access to Vulkan resources and functions needed to create
 		 * synchronization objects and uniform buffers.
 		 */
-		Frame(VkCommandPool commandPool, const ADeviceBackend &deviceBackend);
+		Frame(std::shared_ptr<DeviceContext> deviceContext);
 
 		~Frame();
 
@@ -139,7 +140,7 @@ namespace evan
 		/**
 		 * Vulkan command buffer recorded for this frame.
 		 */
-		VkCommandBuffer _commandBuffer;
+		VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
 
 		/**
 		 * Per-swapchain semaphores signaled when rendering to a swapchain
@@ -150,9 +151,18 @@ namespace evan
 		/**
 		 * @brief Pointer to the mapped memory of the uniform buffer.
 		 */
-		void *_uniformBufferMapped;
+		void *_uniformBufferMapped = nullptr;
 
 		protected:
+		/**
+		 * @brief Releases the synchronization objects, command buffer and
+		 * uniform buffer owned by this frame.
+		 *
+		 * Idempotent: every handle is null-checked and reset after being
+		 * destroyed, making it safe to call from both the destructor and the
+		 * public destroy() method.
+		 */
+		void cleanup();
 		/**
 		 * @brief Creates the Vulkan command buffer for this frame.
 		 *
@@ -199,7 +209,7 @@ namespace evan
 		 * matrices that will be passed to the vertex shader as a uniform buffer
 		 * during rendering.
 		 */
-		VkBuffer _uniformBuffer;
+		VkBuffer _uniformBuffer = VK_NULL_HANDLE;
 
 		/**
 		 * @brief Vulkan device memory associated with the uniform buffer.
@@ -208,6 +218,13 @@ namespace evan
 		 * store the data for the UBO. It is mapped to allow CPU access for
 		 * updating the UBO data before rendering.
 		 */
-		VkDeviceMemory _uniformBufferMemory;
+		VkDeviceMemory _uniformBufferMemory = VK_NULL_HANDLE;
+
+		/**
+		 * @brief The device context used to create this frame, kept alive for
+		 * the lifetime of the frame so that cleanup can safely destroy its
+		 * Vulkan resources.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
 	};
 }	 // namespace evan

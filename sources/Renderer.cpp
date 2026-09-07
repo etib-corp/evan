@@ -9,10 +9,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
+evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
+						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
 						 std::shared_ptr<RessourceManager> ressourceManager)
 	: _ressourceManager(ressourceManager)
+	, _deviceContext(deviceContext)
 {
 	this->getLogger().info() << "Initializing Renderer...";
 
@@ -21,19 +23,18 @@ evan::Renderer::Renderer(DeviceContext &deviceContext, VkRenderPass renderPass,
 
 	this->getLogger().info() << "Current frame index: " << _currentFrameIndex;
 
-	this->createDescriptorSetLayout(deviceContext.getDeviceBackend()->_device);
-	this->createGraphicsPipelines(deviceContext.getDeviceBackend()->_device,
+	this->createDescriptorSetLayout(deviceContext->getDeviceBackend()->_device);
+	this->createGraphicsPipelines(deviceContext->getDeviceBackend()->_device,
 								  renderPass, msaaSamples);
 	this->createDescriptorPool(
-		deviceContext.getDeviceBackend()->_device,
+		deviceContext->getDeviceBackend()->_device,
 		1000);	  // TODO: Change this with the AssetManager when it will be
 				  // implemented
 	this->getLogger().info() << "Renderer initialized successfully.";
 
 	this->getLogger().info() << "Creating frames for rendering...";
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_frames.emplace_back(std::make_shared<Frame>(
-			deviceContext.getCommandPool(), *deviceContext.getDeviceBackend()));
+		_frames.emplace_back(std::make_shared<Frame>(deviceContext));
 	}
 	this->getLogger().info() << "Frames created successfully.";
 }
@@ -126,6 +127,7 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// uniform buffer is updated per view, not per acquired image index.
 	const bool waitOnImageAvailable =
 		swapchainContext.usesImageAvailableSemaphore();
+	VkFence previousViewFence = VK_NULL_HANDLE;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const ViewSet::View &view = viewSet[v];
 		const std::size_t s		  = view.swapchainIndex;
@@ -135,6 +137,18 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				<< "View " << v << " references invalid swapchain index " << s
 				<< ". Skipping view.";
 			continue;
+		}
+
+		// The command buffer and the uniform buffer are shared across the
+		// views of a frame. Before recording the next view, wait for the
+		// previous view's submission to complete, otherwise the previous
+		// submission's command buffer would be reset while still in flight
+		// and its uniform data overwritten (both eyes would end up rendered
+		// with the same, most recently written, view).
+		if (previousViewFence != VK_NULL_HANDLE
+			&& previousViewFence != frame._inFlight[s]) {
+			vkWaitForFences(device, 1, &previousViewFence, VK_TRUE,
+							UINT64_MAX);
 		}
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
@@ -169,6 +183,8 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				<< ". Skipping frame rendering.";
 			return;
 		}
+
+		previousViewFence = frame._inFlight[s];
 	}
 
 	// 3. Present each swapchain once, with the image acquired for it.
@@ -197,11 +213,10 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
 }
 
-void evan::Renderer::createFrame(VkCommandPool commandPool,
-								 const ADeviceBackend &deviceBackend)
+void evan::Renderer::createFrame(std::shared_ptr<DeviceContext> deviceContext)
 {
-	this->getLogger().info() << "Creating frame with command pool...";
-	_frames.emplace_back(std::make_shared<Frame>(commandPool, deviceBackend));
+	this->getLogger().info() << "Creating frame with device context...";
+	_frames.emplace_back(std::make_shared<Frame>(deviceContext));
 }
 
 /////////////
