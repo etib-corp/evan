@@ -53,6 +53,8 @@ namespace evan
 		 * swapchain images during rendering operations. The render pass defines
 		 * the attachments and subpasses that will be used when rendering to the
 		 * swapchain images.
+		 * @param oldSwapchain The previous swapchain to retire when recreating,
+		 * or VK_NULL_HANDLE for the initial creation.
 		 *
 		 * @note The constructor performs several steps to create the swapchain,
 		 * including:
@@ -66,7 +68,8 @@ namespace evan
 		 * cleanup operations.
 		 */
 		DesktopSwapchainImage(const DeviceContext &deviceContext,
-							  GLFWwindow *window, VkRenderPass renderpass);
+							  GLFWwindow *window, VkRenderPass renderpass,
+							  VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE);
 
 		~DesktopSwapchainImage();
 

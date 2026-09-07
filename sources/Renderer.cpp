@@ -86,8 +86,17 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		return preprocessError;
 	}
 
-	auto &frame						 = *_frames[_currentFrameIndex];
-	const ViewSet &viewSet			 = swapchainContext.getViewSet();
+	if (swapchainContext.needsSwapchainRecreation()) {
+		this->getLogger().warning()
+			<< "Swapchain marked for recreation (window resized). Recreating "
+			   "swapchain.";
+		swapchainContext.recreateSwapchain(
+			deviceContext, swapchainContext.getRenderPass());
+		return Error::SwapchainOutOfDate;
+	}
+
+	auto &frame			= *_frames[_currentFrameIndex];
+	const ViewSet &viewSet = swapchainContext.getViewSet();
 	const std::size_t swapchainCount = swapchainContext.getSwapchainCount();
 
 	this->getLogger().info()

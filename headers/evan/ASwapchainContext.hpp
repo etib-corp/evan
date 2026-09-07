@@ -243,6 +243,18 @@ namespace evan
 		virtual bool usesImageAvailableSemaphore() const;
 
 		/**
+		 * @brief Indicates whether the swapchain needs to be recreated.
+		 *
+		 * Derived classes signal this when a platform event (such as a window
+		 * resize) invalidates the current swapchain. The renderer checks this
+		 * before acquiring images so recreation can happen proactively rather
+		 * than only after a failed present or acquire.
+		 *
+		 * @return True when the swapchain must be recreated.
+		 */
+		virtual bool needsSwapchainRecreation() const;
+
+		/**
 		 * @brief Retrieves the view matrix for the specified view index.
 		 *
 		 * This is a convenience accessor delegating to the ViewSet. The view
@@ -304,6 +316,21 @@ namespace evan
 		 * height of the viewport in pixels.
 		 */
 		utility::math::Vector2F getViewportSize() const;
+
+		/**
+		 * @brief Updates a view's viewport size and perspective for a new
+		 * swapchain extent.
+		 *
+		 * The viewport size is set to the full extent (width, height). The
+		 * existing vertical field of view is preserved so the camera transform
+		 * survives swapchain recreation; when no field of view has been set yet
+		 * (vertical FOV is zero), a default of 90 degrees (pi/2) is applied.
+		 *
+		 * @param view The view to update in place.
+		 * @param extent The new swapchain extent in pixels.
+		 */
+		static void updateViewForExtent(utility::graphic::ViewF &view,
+										VkExtent2D extent);
 
 		protected:
 		/**
