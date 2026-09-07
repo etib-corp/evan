@@ -61,10 +61,6 @@ evan::Engine::Engine(
 	_ressourceManager->init(_renderer);
 	_currentScene = 0;
 
-	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_renderer->createFrame(_deviceContext);
-	}
-
 	_scenes[0] = std::make_shared<Scene>();
 }
 
@@ -216,10 +212,10 @@ size_t evan::Engine::addObject(
 		rawObjects.emplace(material_id, *mesh);
 	}
 
-	const std::string pipelineLayer = renderMethod.empty() ? "mesh" : renderMethod;
-	std::shared_ptr<RenderObject> renderObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects,
-									   pipelineLayer);
+	const std::string pipelineLayer =
+		renderMethod.empty() ? "mesh" : renderMethod;
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects, pipelineLayer);
 	auto objectID =
 		_scenes[_currentScene]->addObject(_nextObjectID++, renderObject);
 	_ressourceManager->sync();
