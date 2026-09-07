@@ -78,7 +78,7 @@ namespace xider::tests
 	{
 		NonDesktopPlatform platform;
 
-		EXPECT_THROW(evan::DesktopBackend(platform), std::logic_error);
+		EXPECT_THROW(evan::DesktopBackend{platform}, std::logic_error);
 	}
 }	 // namespace xider::tests
 
