@@ -64,7 +64,7 @@ void evan::RessourceManager::sync(bool refresh)
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
 		_ressourceProvider->getShaders();

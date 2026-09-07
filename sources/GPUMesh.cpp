@@ -115,7 +115,7 @@ void evan::GPUMesh::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info()
 		<< "Destroying vertex buffer and freeing memory...";

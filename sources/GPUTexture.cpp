@@ -80,7 +80,7 @@ void evan::GPUTexture::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info() << "Destroying image view...";
 	if (view != VK_NULL_HANDLE) {

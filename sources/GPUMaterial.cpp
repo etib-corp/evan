@@ -90,7 +90,7 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 
 	// Free the old descriptor sets before the textures they reference are
 	// destroyed, and before the new descriptor sets are allocated.
-	this->freeDescriptorSets(deviceBackend->_device);
+	this->freeDescriptorSets(deviceBackend->getDevice());
 
 	_textures.clear();
 
@@ -157,7 +157,7 @@ void evan::GPUMaterial::cleanup()
 {
 	VkDevice device = VK_NULL_HANDLE;
 	if (_deviceContext && _deviceContext->getDeviceBackend()) {
-		device = _deviceContext->getDeviceBackend()->_device;
+		device = _deviceContext->getDeviceBackend()->getDevice();
 	}
 
 	this->freeDescriptorSets(device);
