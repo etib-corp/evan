@@ -30,11 +30,20 @@ evan::RessourceManager::~RessourceManager()
 {
 	this->getLogger().info()
 		<< "Destroying RessourceManager and cleaning up GPU resources...";
+	this->cleanup();
 }
 
 ////////////////////
 // Public Methods //
 ////////////////////
+
+void evan::RessourceManager::cleanup()
+{
+	this->getLogger().info() << "Releasing cached GPU resources...";
+	_materials.clear();
+	_textures.clear();
+	_shaders.clear();
+}
 
 void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 {
@@ -48,6 +57,15 @@ void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 void evan::RessourceManager::sync(bool refresh)
 {
 	this->getLogger().info() << "Synchronizing RessourceManager...";
+	auto renderer = _renderer.lock();
+	if (!renderer) {
+		this->getLogger().info()
+			<< "Renderer not yet initialized. Skipping synchronization.";
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
 		_ressourceProvider->getShaders();
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Material>> materials =
@@ -67,7 +85,9 @@ void evan::RessourceManager::sync(bool refresh)
 		if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUShader for shader ID " << id;
-			_shaders[id]->destroy();
+			if (auto it = _shaders.find(id); it != _shaders.end()) {
+				it->second->destroy();
+			}
 			_shaders[id] = std::make_shared<GPUShader>(
 				_deviceContext->getDeviceBackend()->_device, *shader);
 		}
@@ -90,7 +110,7 @@ void evan::RessourceManager::sync(bool refresh)
 				continue;	 // Skip this material if its shader is not found
 			}
 			_materials[id] = std::make_shared<GPUMaterial>(
-				_deviceContext, *_renderer, *material, shaderID);
+				_deviceContext, *renderer, *material, shaderID);
 		}
 		if (refresh) {
 			this->getLogger().info()
@@ -101,10 +121,13 @@ void evan::RessourceManager::sync(bool refresh)
 					<< "' not found for material ID " << id;
 				continue;	 // Skip this material if its shader is not found
 			}
+			if (auto it = _materials.find(id); it != _materials.end()) {
+				it->second->destroy(device);
+			}
 			_materials[id] = std::make_shared<GPUMaterial>(
-				_deviceContext, *_renderer, *material, shaderID);
+				_deviceContext, *renderer, *material, shaderID);
 		}
-		_materials[id]->update(_deviceContext, *_renderer, *material, shaderID);
+		_materials[id]->update(_deviceContext, *renderer, *material, shaderID);
 	}
 
 	this->getLogger().info() << "Synchronizing textures...";
@@ -116,13 +139,16 @@ void evan::RessourceManager::sync(bool refresh)
 			// other types of textures (normal, roughness, etc.) based on the
 			// material properties.
 			_textures[id] =
-				std::make_shared<GPUTexture>(*_deviceContext, *texture);
+				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		}
 		if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUTexture for texture ID " << id;
+			if (auto it = _textures.find(id); it != _textures.end()) {
+				it->second->destroy(device);
+			}
 			_textures[id] =
-				std::make_shared<GPUTexture>(*_deviceContext, *texture);
+				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		}
 	}
 }
