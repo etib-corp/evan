@@ -10,6 +10,7 @@
 evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 					   std::vector<GPUVertex> vertices,
 					   std::vector<uint32_t> indices, uint32_t materialID)
+	: _deviceContext(deviceContext)
 {
 	this->getLogger().info()
 		<< "Initializing GPUMesh with material ID: " << materialID << "...";
@@ -90,9 +91,8 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 
 evan::GPUMesh::~GPUMesh()
 {
-	this->getLogger().info()
-		<< "GPUMesh destructor called. GPU resources should be cleaned up "
-		   "using the destroy() method with the appropriate Vulkan device.";
+	this->getLogger().info() << "Destroying GPUMesh...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -101,20 +101,42 @@ evan::GPUMesh::~GPUMesh()
 
 void evan::GPUMesh::destroy(VkDevice device)
 {
-	this->getLogger().info() << "Destroying GPUMesh resources...";
+	(void)device;
+	this->cleanup();
+}
+
+///////////////////////
+// Protected methods //
+///////////////////////
+
+void evan::GPUMesh::cleanup()
+{
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
 
 	this->getLogger().info()
 		<< "Destroying vertex buffer and freeing memory...";
-	vkDestroyBuffer(device, _vertexBuffer, nullptr);
-
-	this->getLogger().info() << "Freeing vertex buffer memory...";
-	vkFreeMemory(device, _vertexBufferMemory, nullptr);
+	if (_vertexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _vertexBuffer, nullptr);
+		_vertexBuffer = VK_NULL_HANDLE;
+	}
+	if (_vertexBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _vertexBufferMemory, nullptr);
+		_vertexBufferMemory = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info() << "Destroying index buffer and freeing memory...";
-	vkDestroyBuffer(device, _indexBuffer, nullptr);
-
-	this->getLogger().info() << "Freeing index buffer memory...";
-	vkFreeMemory(device, _indexBufferMemory, nullptr);
+	if (_indexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _indexBuffer, nullptr);
+		_indexBuffer = VK_NULL_HANDLE;
+	}
+	if (_indexBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _indexBufferMemory, nullptr);
+		_indexBufferMemory = VK_NULL_HANDLE;
+	}
 }
 
 /////////////

@@ -145,7 +145,7 @@ namespace evan
 		 * - Generating mipmaps for the Vulkan image if necessary, based on the
 		 * texture dimensions
 		 */
-		GPUTexture(const DeviceContext &deviceContext,
+		GPUTexture(std::shared_ptr<DeviceContext> deviceContext,
 				   const utility::graphic::Texture &texture,
 				   TextureType type = TextureType::Albedo);
 
@@ -196,6 +196,16 @@ namespace evan
 		TextureType type;
 
 		protected:
+		/**
+		 * @brief Releases every Vulkan resource owned by this texture.
+		 *
+		 * This method is idempotent: each handle is checked against
+		 * VK_NULL_HANDLE before being destroyed and is reset afterwards, so it
+		 * is safe to call more than once or after a partially failed
+		 * construction.
+		 */
+		void cleanup();
+
 		/**
 		 * @brief Creates a Vulkan image based on the provided texture data and
 		 * type, and allocates memory for it.
@@ -285,7 +295,14 @@ namespace evan
 		 * allowing shaders to sample from different mipmap levels based on the
 		 * distance and angle of the textured surface relative to the camera.
 		 */
-		uint32_t _mipLevel = 0;
+		uint32_t _mipLevel = 1;
+
+		/**
+		 * @brief The device context used to create this texture, kept alive for
+		 * the lifetime of the texture so that cleanup can safely destroy its
+		 * Vulkan resources.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
 
 		private:
 		/**

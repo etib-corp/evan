@@ -57,6 +57,14 @@ evan::RessourceManager::~RessourceManager()
 // Public Methods //
 ////////////////////
 
+void evan::RessourceManager::cleanup()
+{
+	this->getLogger().info() << "Releasing cached GPU resources...";
+	_materials.clear();
+	_textures.clear();
+	_shaders.clear();
+}
+
 void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 {
 	this->getLogger().info()
@@ -69,6 +77,15 @@ void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 void evan::RessourceManager::sync(bool refresh)
 {
 	this->getLogger().info() << "Synchronizing RessourceManager...";
+	auto renderer = _renderer.lock();
+	if (!renderer) {
+		this->getLogger().info()
+			<< "Renderer not yet initialized. Skipping synchronization.";
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
 		_ressourceProvider->getShaders();
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Material>> materials =
@@ -148,7 +165,7 @@ void evan::RessourceManager::sync(bool refresh)
 				<< "Refreshing GPUTexture for texture ID " << id;
 			it->second->destroy(device);
 			_textures[id] =
-				std::make_shared<GPUTexture>(*_deviceContext, *texture);
+				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		}
 	}
 }
