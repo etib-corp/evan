@@ -17,6 +17,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 							   nullptr);
 
 	_swapchain = properties.swapchain;
+	_device	   = properties.deviceContext.getDeviceBackend()->_device;
 	_height	   = properties.createInfo.height;
 	_width	   = properties.createInfo.width;
 
@@ -56,31 +57,80 @@ evan::XrSwapchainImage::XrSwapchainImage(
 // Public Methods //
 ////////////////////
 
+evan::XrSwapchainImage::~XrSwapchainImage()
+{
+	this->getLogger().info() << "Destroying XrSwapchainImage...";
+	this->cleanup();
+}
+
 void evan::XrSwapchainImage::destroy(VkDevice device)
+{
+	(void)device;
+	this->cleanup();
+}
+
+///////////////////////
+// Private Methods   //
+///////////////////////
+
+void evan::XrSwapchainImage::cleanup()
 {
 	this->getLogger().info()
 		<< "Destroying XrSwapchainImage and releasing resources";
 
-	for (size_t i = 0; i < _swapchainImages.size(); ++i) {
-		this->getLogger().info() << "Destroying image view and framebuffer for "
-									"swapchain image index: "
-								 << i;
-		vkDestroyImageView(device, _imageViews[i], nullptr);
-		vkDestroyFramebuffer(device, _framebuffers[i], nullptr);
+	if (_device != VK_NULL_HANDLE) {
+		for (size_t i = 0; i < _swapchainImages.size(); ++i) {
+			this->getLogger().info()
+				<< "Destroying image view and framebuffer for swapchain "
+				   "image index: "
+				<< i;
+			if (i < _imageViews.size()
+				&& _imageViews[i] != VK_NULL_HANDLE) {
+				vkDestroyImageView(_device, _imageViews[i], nullptr);
+			}
+			if (i < _framebuffers.size()
+				&& _framebuffers[i] != VK_NULL_HANDLE) {
+				vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+			}
+		}
 	}
 
 	_imageViews.clear();
 	_framebuffers.clear();
 
-	this->getLogger().info()
-		<< "Destroying color and depth resources for swapchain image";
-	vkDestroyImage(device, _colorImage, nullptr);
-	vkFreeMemory(device, _colorMemory, nullptr);
-	vkDestroyImageView(device, _colorView, nullptr);
-	vkDestroyImage(device, _depthImage, nullptr);
-	vkFreeMemory(device, _depthMemory, nullptr);
-	vkDestroyImageView(device, _depthView, nullptr);
-	xrDestroySwapchain(_swapchain);
+	if (_device != VK_NULL_HANDLE) {
+		this->getLogger().info()
+			<< "Destroying color and depth resources for swapchain image";
+		if (_colorView != VK_NULL_HANDLE) {
+			vkDestroyImageView(_device, _colorView, nullptr);
+			_colorView = VK_NULL_HANDLE;
+		}
+		if (_colorImage != VK_NULL_HANDLE) {
+			vkDestroyImage(_device, _colorImage, nullptr);
+			_colorImage = VK_NULL_HANDLE;
+		}
+		if (_colorMemory != VK_NULL_HANDLE) {
+			vkFreeMemory(_device, _colorMemory, nullptr);
+			_colorMemory = VK_NULL_HANDLE;
+		}
+		if (_depthView != VK_NULL_HANDLE) {
+			vkDestroyImageView(_device, _depthView, nullptr);
+			_depthView = VK_NULL_HANDLE;
+		}
+		if (_depthImage != VK_NULL_HANDLE) {
+			vkDestroyImage(_device, _depthImage, nullptr);
+			_depthImage = VK_NULL_HANDLE;
+		}
+		if (_depthMemory != VK_NULL_HANDLE) {
+			vkFreeMemory(_device, _depthMemory, nullptr);
+			_depthMemory = VK_NULL_HANDLE;
+		}
+	}
+
+	if (_swapchain != XR_NULL_HANDLE) {
+		xrDestroySwapchain(_swapchain);
+		_swapchain = XR_NULL_HANDLE;
+	}
 }
 
 void evan::XrSwapchainImage::fillPresentInfo(

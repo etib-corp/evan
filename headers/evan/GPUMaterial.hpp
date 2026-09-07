@@ -217,6 +217,25 @@ namespace evan
 								  const std::vector<VkBuffer> &uniformBuffers);
 
 		/**
+		 * @brief Releases every Vulkan resource owned by this material.
+		 *
+		 * Descriptor sets are freed before the textures they reference are
+		 * destroyed. This method is idempotent, so it is safe to call from both
+		 * the destructor and the public destroy() method.
+		 */
+		void cleanup();
+
+		/**
+		 * @brief Frees the descriptor sets allocated for this material and
+		 * clears the container.
+		 *
+		 * @param device The Vulkan logical device used to free the descriptor
+		 * sets. When VK_NULL_HANDLE or when no descriptor sets are present,
+		 * this method only clears the container.
+		 */
+		void freeDescriptorSets(VkDevice device);
+
+		/**
 		 * Textures associated with the material, categorized by their intended
 		 * use in the rendering pipeline.
 		 */
@@ -237,6 +256,19 @@ namespace evan
 		 * updates to the material's properties and resources.
 		 */
 		uint32_t _uploadedVersion = 0;
+
+		/**
+		 * The device context used to create this material, kept alive for the
+		 * lifetime of the material so that cleanup can safely destroy its
+		 * Vulkan resources.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
+
+		/**
+		 * The descriptor pool from which this material's descriptor sets were
+		 * allocated. Required to free them during cleanup.
+		 */
+		VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
 
 		private:
 		uint32_t getBinding(GPUTexture::TextureType type);

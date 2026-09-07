@@ -102,6 +102,16 @@ namespace evan
 		void sync(bool refresh = false);
 
 		/**
+		 * @brief Releases every cached GPU wrapper owned by this manager.
+		 *
+		 * Clears the material, texture and shader caches. With the wrappers
+		 * being RAII, dropping them destroys their Vulkan resources. Call this
+		 * explicitly before tearing down the Renderer's descriptor pool so that
+		 * descriptor sets are freed while the pool is still valid.
+		 */
+		void cleanup();
+
+		/**
 		 * @brief Retrieves a shared pointer to the GPUMaterial associated with
 		 * the given material ID.
 		 *
@@ -167,12 +177,13 @@ namespace evan
 		std::shared_ptr<DeviceContext> _deviceContext;
 
 		/**
-		 * @brief Shared pointer to the Renderer instance.
+		 * @brief Weak pointer to the Renderer instance.
 		 *
-		 * This member variable holds a shared pointer to the Renderer instance,
-		 * which may be used for resource initialization and management.
+		 * A weak pointer is used to avoid a reference cycle between the
+		 * Renderer (which owns this manager) and this manager (which used to
+		 * own the Renderer). Lock it where the Renderer is needed.
 		 */
-		std::shared_ptr<Renderer> _renderer;
+		std::weak_ptr<Renderer> _renderer;
 
 		/**
 		 * @brief Internal maps to store GPU materials and textures for
