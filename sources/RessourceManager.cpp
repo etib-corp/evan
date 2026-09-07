@@ -93,8 +93,6 @@ void evan::RessourceManager::sync(bool refresh)
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Texture>> textures =
 		_ressourceProvider->getTextures();
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
-
 	this->getLogger().info() << "Synchronizing shaders...";
 	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Synchronizing shader ID " << id;
@@ -129,7 +127,7 @@ void evan::RessourceManager::sync(bool refresh)
 			this->getLogger().info()
 				<< "Creating new GPUMaterial for material ID " << id;
 			_materials[id] = std::make_shared<GPUMaterial>(
-				_deviceContext, *_renderer, *material, shaderID);
+				_deviceContext, *renderer, *material, shaderID);
 		} else if (refresh) {
 			if (shaderID == 0) {
 				this->getLogger().warning()
@@ -141,9 +139,9 @@ void evan::RessourceManager::sync(bool refresh)
 				<< "Refreshing GPUMaterial for material ID " << id;
 			it->second->destroy(device);
 			_materials[id] = std::make_shared<GPUMaterial>(
-				_deviceContext, *_renderer, *material, shaderID);
+				_deviceContext, *renderer, *material, shaderID);
 		} else {
-			_materials[id]->update(_deviceContext, *_renderer, *material,
+			_materials[id]->update(_deviceContext, *renderer, *material,
 								   shaderID);
 		}
 	}
@@ -159,7 +157,7 @@ void evan::RessourceManager::sync(bool refresh)
 			// other types of textures (normal, roughness, etc.) based on the
 			// material properties.
 			_textures[id] =
-				std::make_shared<GPUTexture>(*_deviceContext, *texture);
+				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		} else if (refresh) {
 			this->getLogger().info()
 				<< "Refreshing GPUTexture for texture ID " << id;
