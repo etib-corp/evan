@@ -90,27 +90,40 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		this->getLogger().warning()
 			<< "Swapchain marked for recreation (window resized). Recreating "
 			   "swapchain.";
-		swapchainContext.recreateSwapchain(
-			deviceContext, swapchainContext.getRenderPass());
+		swapchainContext.recreateSwapchain(deviceContext,
+										   swapchainContext.getRenderPass());
 		return Error::SwapchainOutOfDate;
 	}
 
-	auto &frame			= *_frames[_currentFrameIndex];
-	const ViewSet &viewSet = swapchainContext.getViewSet();
+	auto &frame						 = *_frames[_currentFrameIndex];
+	const ViewSet &viewSet			 = swapchainContext.getViewSet();
 	const std::size_t swapchainCount = swapchainContext.getSwapchainCount();
 
 	this->getLogger().info()
 		<< "Rendering " << viewSet.size() << " view(s) across "
 		<< swapchainCount << " swapchain(s).";
 
-	// 1. Acquire exactly one image per swapchain image set.
+	const bool waitOnImageAvailable =
+		swapchainContext.usesImageAvailableSemaphore();
+
+	// 1. Wait for the previous frame using this slot to finish on the GPU.
+	// This guarantees the command buffer, the uniform buffer and the
+	// semaphores are free to be reused for this frame. The fence is only
+	// reset right before the first queue submission, so that early returns
+	// (e.g. swapchain recreation) leave it signaled and the next call does
+	// not deadlock.
+	this->getLogger().info() << "Waiting for in-flight fence...";
+	VkResult fenceResult =
+		vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+	if (fenceResult != VK_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to wait for in-flight fence. Aborting frame rendering.";
+		return mapVkResult(fenceResult);
+	}
+
+	// 2. Acquire exactly one image per swapchain image set.
 	std::vector<uint32_t> acquiredImage(swapchainCount, 0);
 	for (std::size_t s = 0; s < swapchainCount; ++s) {
-		this->getLogger().info()
-			<< "Waiting for in-flight fence for swapchain " << s << "...";
-		vkWaitForFences(device, 1, &frame._inFlight[s], VK_TRUE, UINT64_MAX);
-		vkResetFences(device, 1, &frame._inFlight[s]);
-
 		this->getLogger().info()
 			<< "Acquiring swapchain image for swapchain " << s << "...";
 		VkResult result = swapchainContext.aquireImage(
@@ -136,33 +149,30 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		}
 	}
 
-	// 2. Render each view into the acquired image of its swapchain. The
+	// 3. Render each view into the acquired image of its swapchain. The
 	// uniform buffer is updated per view, not per acquired image index.
-	const bool waitOnImageAvailable =
-		swapchainContext.usesImageAvailableSemaphore();
-	VkFence previousViewFence = VK_NULL_HANDLE;
+	// Views referencing an invalid swapchain index are filtered out up front
+	// so they cannot leave the in-flight fence in an inconsistent state.
+	std::vector<std::size_t> renderableViews;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
-		const ViewSet::View &view = viewSet[v];
-		const std::size_t s		  = view.swapchainIndex;
-
+		const std::size_t s = viewSet[v].swapchainIndex;
 		if (s >= swapchainCount) {
 			this->getLogger().error()
 				<< "View " << v << " references invalid swapchain index " << s
 				<< ". Skipping view.";
 			continue;
 		}
+		renderableViews.push_back(v);
+	}
 
-		// The command buffer and the uniform buffer are shared across the
-		// views of a frame. Before recording the next view, wait for the
-		// previous view's submission to complete, otherwise the previous
-		// submission's command buffer would be reset while still in flight
-		// and its uniform data overwritten (both eyes would end up rendered
-		// with the same, most recently written, view).
-		if (previousViewFence != VK_NULL_HANDLE
-			&& previousViewFence != frame._inFlight[s]) {
-			vkWaitForFences(device, 1, &previousViewFence, VK_TRUE,
-							UINT64_MAX);
-		}
+	if (!renderableViews.empty()) {
+		vkResetFences(device, 1, &frame._inFlight);
+	}
+
+	for (std::size_t i = 0; i < renderableViews.size(); ++i) {
+		const std::size_t v		  = renderableViews[i];
+		const ViewSet::View &view = viewSet[v];
+		const std::size_t s		  = view.swapchainIndex;
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
 
@@ -185,12 +195,12 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		submitInfo.pWaitDstStageMask	= waitStages;
 		submitInfo.commandBufferCount	= 1;
 		submitInfo.pCommandBuffers		= &frame._commandBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores	= &frame._renderFinished[s];
+		submitInfo.signalSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+		submitInfo.pSignalSemaphores =
+			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
-		VkResult submitResult =
-			vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo,
-						  frame._inFlight[s]);
+		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
+											  1, &submitInfo, frame._inFlight);
 		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to submit draw command buffer for view " << v
@@ -198,15 +208,47 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			return mapVkResult(submitResult);
 		}
 
-		previousViewFence = frame._inFlight[s];
+		// The command buffer and the uniform buffer are shared across the
+		// views of a frame. Before recording the next view, wait for this
+		// view's submission to complete, otherwise the command buffer would
+		// be reset while still in flight and its uniform data overwritten
+		// (both eyes would end up rendered with the same, most recently
+		// written, view).
+		const bool isLastView = (i + 1 == renderableViews.size());
+		if (!isLastView) {
+			VkResult viewWaitResult = vkWaitForFences(
+				device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+			if (viewWaitResult != VK_SUCCESS) {
+				this->getLogger().error()
+					<< "Failed to wait for in-flight fence between views. "
+					   "Aborting frame rendering.";
+				return mapVkResult(viewWaitResult);
+			}
+			vkResetFences(device, 1, &frame._inFlight);
+		}
 	}
 
-	// 3. Present each swapchain once, with the image acquired for it.
+	// Backends that do not use presentation semaphores (OpenXR) present on
+	// their own timeline, so wait for the render submission to complete
+	// before handing the images back for composition.
+	if (!waitOnImageAvailable && !renderableViews.empty()) {
+		VkResult renderWaitResult =
+			vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+		if (renderWaitResult != VK_SUCCESS) {
+			this->getLogger().error()
+				<< "Failed to wait for render completion. Aborting frame "
+				   "rendering.";
+			return mapVkResult(renderWaitResult);
+		}
+	}
+
+	// 4. Present each swapchain once, with the image acquired for it.
 	for (std::size_t s = 0; s < swapchainCount; ++s) {
 		VkPresentInfoKHR presentInfo {};
 		presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores	   = &frame._renderFinished[s];
+		presentInfo.waitSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+		presentInfo.pWaitSemaphores =
+			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
 		swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &acquiredImage[s];
