@@ -56,8 +56,7 @@ VkSurfaceKHR
 	VkSurfaceKHR surface;
 	if (glfwCreateWindowSurface(instance, _window, nullptr, &surface)
 		!= VK_SUCCESS) {
-		this->getLogger().error() << "Failed to create Vulkan surface";
-		return VK_NULL_HANDLE;
+		throw std::runtime_error("Failed to create Vulkan surface");
 	}
 	this->getLogger().info() << "Vulkan surface created successfully";
 	return surface;
