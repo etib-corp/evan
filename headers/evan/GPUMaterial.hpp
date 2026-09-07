@@ -252,6 +252,13 @@ namespace evan
 		std::vector<VkDescriptorSet> _descriptorSets;
 
 		/**
+		 * The Vulkan descriptor pool from which the descriptor sets were
+		 * allocated. Stored so they can be freed when the material is
+		 * destroyed.
+		 */
+		VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
+
+		/**
 		 * The version number of the material, used for tracking changes and
 		 * updates to the material's properties and resources.
 		 */
@@ -263,12 +270,6 @@ namespace evan
 		 * Vulkan resources.
 		 */
 		std::shared_ptr<DeviceContext> _deviceContext;
-
-		/**
-		 * The descriptor pool from which this material's descriptor sets were
-		 * allocated. Required to free them during cleanup.
-		 */
-		VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
 
 		private:
 		uint32_t getBinding(GPUTexture::TextureType type);

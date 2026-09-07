@@ -49,6 +49,7 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 			deviceContext, *texture, textureType));
 	}
 
+	_descriptorPool = renderer.getDescriptorPool();
 	this->createDescriptorSets(
 		deviceBackend->getDevice(), renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
@@ -68,8 +69,19 @@ evan::GPUMaterial::~GPUMaterial()
 
 void evan::GPUMaterial::destroy(VkDevice device)
 {
-	(void)device;
-	this->cleanup();
+	this->getLogger().info() << "Destroying GPUMaterial...";
+
+	if (!_descriptorSets.empty() && _descriptorPool != VK_NULL_HANDLE) {
+		vkFreeDescriptorSets(device, _descriptorPool,
+							 static_cast<uint32_t>(_descriptorSets.size()),
+							 _descriptorSets.data());
+		_descriptorSets.clear();
+	}
+
+	for (const auto &texture: _textures) {
+		texture->destroy(device);
+	}
+	_textures.clear();
 }
 
 void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
@@ -86,8 +98,17 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 	}
 
 	auto deviceBackend = deviceContext->getDeviceBackend();
+	auto device		   = deviceBackend->_device;
 	auto textures	   = material.getTextures();
 
+	vkFreeDescriptorSets(device, renderer.getDescriptorPool(),
+						 static_cast<uint32_t>(_descriptorSets.size()),
+						 _descriptorSets.data());
+	_descriptorSets.clear();
+
+	for (const auto &texture: _textures) {
+		texture->destroy(device);
+	}
 	// Free the old descriptor sets before the textures they reference are
 	// destroyed, and before the new descriptor sets are allocated.
 	this->freeDescriptorSets(deviceBackend->getDevice());
