@@ -70,19 +70,20 @@ namespace xider::tests
 			return {};
 		}
 
-		bool preprocessFrame(evan::ASwapchainContext &) override
+		evan::Error preprocessFrame(evan::ASwapchainContext &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
-		bool processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error
+			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
-		bool postprocessFrame(evan::ASwapchainContext &) override
+		evan::Error postprocessFrame(evan::ASwapchainContext &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
 		protected:
@@ -123,19 +124,20 @@ namespace xider::tests
 			return {};
 		}
 
-		bool preprocessFrame(evan::ASwapchainContext &) override
+		evan::Error preprocessFrame(evan::ASwapchainContext &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
-		bool processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error
+			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
-		bool postprocessFrame(evan::ASwapchainContext &) override
+		evan::Error postprocessFrame(evan::ASwapchainContext &) override
 		{
-			return true;
+			return evan::Error::Ok;
 		}
 
 		protected:
