@@ -92,7 +92,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			   "swapchain.";
 		swapchainContext.recreateSwapchain(
 			deviceContext, swapchainContext.getRenderPass());
-		return;
+		return Error::SwapchainOutOfDate;
 	}
 
 	auto &frame			= *_frames[_currentFrameIndex];
