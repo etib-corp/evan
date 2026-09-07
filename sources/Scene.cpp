@@ -56,11 +56,10 @@ bool evan::Scene::removeObject(uint32_t objectID)
 // Getters //
 /////////////
 
-const std::vector<std::shared_ptr<evan::GPUMesh>> &
+std::vector<std::shared_ptr<evan::GPUMesh>>
 	evan::Scene::getMeshes() const
 {
-	static std::vector<std::shared_ptr<GPUMesh>> meshes;
-	meshes.clear();
+	std::vector<std::shared_ptr<GPUMesh>> meshes;
 
 	for (const auto &[_, object]: _objects) {
 		const std::vector<std::shared_ptr<GPUMesh>> &objectMeshes =

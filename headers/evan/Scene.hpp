@@ -122,22 +122,22 @@ namespace evan
 		/**
 		 * @brief Retrieves the meshes contained in the Scene.
 		 *
-		 * This method returns a constant reference to a vector of GPUMesh
-		 * objects representing the meshes contained in the Scene. Each GPUMesh
-		 * object contains information about the vertex and index buffers, as
-		 * well as the material ID associated with that mesh. The returned
-		 * vector allows access to the meshes for rendering or other operations
-		 * while ensuring that the internal state of the Scene is not modified.
+		 * This method returns a vector of GPUMesh objects representing the
+		 * meshes contained in the Scene. Each GPUMesh object contains
+		 * information about the vertex and index buffers, as well as the
+		 * material ID associated with that mesh. The returned vector allows
+		 * access to the meshes for rendering or other operations while
+		 * ensuring that the internal state of the Scene is not modified.
 		 *
-		 * @return A constant reference to a vector of GPUMesh objects
-		 * representing the meshes contained in the Scene.
+		 * @return A vector of GPUMesh objects representing the meshes
+		 * contained in the Scene.
 		 *
 		 * @note The method assumes that the meshes have been properly
 		 * initialized and are ready for use in rendering or other operations.
-		 * It also assumes that the caller will not modify the returned vector,
-		 * as it is a constant reference to the internal state of the Scene.
+		 * The returned vector is built from the current scene contents and is
+		 * safe to use independently of the Scene.
 		 */
-		const std::vector<std::shared_ptr<GPUMesh>> &getMeshes() const;
+		[[nodiscard]] std::vector<std::shared_ptr<GPUMesh>> getMeshes() const;
 
 		/**
 		 * @brief Retrieves the materials contained in the Scene.
