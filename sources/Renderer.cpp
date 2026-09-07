@@ -70,18 +70,20 @@ void evan::Renderer::destroy(VkDevice device)
 	}
 }
 
-void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
-							   ASwapchainContext &swapchainContext,
-							   const Scene &scene)
+evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
+									  ASwapchainContext &swapchainContext,
+									  const Scene &scene)
 {
 	this->getLogger().info() << "Drawing frame...";
 
 	auto device = deviceContext.getDeviceBackend()->_device;
 
-	if (!deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext)) {
+	Error preprocessError =
+		deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
+	if (preprocessError != Error::Ok) {
 		this->getLogger().warning()
 			<< "Preprocessing frame failed. Skipping frame rendering.";
-		return;
+		return preprocessError;
 	}
 
 	if (swapchainContext.needsSwapchainRecreation()) {
@@ -117,18 +119,20 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		swapchainContext.waitForImage(static_cast<uint32_t>(s));
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		Error acquireError = mapVkResult(result);
+		if (acquireError == Error::SwapchainOutOfDate
+			|| acquireError == Error::Suboptimal) {
 			this->getLogger().warning()
 				<< "Swapchain " << s
 				<< " is out of date. Recreating swapchain.";
 			swapchainContext.recreateSwapchain(
 				deviceContext, swapchainContext.getRenderPass());
-			return;
-		} else if (result != VK_SUCCESS) {
+			return acquireError;
+		} else if (acquireError != Error::Ok) {
 			this->getLogger().error()
 				<< "Failed to acquire swapchain image for swapchain " << s
-				<< ". Skipping frame rendering.";
-			return;
+				<< ". Aborting frame rendering.";
+			return acquireError;
 		}
 	}
 
@@ -184,13 +188,14 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores	= &frame._renderFinished[s];
 
-		if (vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo,
-						  frame._inFlight[s])
-			!= VK_SUCCESS) {
+		VkResult submitResult =
+			vkQueueSubmit(deviceContext.getGraphicsQueue(), 1, &submitInfo,
+						  frame._inFlight[s]);
+		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to submit draw command buffer for view " << v
-				<< ". Skipping frame rendering.";
-			return;
+				<< ". Aborting frame rendering.";
+			return mapVkResult(submitResult);
 		}
 
 		previousViewFence = frame._inFlight[s];
@@ -206,10 +211,20 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
 		presentInfo.pImageIndices = &acquiredImage[s];
 
-		if (!deviceContext.getDeviceBackend()->processFrame(
-				presentInfo, *swapchainContext._swapchainImages[s])) {
+		Error presentError = deviceContext.getDeviceBackend()->processFrame(
+			presentInfo, *swapchainContext._swapchainImages[s]);
+		if (presentError == Error::SwapchainOutOfDate
+			|| presentError == Error::Suboptimal) {
+			this->getLogger().warning()
+				<< "Swapchain " << s
+				<< " is out of date. Recreating swapchain.";
+			swapchainContext.recreateSwapchain(
+				deviceContext, swapchainContext.getRenderPass());
+			return presentError;
+		} else if (presentError != Error::Ok) {
 			this->getLogger().error()
 				<< "Failed to present swapchain " << s << ".";
+			return presentError;
 		}
 	}
 
@@ -219,7 +234,13 @@ void evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	this->getLogger().info() << "Next frame index: " << _currentFrameIndex;
 
 	this->getLogger().info() << "Post-processing frame...";
-	deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
+	Error postprocessError =
+		deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
+	if (postprocessError != Error::Ok) {
+		return postprocessError;
+	}
+
+	return Error::Ok;
 }
 
 void evan::Renderer::createFrame(std::shared_ptr<DeviceContext> deviceContext)
@@ -476,7 +497,9 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 			this->getLogger().error() << "Failed to create graphics pipeline !";
 			return;
 		}
-		shader->destroy();
+		// The GPUShader modules are owned by the RessourceManager. They are
+		// released when the manager replaces or drops the wrapper, so do not
+		// destroy them here or RessourceManager would double-free them.
 	}
 	this->getLogger().info() << "Graphics pipelines created successfully.";
 }

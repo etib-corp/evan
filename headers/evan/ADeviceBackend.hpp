@@ -8,6 +8,7 @@
 #pragma once
 
 #include "evan/EvanPlatform.hpp"
+#include "evan/Error.hpp"
 #include "evan/Version.hpp"
 
 #include "evan/IPlatform.hpp"
@@ -338,7 +339,7 @@ namespace evan
 		 * @return true if preprocessing was successful and the frame is ready
 		 * for presentation, false otherwise
 		 */
-		virtual bool preprocessFrame(ASwapchainContext &swapchainContext) = 0;
+		virtual Error preprocessFrame(ASwapchainContext &swapchainContext) = 0;
 
 		/**
 		 * @brief Processes a frame for presentation.
@@ -353,7 +354,7 @@ namespace evan
 		 * @return true if the frame was processed successfully, false
 		 * otherwise.
 		 */
-		virtual bool processFrame(VkPresentInfoKHR presentInfo,
+		virtual Error processFrame(VkPresentInfoKHR presentInfo,
 								  ASwapchainImage &swapchainImage) = 0;
 
 		/**
@@ -372,7 +373,7 @@ namespace evan
 		 *
 		 * @return true if postprocessing was successful, false otherwise.
 		 */
-		virtual bool postprocessFrame(ASwapchainContext &swapchainContext) = 0;
+		virtual Error postprocessFrame(ASwapchainContext &swapchainContext) = 0;
 
 		/**
 		 * @brief Creates a Vulkan buffer and allocates memory for it.
@@ -389,11 +390,9 @@ namespace evan
 		 * buffer size, usage flags, memory properties, and references to the
 		 * resulting buffer and memory objects.
 		 *
-		 * @throws std::runtime_error If buffer creation or memory allocation
-		 * fails, an exception will be thrown with details about the failure.
-		 *
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		void createBuffer(const CreateBufferProperties &properties) const;
+		Error createBuffer(const CreateBufferProperties &properties) const;
 
 		/**
 		 * @brief Transitions the layout of a Vulkan image.
@@ -407,10 +406,9 @@ namespace evan
 		 * the image layout transition, including device, command pool, queue,
 		 * image, format, old and new layouts, and the number of mipmap levels.
 		 *
-		 * @throws std::runtime_error If the layout transition fails, an
-		 * exception will be thrown with details about the failure.
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		void transitionImageLayout(
+		Error transitionImageLayout(
 			const TransitionImageLayoutProperties &properties) const;
 
 		/**
@@ -473,10 +471,9 @@ namespace evan
 		 * dimensions, format, usage flags, and references to the resulting
 		 * image and memory objects.
 		 *
-		 * @throws std::runtime_error If image creation or memory allocation
-		 * fails, an exception will be thrown with details about the failure.
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		void createImage(const CreateImageProperties &properties) const;
+		Error createImage(const CreateImageProperties &properties) const;
 
 		/**
 		 * @brief Copies data from a Vulkan buffer to a Vulkan image.
@@ -494,10 +491,9 @@ namespace evan
 		 * command pool, graphics queue, source buffer, destination image,
 		 * and image dimensions.
 		 *
-		 * @throws std::runtime_error If the copy operation fails, an exception
-		 * will be thrown with details about the failure.
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		void copyBufferToImage(
+		Error copyBufferToImage(
 			const CopyBufferToImageProperties &properties) const;
 
 		/**
@@ -516,10 +512,9 @@ namespace evan
 		 * handles, command pool, graphics queue, source buffer, destination
 		 * buffer, and the size of the data to copy.
 		 *
-		 * @throws std::runtime_error If the copy operation fails, an exception
-		 * will be thrown with details about the failure.
+		 * @return evan::Error::Ok on success, or a mapped error otherwise.
 		 */
-		void copyBuffer(const CopyBufferProperties &properties) const;
+		Error copyBuffer(const CopyBufferProperties &properties) const;
 
 		/**
 		 * @brief Creates a Vulkan image view for a given image.
@@ -537,13 +532,11 @@ namespace evan
 		 * @param mipLevels The number of mipmap levels in the image, which
 		 * determines the range of mip levels included in the image view.
 		 *
-		 * @return A VkImageView handle representing the created image view.
-		 *
-		 * @throws std::runtime_error If the image view creation fails.
+		 * @return A Result holding the created image view, or a mapped error.
 		 */
-		VkImageView createImageView(VkImage image, VkFormat format,
-									VkImageAspectFlags aspectFlags,
-									uint32_t mipLevels) const;
+		Result<VkImageView> createImageView(VkImage image, VkFormat format,
+											VkImageAspectFlags aspectFlags,
+											uint32_t mipLevels) const;
 
 		/**
 		 * The physical device, which represents a
