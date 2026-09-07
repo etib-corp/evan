@@ -35,7 +35,7 @@ evan::RessourceManager::~RessourceManager()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	for (auto &[id, material]: _materials) {
 		material->destroy(device);

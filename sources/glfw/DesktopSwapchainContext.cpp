@@ -74,7 +74,7 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 	this->getLogger().info() << "Recreating swapchain and associated resources "
 								"for DesktopSwapchainContext...";
 
-	auto device = deviceContext.getDeviceBackend()->_device;
+	auto device = deviceContext.getDeviceBackend()->getDevice();
 
 	this->getLogger().info()
 		<< "Waiting for the device to be idle before recreating the "

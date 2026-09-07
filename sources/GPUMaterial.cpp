@@ -98,7 +98,7 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 	}
 
 	auto deviceBackend = deviceContext->getDeviceBackend();
-	auto device		   = deviceBackend->_device;
+	auto device		   = deviceBackend->getDevice();
 	auto textures	   = material.getTextures();
 
 	vkFreeDescriptorSets(device, renderer.getDescriptorPool(),
