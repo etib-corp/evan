@@ -13,9 +13,12 @@ evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
 	this->getLogger().info()
 		<< "Creating frame with command pool and device backend...";
 
-	this->createCommandBuffer(deviceBackend.getDevice(), commandPool);
-	this->createSyncObjects(deviceBackend.getDevice());
-	this->createUniformBuffer(deviceBackend);
+	auto deviceBackend = _deviceContext->getDeviceBackend();
+	auto commandPool = _deviceContext->getCommandPool();
+
+	this->createCommandBuffer(deviceBackend->getDevice(), commandPool);
+	this->createSyncObjects(deviceBackend->getDevice());
+	this->createUniformBuffer(*deviceBackend);
 
 	this->getLogger().info() << "Frame created successfully.";
 }
@@ -46,7 +49,7 @@ void evan::Frame::cleanup()
 		return;
 	}
 
-	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info() << "Destroying synchronization objects...";
 	for (auto semaphore: _imageAvailable) {
