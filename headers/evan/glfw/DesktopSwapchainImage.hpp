@@ -125,9 +125,23 @@ namespace evan
 		 * lifecycle of the swapchain, ensuring that it is destroyed when no
 		 * longer needed to release associated resources.
 		 */
-		VkSwapchainKHR _swapchain;
+		VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
 
 		private:
+		/**
+		 * @brief Releases every resource owned by this swapchain image.
+		 *
+		 * Idempotent: each handle is null-checked and reset after being
+		 * destroyed, so it is safe to call from both the destructor and the
+		 * public destroy() method.
+		 */
+		void cleanup();
+
+		/**
+		 * The Vulkan logical device used to destroy the swapchain and the
+		 * associated image views, framebuffers and color/depth resources.
+		 */
+		VkDevice _device = VK_NULL_HANDLE;
 		/**
 		 * @brief Chooses the appropriate surface format for the swapchain based
 		 * on the available formats.

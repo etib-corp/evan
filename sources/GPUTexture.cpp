@@ -10,16 +10,16 @@
 #include <algorithm>
 #include <cmath>
 
-evan::GPUTexture::GPUTexture(const DeviceContext &deviceContext,
+evan::GPUTexture::GPUTexture(std::shared_ptr<DeviceContext> deviceContext,
 							 const utility::graphic::Texture &texture,
 							 TextureType type)
-	: type(type)
+	: _deviceContext(deviceContext), type(type)
 {
 	this->getLogger().info() << "Creating GPUTexture...";
 
-	auto deviceBackend = deviceContext.getDeviceBackend();
-	auto commandPool   = deviceContext.getCommandPool();
-	auto graphicsQueue = deviceContext.getGraphicsQueue();
+	auto deviceBackend = deviceContext->getDeviceBackend();
+	auto commandPool   = deviceContext->getCommandPool();
+	auto graphicsQueue = deviceContext->getGraphicsQueue();
 
 	this->createImage(*deviceBackend, texture, commandPool, graphicsQueue);
 	this->createImageView(*deviceBackend);
@@ -57,6 +57,7 @@ evan::GPUTexture::GPUTexture(const DeviceContext &deviceContext,
 evan::GPUTexture::~GPUTexture()
 {
 	this->getLogger().info() << "Destroying GPUTexture...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -65,21 +66,46 @@ evan::GPUTexture::~GPUTexture()
 
 void evan::GPUTexture::destroy(VkDevice device)
 {
-	this->getLogger().info() << "Destroying Vulkan resources for GPUTexture...";
-
-	this->getLogger().info() << "Destroying image view...";
-	vkDestroyImage(device, _image, nullptr);
-
-	this->getLogger().info() << "Freeing image memory...";
-	vkFreeMemory(device, _memory, nullptr);
-
-	this->getLogger().info() << "Destroying sampler...";
-	vkDestroySampler(device, sampler, nullptr);
+	(void)device;
+	this->cleanup();
 }
 
 ///////////////////////
 // Protected methods //
 ///////////////////////
+
+void evan::GPUTexture::cleanup()
+{
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
+
+	this->getLogger().info() << "Destroying image view...";
+	if (view != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, view, nullptr);
+		view = VK_NULL_HANDLE;
+	}
+
+	this->getLogger().info() << "Destroying image...";
+	if (_image != VK_NULL_HANDLE) {
+		vkDestroyImage(device, _image, nullptr);
+		_image = VK_NULL_HANDLE;
+	}
+
+	this->getLogger().info() << "Freeing image memory...";
+	if (_memory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _memory, nullptr);
+		_memory = VK_NULL_HANDLE;
+	}
+
+	this->getLogger().info() << "Destroying sampler...";
+	if (sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(device, sampler, nullptr);
+		sampler = VK_NULL_HANDLE;
+	}
+}
 
 void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 								   const utility::graphic::Texture &texture,
