@@ -89,19 +89,16 @@ void evan::GPUTexture::cleanup()
 		view = VK_NULL_HANDLE;
 	}
 
-	this->getLogger().info() << "Destroying image...";
 	if (_image != VK_NULL_HANDLE) {
 		vkDestroyImage(device, _image, nullptr);
 		_image = VK_NULL_HANDLE;
 	}
 
-	this->getLogger().info() << "Freeing image memory...";
 	if (_memory != VK_NULL_HANDLE) {
 		vkFreeMemory(device, _memory, nullptr);
 		_memory = VK_NULL_HANDLE;
 	}
 
-	this->getLogger().info() << "Destroying sampler...";
 	if (sampler != VK_NULL_HANDLE) {
 		vkDestroySampler(device, sampler, nullptr);
 		sampler = VK_NULL_HANDLE;
