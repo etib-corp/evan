@@ -124,11 +124,13 @@ namespace evan
 		VkBuffer getUniformBuffer() const;
 
 		/**
-		 * Per-swapchain fences ensuring that a frame's submissions for each
-		 * swapchain are not started until the previous frame using them has
-		 * finished.
+		 * In-flight fence ensuring that a frame's resources (command buffer,
+		 * uniform buffer and semaphores) are not reused until the previous
+		 * frame using them has finished on the GPU. One fence is kept per
+		 * in-flight frame, signaled by the frame's queue submission and
+		 * waited on before the frame is reused.
 		 */
-		std::vector<VkFence> _inFlight;
+		VkFence _inFlight = VK_NULL_HANDLE;
 
 		/**
 		 * Per-swapchain semaphores signaled when a swapchain image is
