@@ -355,7 +355,7 @@ namespace evan
 		 * otherwise.
 		 */
 		virtual Error processFrame(VkPresentInfoKHR presentInfo,
-								  ASwapchainImage &swapchainImage) = 0;
+								   ASwapchainImage &swapchainImage) = 0;
 
 		/**
 		 * @brief Postprocesses a frame after presentation.
@@ -694,29 +694,26 @@ namespace evan
 		/**
 		 * @brief Finds a suitable memory type for Vulkan resource allocation.
 		 *
-		 * This function queries the Vulkan physical device's memory properties
-		 * to find a memory type that matches the specified type filter and
-		 * memory property flags. It iterates through the available memory types
-		 * and checks if they meet the criteria defined by the type filter and
-		 * properties. If a suitable memory type is found, its index is
-		 * returned; otherwise an exception is thrown indicating that no
-		 * suitable memory type was found.
+		 * Queries the Vulkan physical device's memory properties to find a
+		 * memory type matching the specified type filter and memory property
+		 * flags. Returns Error::Ok with the matching index on success, or
+		 * Error::RuntimeError (value 0) when no memory type satisfies the
+		 * constraints, instead of silently falling back to memory type 0.
 		 *
-		 * @param physicalDevice The Vulkan physical device whose memory
-		 * properties will be queried.
 		 * @param typeFilter A bitmask specifying the acceptable memory types
 		 * based on the resource requirements (e.g., from memory requirements).
 		 * @param properties A bitmask of VkMemoryPropertyFlags specifying the
 		 * desired memory properties (e.g.,
 		 * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT).
 		 *
-		 * @return uint32_t The index of a suitable memory type that matches the
-		 * type filter and properties.
+		 * @return Result<uint32_t> The index of a suitable memory type that
+		 * matches the type filter and properties, or an error when none
+		 * matches.
 		 *
 		 * @note TODO: Remove useless properties (such as the logical device
 		 * which is already a member of the class).
 		 */
-		uint32_t findMemoryType(uint32_t typeFilter,
-								VkMemoryPropertyFlags properties) const;
+		Result<uint32_t> findMemoryType(uint32_t typeFilter,
+										VkMemoryPropertyFlags properties) const;
 	};
 }	 // namespace evan
