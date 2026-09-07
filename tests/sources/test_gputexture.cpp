@@ -129,7 +129,7 @@ namespace xider::tests
 				"evan test", 64, 64);
 			#endif
 
-			evan::DeviceContext deviceContext(*platform);
+			auto deviceContext = std::make_shared<evan::DeviceContext>(*platform);
 			utility::graphic::Texture texture(
 				64, 64, utility::graphic::Texture::TextureType::Albedo);
 			evan::GPUTexture gpuTexture(deviceContext, texture);
