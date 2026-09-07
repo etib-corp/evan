@@ -8,6 +8,8 @@
 #include "evan/glfw/DesktopBackend.hpp"
 #include "evan/CheckedCast.hpp"
 
+#include <stdexcept>
+
 /**
  * @brief Default debug callback function for Vulkan validation layers.
  *
@@ -291,6 +293,11 @@ void evan::DesktopBackend::createPresentQueue()
 
 	QueueFamilyIndices indices = this->findQueueFamilies();
 
+	if (!indices.presentFamily.has_value()) {
+		throw std::runtime_error(
+			"Failed to find a present queue family for the logical device");
+	}
+
 	this->getLogger().info()
 		<< "Retrieving present queue from logical device...";
 
@@ -389,52 +396,14 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		createInfo.ppEnabledExtensionNames = extensionsWrapped.data();
 
 		result = vkCreateInstance(&createInfo, nullptr, &_VkInstance);
-		switch (result) {
-			case VK_SUCCESS:
-				this->getLogger().info()
-					<< "Vulkan instance created successfully with "
-					   "VK_KHR_portability_subset enabled!";
-				break;
-			case VK_ERROR_OUT_OF_HOST_MEMORY:
-				this->getLogger().error()
-					<< "Host out of memory while creating Vulkan instance!";
-				return;
-			case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-				this->getLogger().error()
-					<< "Device out of memory while creating Vulkan instance!";
-				return;
-			case VK_ERROR_INITIALIZATION_FAILED:
-				this->getLogger().error()
-					<< "Vulkan initialization failed while creating instance!";
-				return;
-			case VK_ERROR_LAYER_NOT_PRESENT:
-				this->getLogger().error() << "Validation layer not present "
-											 "while creating Vulkan instance!";
-				return;
-			case VK_ERROR_EXTENSION_NOT_PRESENT:
-				this->getLogger().error() << "Required extension not present "
-											 "while creating Vulkan instance!";
-				return;
-			case VK_ERROR_INCOMPATIBLE_DRIVER:
-				this->getLogger().error()
-					<< "Failed to create Vulkan instance due to incompatible "
-					   "driver, even with VK_KHR_portability_subset enabled! "
-					   "This may indicate a deeper issue with the Vulkan "
-					   "implementation on this platform.";
-				return;
-			default:
-				this->getLogger().error() << "Failed to create Vulkan instance "
-											 "due to unknown error! VkResult: "
-										  << result;
-				return;
-		}
 	}
-	if (result == VK_SUCCESS) {
-		this->getLogger().info() << "Vulkan instance created successfully!";
-	} else {
-		this->getLogger().error()
-			<< "Failed to create Vulkan instance! VkResult: " << result;
+
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error(
+			"Failed to create Vulkan instance! VkResult: "
+			+ std::to_string(result));
 	}
+	this->getLogger().info() << "Vulkan instance created successfully!";
 }
 
 void evan::DesktopBackend::createLogicalDevice()
@@ -457,6 +426,12 @@ void evan::DesktopBackend::createLogicalDevice()
 	this->getLogger().info() << "Device extensions: " << extensionsList;
 
 	QueueFamilyIndices indices = this->findQueueFamilies();
+
+	if (!indices.isComplete()) {
+		throw std::runtime_error(
+			"Failed to find suitable queue families for logical device "
+			"creation");
+	}
 
 	this->getLogger().info()
 		<< "Setting up queue create infos for logical device creation...";
@@ -528,10 +503,12 @@ void evan::DesktopBackend::createLogicalDevice()
 	this->getLogger().info()
 		<< "Creating logical device with the specified queue create infos, "
 		   "enabled features, extensions, and validation layers...";
-	if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device)
-		!= VK_SUCCESS) {
-		this->getLogger().error() << "Failed to create logical device!";
-		return;
+	VkResult result =
+		vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error(
+			"Failed to create logical device! VkResult: "
+			+ std::to_string(result));
 	}
 	this->getLogger().info() << "Logical device created successfully!";
 }
@@ -546,8 +523,7 @@ void evan::DesktopBackend::pickPhysicalDevice()
 	vkEnumeratePhysicalDevices(_VkInstance, &deviceCount, nullptr);
 
 	if (deviceCount == 0) {
-		this->getLogger().error() << "Failed to find GPUs with Vulkan support!";
-		return;
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
 	this->getLogger().info()
@@ -576,8 +552,7 @@ void evan::DesktopBackend::pickPhysicalDevice()
 	}
 
 	if (_physicalDevice == VK_NULL_HANDLE) {
-		this->getLogger().error() << "Failed to find a suitable GPU!";
-		return;
+		throw std::runtime_error("Failed to find a suitable GPU!");
 	}
 	this->getLogger().info() << "Physical device selected successfully.";
 }
