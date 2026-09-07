@@ -7,6 +7,8 @@
 
 #include "evan/glfw/platform/MacOsDesktopPlatform.hpp"
 
+#include <stdexcept>
+
 evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name,
 												 const uint32_t width,
 												 const uint32_t height)
@@ -14,12 +16,7 @@ evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name,
 	this->getLogger().info()
 		<< "Initializing MacOsDesktopPlatform with window name: " << name
 		<< ", width: " << width << ", height: " << height;
-	if (!glfwInit()) {
-		this->getLogger().error() << "Failed to initialize GLFW";
-		return;
-	}
 
-	this->getLogger().info() << "GLFW initialized successfully";
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
@@ -27,9 +24,8 @@ evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name,
 	_window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
 	if (!_window) {
 		this->getLogger().error() << "Failed to create GLFW window";
-		return;
+		throw std::runtime_error("Failed to create GLFW window");
 	}
-	glfwSetWindowAspectRatio(_window, width, height);
 }
 
 ////////////////////

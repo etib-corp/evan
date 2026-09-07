@@ -7,6 +7,8 @@
 
 #include "evan/glfw/platform/LinuxDesktopPlatform.hpp"
 
+#include <stdexcept>
+
 evan::LinuxDesktopPlatform::LinuxDesktopPlatform(const std::string &name,
 												 const uint32_t width,
 												 const uint32_t height)
@@ -14,13 +16,6 @@ evan::LinuxDesktopPlatform::LinuxDesktopPlatform(const std::string &name,
 	this->getLogger().info()
 		<< "Initializing LinuxDesktopPlatform with window name: " << name
 		<< ", width: " << width << ", height: " << height;
-
-	if (!glfwInit()) {
-		this->getLogger().error() << "Failed to initialize GLFW";
-		return;
-	}
-
-	this->getLogger().info() << "GLFW initialized successfully";
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -30,9 +25,8 @@ evan::LinuxDesktopPlatform::LinuxDesktopPlatform(const std::string &name,
 
 	if (!_window) {
 		this->getLogger().error() << "Failed to create GLFW window";
-		return;
+		throw std::runtime_error("Failed to create GLFW window");
 	}
-	glfwSetWindowAspectRatio(_window, width, height);
 }
 
 ////////////////////

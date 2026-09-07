@@ -15,8 +15,11 @@ evan::IDesktopPlatform::~IDesktopPlatform()
 	this->getLogger().info()
 		<< "Destroying IDesktopPlatform and releasing associated resources...";
 
-	glfwDestroyWindow(_window);
-	glfwTerminate();
+	if (_window != nullptr) {
+		glfwDestroyWindow(_window);
+		_window = nullptr;
+	}
+	// _glfwContext releases here; the last instance calls glfwTerminate().
 }
 
 ////////////////////
