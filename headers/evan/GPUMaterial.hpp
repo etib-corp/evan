@@ -271,12 +271,6 @@ namespace evan
 		 */
 		std::shared_ptr<DeviceContext> _deviceContext;
 
-		/**
-		 * The descriptor pool from which this material's descriptor sets were
-		 * allocated. Required to free them during cleanup.
-		 */
-		VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
-
 		private:
 		uint32_t getBinding(GPUTexture::TextureType type);
 	};
