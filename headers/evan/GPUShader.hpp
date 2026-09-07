@@ -67,6 +67,13 @@ namespace evan
 
 		protected:
 		/**
+		 * @brief Releases the Vulkan shader modules owned by this shader.
+		 *
+		 * Idempotent: modules are null-checked and reset after destruction.
+		 */
+		void cleanup();
+
+		/**
 		 * Vulkan shader module for the vertex shader
 		 */
 		VkShaderModule _vertexShaderModule = VK_NULL_HANDLE;
@@ -89,6 +96,6 @@ namespace evan
 		/**
 		 * Vulkan logical device used to create and manage shader modules
 		 */
-		VkDevice _logicalDevice;
+		VkDevice _logicalDevice = VK_NULL_HANDLE;
 	};
 }	 // namespace evan

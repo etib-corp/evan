@@ -7,8 +7,8 @@
 
 #include "evan/Frame.hpp"
 
-evan::Frame::Frame(VkCommandPool commandPool,
-				   const ADeviceBackend &deviceBackend)
+evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
+	: _deviceContext(deviceContext)
 {
 	this->getLogger().info()
 		<< "Creating frame with command pool and device backend...";
@@ -23,6 +23,7 @@ evan::Frame::Frame(VkCommandPool commandPool,
 evan::Frame::~Frame()
 {
 	this->getLogger().info() << "Destroying frame...";
+	this->cleanup();
 }
 
 ////////////////////
@@ -31,28 +32,52 @@ evan::Frame::~Frame()
 
 void evan::Frame::destroy(VkDevice device)
 {
-	this->getLogger().info() << "Destroying Vulkan resources for frame...";
+	(void)device;
+	this->cleanup();
+}
 
-	this->getLogger().info()
-		<< "Destroying uniform buffer and freeing memory...";
-	vkDestroyBuffer(device, _uniformBuffer, nullptr);
+/////////////////////
+// Private Methods //
+/////////////////////
 
-	this->getLogger().info() << "Freeing uniform buffer memory...";
-	vkFreeMemory(device, _uniformBufferMemory, nullptr);
+void evan::Frame::cleanup()
+{
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		return;
+	}
+
+	VkDevice device = _deviceContext->getDeviceBackend()->_device;
 
 	this->getLogger().info() << "Destroying synchronization objects...";
-	for (const auto semaphore: _imageAvailable) {
-		vkDestroySemaphore(device, semaphore, nullptr);
+	for (auto semaphore: _imageAvailable) {
+		if (semaphore != VK_NULL_HANDLE) {
+			vkDestroySemaphore(device, semaphore, nullptr);
+		}
 	}
-	for (const auto semaphore: _renderFinished) {
-		vkDestroySemaphore(device, semaphore, nullptr);
+	for (auto semaphore: _renderFinished) {
+		if (semaphore != VK_NULL_HANDLE) {
+			vkDestroySemaphore(device, semaphore, nullptr);
+		}
 	}
-	for (const auto fence: _inFlight) {
-		vkDestroyFence(device, fence, nullptr);
+	for (auto fence: _inFlight) {
+		if (fence != VK_NULL_HANDLE) {
+			vkDestroyFence(device, fence, nullptr);
+		}
 	}
 	_imageAvailable.clear();
 	_renderFinished.clear();
 	_inFlight.clear();
+
+	this->getLogger().info()
+		<< "Destroying uniform buffer and freeing memory...";
+	if (_uniformBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _uniformBuffer, nullptr);
+		_uniformBuffer = VK_NULL_HANDLE;
+	}
+	if (_uniformBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _uniformBufferMemory, nullptr);
+		_uniformBufferMemory = VK_NULL_HANDLE;
+	}
 }
 
 void evan::Frame::resetCommandBuffer()

@@ -181,11 +181,20 @@ namespace evan
 							   std::vector<uint32_t> indices);
 
 		/**
+		 * @brief Releases the vertex and index buffers owned by this mesh.
+		 *
+		 * Idempotent: every handle is null-checked and reset after being
+		 * destroyed, making it safe to call from both the destructor and the
+		 * public destroy() method.
+		 */
+		void cleanup();
+
+		/**
 		 * Vulkan buffer handle for the vertex buffer
 		 * associated with this GPUMesh instance,
 		 * which contains the vertex data for rendering operations.
 		 */
-		VkBuffer _vertexBuffer;
+		VkBuffer _vertexBuffer = VK_NULL_HANDLE;
 
 		/**
 		 * Vulkan device memory handle for the vertex buffer
@@ -193,14 +202,14 @@ namespace evan
 		 * which is used to manage the memory allocated for the vertex buffer on
 		 * the GPU.
 		 */
-		VkDeviceMemory _vertexBufferMemory;
+		VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
 
 		/**
 		 * Vulkan buffer handle for the index buffer
 		 * associated with this GPUMesh instance,
 		 * which contains the index data for rendering operations.
 		 */
-		VkBuffer _indexBuffer;
+		VkBuffer _indexBuffer = VK_NULL_HANDLE;
 
 		/**
 		 * Vulkan device memory handle for the index buffer
@@ -208,7 +217,7 @@ namespace evan
 		 * which is used to manage the memory allocated for the index buffer on
 		 * the GPU.
 		 */
-		VkDeviceMemory _indexBufferMemory;
+		VkDeviceMemory _indexBufferMemory = VK_NULL_HANDLE;
 
 		/**
 		 * The count of indices stored in the index buffer
@@ -216,13 +225,20 @@ namespace evan
 		 * which is used for rendering operations to determine how many vertices
 		 * to draw based on the index data.
 		 */
-		uint32_t _indexCount;
+		uint32_t _indexCount = 0;
 
 		/**
 		 * The material ID associated with this GPUMesh instance,
 		 * which can be used for rendering purposes to reference material
 		 * properties.
 		 */
-		uint32_t _materialID;
+		uint32_t _materialID = 0;
+
+		/**
+		 * The device context used to create this mesh, kept alive for the
+		 * lifetime of the mesh so that cleanup can safely destroy its Vulkan
+		 * resources.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
 	};
 }	 // namespace evan
