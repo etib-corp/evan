@@ -8,6 +8,7 @@
 #pragma once
 
 #include "evan/openxr/IXrPlatform.hpp"
+#include "evan/openxr/OpenXrOptions.hpp"
 #include "evan/openxr/XrManageActions.hpp"
 
 #include "evan/ADeviceBackend.hpp"
@@ -236,6 +237,60 @@ namespace evan
 		{
 			return _session;
 		}
+
+		/**
+		 * @brief Retrieves the primary view configuration type selected for
+		 * this OpenXR system.
+		 *
+		 * The value is chosen during construction by enumerating the view
+		 * configurations supported by the runtime and preferring stereo over
+		 * mono.
+		 *
+		 * @return XrViewConfigurationType The selected view configuration type.
+		 */
+		XrViewConfigurationType getViewConfigurationType() const
+		{
+			return _viewConfigurationType;
+		}
+
+		/**
+		 * @brief Retrieves the user-configurable OpenXR options.
+		 *
+		 * These are copied from the platform when the backend is constructed.
+		 *
+		 * @return A const reference to the OpenXR options used by this backend.
+		 */
+		const OpenXrOptions &getOpenXrOptions() const
+		{
+			return _openXrOptions;
+		}
+
+		/**
+		 * @brief Enumerates the primary view configuration types supported by
+		 * the OpenXR system.
+		 *
+		 * @return std::vector<XrViewConfigurationType> The supported primary
+		 * view configuration types, or an empty vector on failure.
+		 */
+		std::vector<XrViewConfigurationType>
+			enumerateViewConfigurationTypes() const;
+
+		/**
+		 * @brief Selects a primary view configuration type from the ones
+		 * supported by the runtime.
+		 *
+		 * Prefers XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, then
+		 * XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO, then the first entry. If no
+		 * configuration is provided, PRIMARY_MONO is returned as a safe
+		 * fallback.
+		 *
+		 * @param configurations The view configuration types enumerated from
+		 * the OpenXR system.
+		 * @return XrViewConfigurationType The most appropriate configuration
+		 * for a head-mounted display.
+		 */
+		static XrViewConfigurationType selectViewConfigurationType(
+			const std::vector<XrViewConfigurationType> &configurations);
 
 		/**
 		 * The OpenXR instance, which represents the
@@ -497,5 +552,18 @@ namespace evan
 		 *
 		 */
 		std::vector<const char *> getRequiredInstanceExtensionsAndroid();
+
+		/**
+		 * The primary view configuration type selected for this OpenXR system,
+		 * chosen by enumerating the configurations supported by the runtime.
+		 */
+		XrViewConfigurationType _viewConfigurationType =
+			XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+		/**
+		 * A copy of the user-configurable OpenXR options taken from the
+		 * platform when the backend is constructed.
+		 */
+		OpenXrOptions _openXrOptions;
 	};
 }	 // namespace evan

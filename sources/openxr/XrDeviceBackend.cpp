@@ -20,6 +20,16 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	createXrInstance(platform);
 	getSystem();
 
+	const IXrPlatform &xrPlatform =
+		evan::checkedCast<const IXrPlatform>(platform);
+	_openXrOptions = xrPlatform.getOpenXrOptions();
+
+	const auto viewConfigurations = enumerateViewConfigurationTypes();
+	if (!viewConfigurations.empty()) {
+		_viewConfigurationType =
+			selectViewConfigurationType(viewConfigurations);
+	}
+
 	this->createInstance(platform, "Evan", appVersion);
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
@@ -62,7 +72,8 @@ evan::XrDeviceBackend::~XrDeviceBackend()
 // Public Methods //
 ////////////////////
 
-evan::Error evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
+evan::Error
+	evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Preprocessing frame for OpenXR session";
 
@@ -100,10 +111,9 @@ evan::Error evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainC
 	XrViewState viewState { XR_TYPE_VIEW_STATE };
 	uint32_t viewCount = 0;
 	XrViewLocateInfo viewLocateInfo { XR_TYPE_VIEW_LOCATE_INFO };
-	viewLocateInfo.viewConfigurationType =
-		XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-	viewLocateInfo.displayTime = _predictedDisplayTime;
-	viewLocateInfo.space	   = _space;
+	viewLocateInfo.viewConfigurationType = _viewConfigurationType;
+	viewLocateInfo.displayTime			 = _predictedDisplayTime;
+	viewLocateInfo.space				 = _space;
 	auto &xrContext =
 		evan::checkedCast<evan::XrSwapchainContext>(swapchainContext);
 	std::vector<XrView> &views = xrContext._views;
@@ -121,7 +131,7 @@ evan::Error evan::XrDeviceBackend::preprocessFrame(ASwapchainContext &swapchainC
 }
 
 evan::Error evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
-												 ASwapchainImage &swapchainImage)
+												ASwapchainImage &swapchainImage)
 {
 	this->getLogger().info() << "Processing frame for OpenXR session";
 
@@ -139,8 +149,8 @@ evan::Error evan::XrDeviceBackend::processFrame(VkPresentInfoKHR presentInfo,
 	return Error::Ok;
 }
 
-evan::Error evan::XrDeviceBackend::postprocessFrame(
-	ASwapchainContext &swapchainContext)
+evan::Error
+	evan::XrDeviceBackend::postprocessFrame(ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Postprocessing frame for OpenXR session";
 
@@ -221,8 +231,8 @@ std::vector<XrViewConfigurationView>
 
 	uint32_t viewConfigurationCount = 0;
 	xrEnumerateViewConfigurationViews(_XrInstance, _systemId,
-									  XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
-									  0, &viewConfigurationCount, nullptr);
+									  _viewConfigurationType, 0,
+									  &viewConfigurationCount, nullptr);
 
 	if (viewConfigurationCount == 0) {
 		this->getLogger().error()
@@ -232,10 +242,57 @@ std::vector<XrViewConfigurationView>
 	std::vector<XrViewConfigurationView> viewConfigurations(
 		viewConfigurationCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
 	xrEnumerateViewConfigurationViews(
-		_XrInstance, _systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
-		viewConfigurationCount, &viewConfigurationCount,
-		viewConfigurations.data());
+		_XrInstance, _systemId, _viewConfigurationType, viewConfigurationCount,
+		&viewConfigurationCount, viewConfigurations.data());
 	return viewConfigurations;
+}
+
+std::vector<XrViewConfigurationType>
+	evan::XrDeviceBackend::enumerateViewConfigurationTypes() const
+{
+	this->getLogger().info()
+		<< "Enumerating view configuration types for OpenXR system";
+
+	uint32_t viewConfigurationCount = 0;
+	XrResult result					= xrEnumerateViewConfigurations(
+		_XrInstance, _systemId, 0, &viewConfigurationCount, nullptr);
+	if (result != XR_SUCCESS || viewConfigurationCount == 0) {
+		this->getLogger().error()
+			<< "Failed to enumerate view configuration types: " << result;
+		return {};
+	}
+
+	std::vector<XrViewConfigurationType> viewConfigurations(
+		viewConfigurationCount);
+	result = xrEnumerateViewConfigurations(
+		_XrInstance, _systemId, viewConfigurationCount, &viewConfigurationCount,
+		viewConfigurations.data());
+	if (result != XR_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to enumerate view configuration types: " << result;
+		return {};
+	}
+	viewConfigurations.resize(viewConfigurationCount);
+	return viewConfigurations;
+}
+
+XrViewConfigurationType evan::XrDeviceBackend::selectViewConfigurationType(
+	const std::vector<XrViewConfigurationType> &configurations)
+{
+	for (const auto configuration: configurations) {
+		if (configuration == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO) {
+			return configuration;
+		}
+	}
+	for (const auto configuration: configurations) {
+		if (configuration == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO) {
+			return configuration;
+		}
+	}
+	if (!configurations.empty()) {
+		return configurations.front();
+	}
+	return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO;
 }
 
 std::vector<std::shared_ptr<utility::event::Event>>
