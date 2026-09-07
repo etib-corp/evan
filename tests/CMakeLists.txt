@@ -8,6 +8,7 @@ set(TEST_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/headers")
 set(TEST_SOURCES
     sources/test_engine.cpp
     sources/test_backend_abstraction.cpp
+    sources/test_gputexture.cpp
     sources/test_error.cpp
     sources/test_scene.cpp
 )
