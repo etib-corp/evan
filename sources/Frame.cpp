@@ -62,14 +62,12 @@ void evan::Frame::cleanup()
 			vkDestroySemaphore(device, semaphore, nullptr);
 		}
 	}
-	for (auto fence: _inFlight) {
-		if (fence != VK_NULL_HANDLE) {
-			vkDestroyFence(device, fence, nullptr);
-		}
+	if (_inFlight != VK_NULL_HANDLE) {
+		vkDestroyFence(device, _inFlight, nullptr);
+		_inFlight = VK_NULL_HANDLE;
 	}
 	_imageAvailable.clear();
 	_renderFinished.clear();
-	_inFlight.clear();
 
 	this->getLogger().info()
 		<< "Destroying uniform buffer and freeing memory...";
@@ -135,7 +133,6 @@ void evan::Frame::createSyncObjects(VkDevice device)
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	_inFlight.resize(MAX_SWAPCHAINS);
 	_imageAvailable.resize(MAX_SWAPCHAINS);
 	_renderFinished.resize(MAX_SWAPCHAINS);
 
@@ -145,13 +142,17 @@ void evan::Frame::createSyncObjects(VkDevice device)
 				!= VK_SUCCESS
 			|| vkCreateSemaphore(device, &semaphoreInfo, nullptr,
 								 &_renderFinished[i])
-				!= VK_SUCCESS
-			|| vkCreateFence(device, &fenceInfo, nullptr, &_inFlight[i])
 				!= VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to create synchronization objects for frame!";
 			return;
 		}
+	}
+
+	if (vkCreateFence(device, &fenceInfo, nullptr, &_inFlight) != VK_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to create in-flight fence for frame!";
+		return;
 	}
 	this->getLogger().info() << "Synchronization objects created successfully.";
 }
