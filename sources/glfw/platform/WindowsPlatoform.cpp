@@ -7,6 +7,8 @@
 
 #include "evan/glfw/platform/WindowsPlatform.hpp"
 
+#include <stdexcept>
+
 evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name,
 													 const uint32_t width,
 													 const uint32_t height)
@@ -15,8 +17,7 @@ evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name,
 		<< "Initializing WindowsDesktopPlatform with window name: " << name
 		<< ", width: " << width << ", height: " << height;
 	if (!glfwInit()) {
-		this->getLogger().error() << "Failed to initialize GLFW";
-		return;
+		throw std::runtime_error("Failed to initialize GLFW");
 	}
 
 	this->getLogger().info() << "GLFW initialized successfully";
@@ -26,8 +27,7 @@ evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name,
 	this->getLogger().info() << "Creating GLFW window";
 	_window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
 	if (!_window) {
-		this->getLogger().error() << "Failed to create GLFW window";
-		return;
+		throw std::runtime_error("Failed to create GLFW window");
 	}
 	glfwSetWindowAspectRatio(_window, width, height);
 }
@@ -60,8 +60,7 @@ VkSurfaceKHR
 	VkSurfaceKHR surface;
 	if (glfwCreateWindowSurface(instance, _window, nullptr, &surface)
 		!= VK_SUCCESS) {
-		this->getLogger().error() << "Failed to create Vulkan surface";
-		return VK_NULL_HANDLE;
+		throw std::runtime_error("Failed to create Vulkan surface");
 	}
 	this->getLogger().info() << "Vulkan surface created successfully";
 	return surface;
