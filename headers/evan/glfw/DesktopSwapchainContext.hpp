@@ -189,6 +189,14 @@ namespace evan
 		const ViewSet &getViewSet() const override;
 
 		/**
+		 * @brief Retrieves the MSAA sample count used by this swapchain
+		 * context.
+		 *
+		 * @return The device-level MSAA sample count.
+		 */
+		VkSampleCountFlagBits getMsaaSamples() const override;
+
+		/**
 		 * @brief Desktop swapchains signal the image-available semaphore
 		 * through vkAcquireNextImageKHR.
 		 *
@@ -215,6 +223,11 @@ namespace evan
 		 * @brief GLFW reference window for the swapchain context
 		 */
 		GLFWwindow *_referenceWindow;
+
+		/**
+		 * @brief MSAA sample count used by this swapchain context.
+		 */
+		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		/**
 		 * @brief Set when the GLFW framebuffer size callback fires, signaling

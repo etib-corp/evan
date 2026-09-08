@@ -270,8 +270,11 @@ namespace evan
 		 * initialized and should support the necessary features for depth
 		 * buffering to ensure that the depth resources can be created
 		 * successfully.
+		 * @param msaaSamples The number of samples for multisampling (MSAA) to
+		 * be used by the depth resources.
 		 */
-		void createDepthResources(const DeviceContext &deviceContext);
+		void createDepthResources(const DeviceContext &deviceContext,
+								  VkSampleCountFlagBits msaaSamples);
 
 		/**
 		 * @brief Creates framebuffers for the swapchain images.
@@ -291,9 +294,14 @@ namespace evan
 		 * @param renderPass The Vulkan render pass that defines the structure
 		 * of the rendering operations. This render pass should be compatible
 		 * with the attachments used in the framebuffers.
+		 * @param resolveToSwapchain When true, the framebuffer is created with
+		 * a color, depth and resolve attachment layout. When false, the
+		 * framebuffer only references the swapchain image view and the depth
+		 * view.
 		 */
 		void createFramebuffers(VkDevice logicalDevice,
-								VkRenderPass renderPass);
+								VkRenderPass renderPass,
+								bool resolveToSwapchain);
 
 		/**
 		 * @brief Creates the Vulkan images for the swapchain.

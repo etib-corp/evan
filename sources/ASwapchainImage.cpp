@@ -125,7 +125,7 @@ void evan::ASwapchainImage::createColorResources(
 }
 
 void evan::ASwapchainImage::createDepthResources(
-	const DeviceContext &deviceContext)
+	const DeviceContext &deviceContext, VkSampleCountFlagBits msaaSamples)
 {
 	this->getLogger().info()
 		<< "Creating depth resources for swapchain images...";
@@ -133,9 +133,8 @@ void evan::ASwapchainImage::createDepthResources(
 	VkPhysicalDevice physicalDevice =
 		deviceContext.getDeviceBackend()->getPhysicalDevice();
 
-	VkSampleCountFlagBits msaaSamples = deviceContext.getMsaaSamples();
-	VkCommandPool commandPool		  = deviceContext.getCommandPool();
-	VkQueue graphicsQueue			  = deviceContext.getGraphicsQueue();
+	VkCommandPool commandPool = deviceContext.getCommandPool();
+	VkQueue graphicsQueue	  = deviceContext.getGraphicsQueue();
 
 	this->getLogger().info() << "MSAA samples: " << msaaSamples;
 	this->getLogger().info() << "Finding supported depth format...";
@@ -196,7 +195,8 @@ void evan::ASwapchainImage::createDepthResources(
 }
 
 void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
-											   VkRenderPass renderPass)
+											   VkRenderPass renderPass,
+											   bool resolveToSwapchain)
 {
 	this->getLogger().info() << "Creating framebuffers for swapchain images...";
 
@@ -212,8 +212,12 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 			<< ", depth view: " << (uintptr_t)_depthView
 			<< ", image view: " << (uintptr_t)_imageViews[i];
 
-		std::array<VkImageView, 3> attachments = { _colorView, _depthView,
-												   _imageViews[i] };
+		std::vector<VkImageView> attachments;
+		if (resolveToSwapchain) {
+			attachments = { _colorView, _depthView, _imageViews[i] };
+		} else {
+			attachments = { _imageViews[i], _depthView };
+		}
 
 		VkFramebufferCreateInfo framebufferInfo {};
 		framebufferInfo.sType	   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

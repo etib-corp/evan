@@ -79,6 +79,18 @@ namespace evan
 		VkSampleCountFlagBits getMsaaSamples() const;
 
 		/**
+		 * @brief Overrides the MSAA sample count used by this device context.
+		 *
+		 * The requested sample count is applied only when it is supported by
+		 * both the framebuffer color and depth attachments of the physical
+		 * device. Applications can use this to lower the automatically
+		 * selected sample count or raise it up to the hardware limit.
+		 *
+		 * @param samples The MSAA sample count flag bits to use.
+		 */
+		void setMsaaSamples(VkSampleCountFlagBits samples);
+
+		/**
 		 * @brief Retrieves a shared pointer to the ADeviceBackend instance
 		 * associated with this device context.
 		 *
@@ -170,12 +182,10 @@ namespace evan
 		 * Sets _msaaSamples to the highest supported sample count, with a
 		 * fallback to VK_SAMPLE_COUNT_1_BIT if no higher counts are available.
 		 *
-		 * Supported sample counts in descending order of preference:
-		 * - VK_SAMPLE_COUNT_64_BIT
-		 * - VK_SAMPLE_COUNT_32_BIT
-		 * - VK_SAMPLE_COUNT_16_BIT
-		 * - VK_SAMPLE_COUNT_8_BIT
-		 * - VK_SAMPLE_COUNT_4_BIT
+		 * The automatic selection is capped at VK_SAMPLE_COUNT_4_BIT to avoid
+		 * selecting performance-killing sample counts. Supported sample counts
+		 * in descending order of preference:
+		 * - VK_SAMPLE_COUNT_4_BIT (cap)
 		 * - VK_SAMPLE_COUNT_2_BIT
 		 * - VK_SAMPLE_COUNT_1_BIT (default)
 		 *

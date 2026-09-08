@@ -133,6 +133,20 @@ namespace evan
 		VkRenderPass getRenderPass() const;
 
 		/**
+		 * @brief Retrieves the MSAA sample count used by this swapchain
+		 * context.
+		 *
+		 * This is the effective sample count used for the render pass,
+		 * framebuffer attachments and graphics pipelines. Desktop contexts
+		 * return the device-level sample count, while OpenXR contexts return
+		 * the count derived from the runtime's recommended swapchain sample
+		 * count.
+		 *
+		 * @return The MSAA sample count used by this swapchain context.
+		 */
+		virtual VkSampleCountFlagBits getMsaaSamples() const = 0;
+
+		/**
 		 * @brief Acquires the next available image from the swapchain for
 		 * rendering.
 		 *
@@ -370,6 +384,10 @@ namespace evan
 		 * be used in the render pass. This parameter is essential for
 		 * configuring the render pass to support multisampling if required by
 		 * the rendering system.
+		 * @param resolveToSwapchain When true, a one-sample resolve attachment
+		 * targeting the swapchain image is created. When false, the color
+		 * attachment is expected to be the swapchain image itself and no
+		 * resolve attachment is created.
 		 *
 		 * @note Implement this function to ensure that the render pass is
 		 * properly created and configured according to the specific
@@ -380,7 +398,7 @@ namespace evan
 		 */
 		void createRenderPass(
 			const std::shared_ptr<ADeviceBackend> &deviceBackend,
-			VkSampleCountFlagBits msaaSamples);
+			VkSampleCountFlagBits msaaSamples, bool resolveToSwapchain);
 
 		/**
 		 * @brief Selects the appropriate swapchain format from the available

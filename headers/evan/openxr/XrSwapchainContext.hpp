@@ -216,6 +216,17 @@ namespace evan
 		const ViewSet &getViewSet() const override;
 
 		/**
+		 * @brief Retrieves the MSAA sample count used by this swapchain
+		 * context.
+		 *
+		 * The count is derived from the OpenXR runtime's recommended
+		 * swapchain sample count.
+		 *
+		 * @return The MSAA sample count used by this swapchain context.
+		 */
+		VkSampleCountFlagBits getMsaaSamples() const override;
+
+		/**
 		 * @brief Rebuilds the ViewSet from the latest OpenXR view state.
 		 *
 		 * Must be called after xrLocateViews (done in preprocessFrame) so the
@@ -251,10 +262,36 @@ namespace evan
 
 		private:
 		/**
+		 * @brief Selects the effective MSAA sample count and resolve strategy
+		 * from the OpenXR runtime's recommended swapchain sample count.
+		 *
+		 * When the runtime recommends a one-sample swapchain, the engine keeps
+		 * resolving a multisampled color image into the swapchain. When the
+		 * runtime recommends multisampled swapchain images, rendering targets
+		 * the swapchain image directly and no resolve attachment is used.
+		 *
+		 * @param deviceContext The device context providing the engine-selected
+		 * sample count fallback.
+		 */
+		void selectMsaaSamples(const DeviceContext &deviceContext);
+
+		/**
 		 * The set of views rendered by this swapchain context. Each view maps
 		 * to one eye and targets its own swapchain image set.
 		 */
 		ViewSet _viewSet;
+
+		/**
+		 * @brief MSAA sample count resolved for this swapchain context from
+		 * the OpenXR runtime's recommended swapchain sample count.
+		 */
+		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		/**
+		 * @brief Whether rendering resolves a multisampled color image into
+		 * the swapchain image (true) or renders directly into it (false).
+		 */
+		bool _resolveToSwapchain = true;
 
 		/**
 		 * Vector of XrCompositionLayerProjectionView structures for each
