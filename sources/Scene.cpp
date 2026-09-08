@@ -52,6 +52,16 @@ bool evan::Scene::removeObject(uint32_t objectID)
 	return _objects.erase(objectID) > 0;
 }
 
+std::shared_ptr<evan::RenderObject> evan::Scene::getObject(uint32_t objectID)
+	const
+{
+	auto objectIt = _objects.find(objectID);
+	if (objectIt == _objects.end()) {
+		return nullptr;
+	}
+	return objectIt->second;
+}
+
 /////////////
 // Getters //
 /////////////
