@@ -120,6 +120,22 @@ namespace evan
 		bool removeObject(uint32_t objectID);
 
 		/**
+		 * @brief Retrieves a renderable object from the Scene by its object ID.
+		 *
+		 * This method looks up the renderable object associated with the given
+		 * object ID and returns it if it exists. It is useful for accessing an
+		 * object after it has been added to the Scene, for example to update
+		 * its data without recreating it.
+		 *
+		 * @param objectID A uint32_t representing the unique identifier of the
+		 * renderable object to retrieve.
+		 *
+		 * @return A shared pointer to the RenderObject if found, or nullptr if
+		 * no object with the given ID exists in the Scene.
+		 */
+		std::shared_ptr<RenderObject> getObject(uint32_t objectID) const;
+
+		/**
 		 * @brief Retrieves the meshes contained in the Scene.
 		 *
 		 * This method returns a constant reference to a vector of GPUMesh

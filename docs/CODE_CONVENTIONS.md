@@ -37,6 +37,18 @@ Within each section, keep this order:
 3. Methods
 4. Fields
 
+## Performance
+
+- Do not create or destroy GPU resources (meshes, textures, buffers) inside
+  input callbacks such as mouse, keyboard, or hand motion handlers. These
+  callbacks can fire many times per frame, and Vulkan buffer creation involves
+  staging buffers, memory allocation, and device transfers that can cause
+  frame-time spikes and resource churn.
+- Prefer creating resources once at initialization and updating their data or
+  transform per frame instead. For meshes whose vertex positions change but
+  whose topology is static, reuse the existing buffers and re-upload vertex
+  data (see `evan::GPUMesh::updateVertices`).
+
 ## Checklist Before Opening A PR
 
 - Naming follows conventions.

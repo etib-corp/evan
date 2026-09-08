@@ -8,6 +8,7 @@
 #pragma once
 
 #include <chrono>
+#include <limits>
 #include <utility/graphic/material.hpp>
 
 #include "evan/Version.hpp"
@@ -552,6 +553,17 @@ namespace evan
 		 */
 		utility::math::Vector2F _lastMousePosition { 0.0f, 0.0f };
 
+		/**
+		 * @brief Tracks the object ID of the persistent debug ray mesh.
+		 *
+		 * The debug ray is created once and its vertex data is updated in
+		 * place as the cursor/hand moves, instead of creating and destroying a
+		 * new GPU mesh on every input event. When set to
+		 * std::numeric_limits<size_t>::max(), no debug ray has been created
+		 * yet.
+		 */
+		size_t _debugRayObjectID = std::numeric_limits<size_t>::max();
+
 		private:
 		/**
 		 * @brief Handles viewport input for camera movement and rotation.
@@ -624,6 +636,17 @@ namespace evan
 			utility::graphic::PositionF &position,
 			utility::graphic::OrientationF &orientation, float movementSpeed,
 			float rotationSpeed, float deltaTime);
+
+		/**
+		 * @brief Updates the persistent debug ray visualization.
+		 *
+		 * Creates the debug ray mesh on the first call and updates its vertex
+		 * data in place on subsequent calls, avoiding the creation and
+		 * destruction of GPU buffers on every input event.
+		 *
+		 * @param ray The ray to visualize.
+		 */
+		void updateDebugRay(const utility::graphic::RayF &ray);
 
 		/**
 		 * @brief Tracks the last frame time for delta time calculation.
