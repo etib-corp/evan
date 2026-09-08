@@ -153,6 +153,25 @@ namespace evan
 		 */
 		uint32_t getMaterialID() const;
 
+		/**
+		 * @brief Updates the vertex data of the mesh in place.
+		 *
+		 * This method re-uploads vertex data to the already-allocated vertex
+		 * buffer, reusing the existing buffer and memory instead of creating
+		 * and destroying Vulkan resources. It is intended for meshes whose
+		 * topology is static but whose vertex positions change over time (for
+		 * example a debug ray that follows the cursor).
+		 *
+		 * @param vertices A vector of GPUVertex structures containing the new
+		 * vertex data. The number of vertices must match the count the mesh was
+		 * created with.
+		 *
+		 * @note The method performs a staging upload followed by a buffer copy,
+		 * so it should not be called every frame for large meshes. It avoids
+		 * buffer creation and destruction, but still performs a device transfer.
+		 */
+		void updateVertices(const std::vector<GPUVertex> &vertices);
+
 		protected:
 		/**
 		 * @brief Creates the vertex buffer on the GPU using the provided device
@@ -226,6 +245,13 @@ namespace evan
 		 * to draw based on the index data.
 		 */
 		uint32_t _indexCount = 0;
+
+		/**
+		 * The number of vertices the vertex buffer was allocated for. Used to
+		 * validate updateVertices() calls and prevent writing past the end of
+		 * the allocated buffer.
+		 */
+		size_t _vertexCount = 0;
 
 		/**
 		 * The material ID associated with this GPUMesh instance,

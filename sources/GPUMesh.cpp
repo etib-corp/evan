@@ -17,6 +17,7 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 
 	auto deviceBackend = deviceContext->getDeviceBackend();
 	_indexCount		   = indices.size();
+	_vertexCount	   = vertices.size();
 	_materialID		   = materialID;
 
 	this->getLogger().info()
@@ -103,6 +104,64 @@ void evan::GPUMesh::destroy(VkDevice device)
 {
 	(void)device;
 	this->cleanup();
+}
+
+void evan::GPUMesh::updateVertices(const std::vector<GPUVertex> &vertices)
+{
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		this->getLogger().warning()
+			<< "Cannot update vertices: device context unavailable.";
+		return;
+	}
+
+	if (_vertexBuffer == VK_NULL_HANDLE
+		|| _vertexBufferMemory == VK_NULL_HANDLE) {
+		this->getLogger().warning()
+			<< "Cannot update vertices: vertex buffer not initialized.";
+		return;
+	}
+
+	if (vertices.size() != _vertexCount) {
+		this->getLogger().warning()
+			<< "Cannot update vertices: expected " << _vertexCount
+			<< " vertices but received " << vertices.size() << ".";
+		return;
+	}
+
+	auto deviceBackend = _deviceContext->getDeviceBackend();
+	VkDeviceSize bufferSize = sizeof(GPUVertex) * vertices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory = VK_NULL_HANDLE;
+	ADeviceBackend::CreateBufferProperties stagingBufferProperties = {
+		._size		 = bufferSize,
+		._usage		 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		._buffer	   = stagingBuffer,
+		._bufferMemory = stagingBufferMemory
+	};
+
+	deviceBackend->createBuffer(stagingBufferProperties);
+
+	void *data = nullptr;
+	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize,
+				0, &data);
+	memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+	vkUnmapMemory(deviceBackend->getDevice(), stagingBufferMemory);
+
+	ADeviceBackend::CopyBufferProperties copyBufferProperties = {
+		._logicalDevice = deviceBackend->getDevice(),
+		._commandPool	= _deviceContext->getCommandPool(),
+		._graphicsQueue = _deviceContext->getGraphicsQueue(),
+		._srcBuffer		= stagingBuffer,
+		._dstBuffer		= _vertexBuffer,
+		._size			= bufferSize
+	};
+	deviceBackend->copyBuffer(copyBufferProperties);
+
+	vkDestroyBuffer(deviceBackend->getDevice(), stagingBuffer, nullptr);
+	vkFreeMemory(deviceBackend->getDevice(), stagingBufferMemory, nullptr);
 }
 
 ///////////////////////
