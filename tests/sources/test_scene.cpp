@@ -24,6 +24,10 @@
 
 #include <gtest/gtest.h>
 
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 namespace xider::tests
 {
 	/**
@@ -57,4 +61,27 @@ namespace xider::tests
 
 		EXPECT_TRUE(scene.getMeshes().empty());
 	}
-}	 // namespace xider::tests
+	/**
+	 * @brief Ensures getMeshes() returns its result by value rather than a
+	 * reference to shared (static) state. Returning by value guarantees that
+	 * the result is scoped to the Scene instance and to the calling thread,
+	 * which previously was not the case.
+	 */
+	TEST(SceneTest, GetMeshesReturnsByValue)
+	{
+		static_assert(!std::is_reference_v<decltype(
+						  std::declval<const evan::Scene &>().getMeshes())>,
+					  "Scene::getMeshes() must return by value, not by "
+					  "reference");
+
+		evan::Scene first;
+		evan::Scene second;
+
+		const std::vector<std::shared_ptr<evan::GPUMesh>> firstMeshes =
+			first.getMeshes();
+		const std::vector<std::shared_ptr<evan::GPUMesh>> secondMeshes =
+			second.getMeshes();
+
+		EXPECT_TRUE(firstMeshes.empty());
+		EXPECT_TRUE(secondMeshes.empty());
+	}}	 // namespace xider::tests
