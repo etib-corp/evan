@@ -125,8 +125,8 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	this->createImages(backend.getDevice(), _swapchain);
 	this->createImageViews(backend);
 	this->createColorResources(backend, deviceContext.getMsaaSamples());
-	this->createDepthResources(deviceContext);
-	this->createFramebuffers(backend.getDevice(), renderpass);
+	this->createDepthResources(deviceContext, deviceContext.getMsaaSamples());
+	this->createFramebuffers(backend.getDevice(), renderpass, true);
 }
 
 evan::DesktopSwapchainImage::~DesktopSwapchainImage()

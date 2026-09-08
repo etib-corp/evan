@@ -7,6 +7,19 @@
 
 #include "evan/DeviceContext.hpp"
 
+namespace
+{
+	/**
+	 * @brief Maximum sample count selected automatically for MSAA.
+	 *
+	 * Capping at 4x avoids automatically selecting excessive sample counts
+	 * (8x/16x/32x/64x) that would kill performance. Applications can still
+	 * opt into higher counts through DeviceContext::setMsaaSamples().
+	 */
+	constexpr VkSampleCountFlags kMaxUsableSampleCountMask =
+		VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT;
+}	 // namespace
+
 /**
  * @brief Default debug callback function for Vulkan validation layers.
  *
@@ -106,6 +119,29 @@ VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 	return _msaaSamples;
 }
 
+void evan::DeviceContext::setMsaaSamples(VkSampleCountFlagBits samples)
+{
+	this->getLogger().info() << "Overriding MSAA sample count...";
+
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(_deviceBackend->getPhysicalDevice(),
+								  &physicalDeviceProperties);
+	VkSampleCountFlags counts =
+		physicalDeviceProperties.limits.framebufferColorSampleCounts
+		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+
+	if ((counts & samples) == 0) {
+		this->getLogger().warning()
+			<< "Requested MSAA sample count " << samples
+			<< " is not supported by color and depth attachments, keeping "
+			<< _msaaSamples;
+		return;
+	}
+
+	_msaaSamples = samples;
+	this->getLogger().info() << "MSAA sample count set to " << samples;
+}
+
 std::shared_ptr<evan::ADeviceBackend>
 	evan::DeviceContext::getDeviceBackend() const
 {
@@ -134,29 +170,11 @@ void evan::DeviceContext::getMaxUsableSampleCount()
 		physicalDeviceProperties.limits.framebufferColorSampleCounts
 		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 
+	counts &= kMaxUsableSampleCountMask;
+
 	this->getLogger().info()
 		<< "Supported sample counts: " << counts << " bits";
 
-	if (counts & VK_SAMPLE_COUNT_64_BIT) {
-		this->getLogger().info() << "Using 64 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_64_BIT;
-		return;
-	}
-	if (counts & VK_SAMPLE_COUNT_32_BIT) {
-		this->getLogger().info() << "Using 32 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_32_BIT;
-		return;
-	}
-	if (counts & VK_SAMPLE_COUNT_16_BIT) {
-		this->getLogger().info() << "Using 16 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_16_BIT;
-		return;
-	}
-	if (counts & VK_SAMPLE_COUNT_8_BIT) {
-		this->getLogger().info() << "Using 8 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_8_BIT;
-		return;
-	}
 	if (counts & VK_SAMPLE_COUNT_4_BIT) {
 		this->getLogger().info() << "Using 4 samples for MSAA.";
 		_msaaSamples = VK_SAMPLE_COUNT_4_BIT;

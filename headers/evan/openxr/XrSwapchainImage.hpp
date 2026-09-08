@@ -77,6 +77,17 @@ namespace evan
 			 * memory, and performing layout transitions.
 			 */
 			const DeviceContext &deviceContext;
+			/**
+			 * @brief The MSAA sample count to use for the color and depth
+			 * resources created for this swapchain image.
+			 */
+			VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+			/**
+			 * @brief When true, a separate multisampled color image is created
+			 * and resolved into the swapchain image. When false, rendering is
+			 * performed directly into the swapchain image.
+			 */
+			bool resolveToSwapchain = true;
 		};
 
 		/**

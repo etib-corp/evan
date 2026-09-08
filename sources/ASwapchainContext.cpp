@@ -11,7 +11,7 @@
 
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend,
-	VkSampleCountFlagBits msaaSamples)
+	VkSampleCountFlagBits msaaSamples, bool resolveToSwapchain)
 {
 	this->getLogger().info() << "Creating render pass for swapchain context...";
 
@@ -68,51 +68,52 @@ void evan::ASwapchainContext::createRenderPass(
 		<< " and layout: " << depthAttachmentRef.layout;
 
 	VkAttachmentDescription colorAttachmentResolve {};
-	colorAttachmentResolve.format		  = swapchainFormat;
-	colorAttachmentResolve.samples		  = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachmentResolve.loadOp		  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.storeOp		  = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachmentResolve.finalLayout	  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	this->getLogger().info()
-		<< "Configured color attachment resolve with format: "
-		<< colorAttachmentResolve.format
-		<< ", samples: " << colorAttachmentResolve.samples
-		<< ", load operation: " << colorAttachmentResolve.loadOp
-		<< ", store operation: " << colorAttachmentResolve.storeOp
-		<< ", stencil load operation: " << colorAttachmentResolve.stencilLoadOp
-		<< ", stencil store operation: "
-		<< colorAttachmentResolve.stencilStoreOp
-		<< ", initial layout: " << colorAttachmentResolve.initialLayout
-		<< ", final layout: " << colorAttachmentResolve.finalLayout;
-
 	VkAttachmentReference colorAttachmentResolveRef {};
 	colorAttachmentResolveRef.attachment = 2;
-	colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	this->getLogger().info()
-		<< "Configured color attachment resolve reference with attachment "
-		   "index: "
-		<< colorAttachmentResolveRef.attachment
-		<< " and layout: " << colorAttachmentResolveRef.layout;
+	std::vector<VkAttachmentDescription> attachments = {
+		colorAttachment, depthAttachment
+	};
 
 	VkSubpassDescription subpass {};
 	subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount	= 1;
 	subpass.pColorAttachments		= &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-	subpass.pResolveAttachments		= &colorAttachmentResolveRef;
+
+	if (resolveToSwapchain) {
+		colorAttachmentResolve.format		   = swapchainFormat;
+		colorAttachmentResolve.samples		   = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachmentResolve.loadOp		   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachmentResolve.finalLayout	  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		colorAttachmentResolveRef.layout =
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachments.push_back(colorAttachmentResolve);
+		subpass.pResolveAttachments = &colorAttachmentResolveRef;
+
+		this->getLogger().info()
+			<< "Configured color attachment resolve with format: "
+			<< colorAttachmentResolve.format
+			<< ", samples: " << colorAttachmentResolve.samples
+			<< ", final layout: " << colorAttachmentResolve.finalLayout;
+	} else {
+		subpass.pResolveAttachments = nullptr;
+		this->getLogger().info()
+			<< "Rendering directly into the swapchain image without a "
+			   "resolve attachment.";
+	}
 
 	this->getLogger().info()
 		<< "Configured subpass with pipeline bind point: "
 		<< subpass.pipelineBindPoint
 		<< ", color attachment count: " << subpass.colorAttachmentCount
 		<< ", depth-stencil attachment reference: "
-		<< depthAttachmentRef.attachment << ", resolve attachment reference: "
-		<< colorAttachmentResolveRef.attachment
+		<< depthAttachmentRef.attachment
 		<< ", and color attachment reference: "
 		<< colorAttachmentRef.attachment;
 
@@ -139,9 +140,6 @@ void evan::ASwapchainContext::createRenderPass(
 	this->getLogger().info()
 		<< "Selected swapchain format: " << swapchainFormat;
 
-	std::array<VkAttachmentDescription, 3> attachments = {
-		colorAttachment, depthAttachment, colorAttachmentResolve
-	};
 	VkRenderPassCreateInfo renderPassInfo {};
 	renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());

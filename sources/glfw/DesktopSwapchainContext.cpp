@@ -16,11 +16,12 @@ std::unordered_map<GLFWwindow *, evan::DesktopSwapchainContext *>
 evan::DesktopSwapchainContext::DesktopSwapchainContext(
 	const DeviceContext &deviceContext, GLFWwindow *window)
 	: _referenceWindow(window)
+	, _msaaSamples(deviceContext.getMsaaSamples())
 {
 	this->getLogger().info() << "Initializing DesktopSwapchainContext...";
 
-	this->createRenderPass(deviceContext.getDeviceBackend(),
-						   deviceContext.getMsaaSamples());
+	this->createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
+						   true);
 
 	this->getLogger().info()
 		<< "Creating swapchain images for DesktopSwapchainContext...";
@@ -140,6 +141,11 @@ evan::ViewSet &evan::DesktopSwapchainContext::getViewSet()
 const evan::ViewSet &evan::DesktopSwapchainContext::getViewSet() const
 {
 	return _viewSet;
+}
+
+VkSampleCountFlagBits evan::DesktopSwapchainContext::getMsaaSamples() const
+{
+	return _msaaSamples;
 }
 
 bool evan::DesktopSwapchainContext::usesImageAvailableSemaphore() const

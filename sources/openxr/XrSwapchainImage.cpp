@@ -46,12 +46,16 @@ evan::XrSwapchainImage::XrSwapchainImage(
 				.value;
 	}
 
-	this->createColorResources(*properties.deviceContext.getDeviceBackend(),
-							   properties.deviceContext.getMsaaSamples());
-	this->createDepthResources(properties.deviceContext);
+	if (properties.resolveToSwapchain) {
+		this->createColorResources(
+			*properties.deviceContext.getDeviceBackend(),
+			properties.msaaSamples);
+	}
+	this->createDepthResources(properties.deviceContext,
+							   properties.msaaSamples);
 	this->createFramebuffers(
 		properties.deviceContext.getDeviceBackend()->getDevice(),
-		properties.renderPass);
+		properties.renderPass, properties.resolveToSwapchain);
 }
 
 ////////////////////

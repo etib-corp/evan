@@ -11,12 +11,32 @@
 
 #include <algorithm>
 
+namespace
+{
+	/**
+	 * @brief Converts an OpenXR sample count to its Vulkan flag bit.
+	 *
+	 * OpenXR exposes swapchain sample counts as plain uint32_t values while
+	 * Vulkan uses VkSampleCountFlagBits. Unsupported or zero counts map to
+	 * VK_SAMPLE_COUNT_1_BIT.
+	 */
+	VkSampleCountFlagBits toVkSampleCountFlagBits(uint32_t sampleCount)
+	{
+		switch (sampleCount) {
+			case 2: return VK_SAMPLE_COUNT_2_BIT;
+			case 4: return VK_SAMPLE_COUNT_4_BIT;
+			case 8: return VK_SAMPLE_COUNT_8_BIT;
+			case 16: return VK_SAMPLE_COUNT_16_BIT;
+			case 32: return VK_SAMPLE_COUNT_32_BIT;
+			case 64: return VK_SAMPLE_COUNT_64_BIT;
+			default: return VK_SAMPLE_COUNT_1_BIT;
+		}
+	}
+}	 // namespace
+
 evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 {
 	this->getLogger().info() << "Initializing XrSwapchainContext";
-
-	createRenderPass(deviceContext.getDeviceBackend(),
-					 deviceContext.getMsaaSamples());
 
 	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
 		*deviceContext.getDeviceBackend());
@@ -34,6 +54,11 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	for (std::size_t i = 0; i < _viewsConfigurations.size(); ++i) {
 		_viewSet[i].swapchainIndex = i;
 	}
+
+	selectMsaaSamples(deviceContext);
+
+	createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
+					 _resolveToSwapchain);
 
 	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
 
@@ -65,14 +90,48 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 			continue;
 		}
 		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain	   = swapchain,
-			.createInfo	   = swapchainCreateInfo,
-			.renderPass	   = _renderPass,
-			.deviceContext = deviceContext
+			.swapchain			= swapchain,
+			.createInfo			= swapchainCreateInfo,
+			.renderPass			= _renderPass,
+			.deviceContext		= deviceContext,
+			.msaaSamples		= _msaaSamples,
+			.resolveToSwapchain = _resolveToSwapchain
 		};
 		_swapchainImages.push_back(
 			std::make_shared<XrSwapchainImage>(properties));
 	}
+}
+
+void evan::XrSwapchainContext::selectMsaaSamples(
+	const DeviceContext &deviceContext)
+{
+	if (_viewsConfigurations.empty()) {
+		_msaaSamples		= deviceContext.getMsaaSamples();
+		_resolveToSwapchain = true;
+		this->getLogger().warning()
+			<< "No OpenXR view configurations available, falling back to "
+			   "device MSAA sample count.";
+		return;
+	}
+
+	uint32_t recommended =
+		_viewsConfigurations.front().recommendedSwapchainSampleCount;
+	VkSampleCountFlagBits swapchainSamples =
+		toVkSampleCountFlagBits(recommended);
+
+	if (swapchainSamples == VK_SAMPLE_COUNT_1_BIT) {
+		_msaaSamples		= deviceContext.getMsaaSamples();
+		_resolveToSwapchain = true;
+	} else {
+		_msaaSamples		= swapchainSamples;
+		_resolveToSwapchain = false;
+	}
+
+	this->getLogger().info()
+		<< "OpenXR recommended swapchain sample count: " << recommended
+		<< ", using MSAA samples: " << _msaaSamples
+		<< ", resolve to swapchain: "
+		<< (_resolveToSwapchain ? "yes" : "no");
 }
 
 ////////////////////
@@ -138,10 +197,12 @@ void evan::XrSwapchainContext::recreateSwapchain(
 			continue;
 		}
 		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain	   = swapchain,
-			.createInfo	   = swapchainCreateInfo,
-			.renderPass	   = _renderPass,
-			.deviceContext = deviceContext
+			.swapchain			= swapchain,
+			.createInfo			= swapchainCreateInfo,
+			.renderPass			= _renderPass,
+			.deviceContext		= deviceContext,
+			.msaaSamples		= _msaaSamples,
+			.resolveToSwapchain = _resolveToSwapchain
 		};
 		_swapchainImages.push_back(
 			std::make_shared<XrSwapchainImage>(properties));
@@ -242,6 +303,11 @@ evan::ViewSet &evan::XrSwapchainContext::getViewSet()
 const evan::ViewSet &evan::XrSwapchainContext::getViewSet() const
 {
 	return _viewSet;
+}
+
+VkSampleCountFlagBits evan::XrSwapchainContext::getMsaaSamples() const
+{
+	return _msaaSamples;
 }
 
 void evan::XrSwapchainContext::syncViewSet()

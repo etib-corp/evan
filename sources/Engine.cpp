@@ -57,7 +57,7 @@ evan::Engine::Engine(
 		std::make_shared<RessourceManager>(ressourceProvider, _deviceContext);
 	_renderer = std::make_shared<Renderer>(
 		_deviceContext, _swapchainContext->getRenderPass(),
-		_deviceContext->getMsaaSamples(), _ressourceManager);
+		_swapchainContext->getMsaaSamples(), _ressourceManager);
 	_ressourceManager->init(_renderer);
 	_currentScene = 0;
 
