@@ -6,6 +6,7 @@
 */
 
 #include <typeindex>
+#include <limits>
 
 #include <utility/event/quit_event.hpp>
 #include <utility/event/keyboard_event.hpp>
@@ -510,14 +511,8 @@ void evan::Engine::handleMouseMotionEvent(
 	utility::graphic::OrientationF &orientation, float rotationSpeed,
 	float deltaTime)
 {
-	static size_t idObject = std::numeric_limits<size_t>::max();
-	auto currentPosition   = mouseMotionEvent->getPosition();
+	auto currentPosition = mouseMotionEvent->getPosition();
 	utility::graphic::RayF ray;
-
-	if (idObject != std::numeric_limits<size_t>::max()) {
-		this->removeObject(idObject);
-		idObject = std::numeric_limits<size_t>::max();
-	}
 
 	try {
 		ray = getView().viewPointToRay(currentPosition);
@@ -527,9 +522,7 @@ void evan::Engine::handleMouseMotionEvent(
 		return;
 	}
 
-	utility::graphic::Mesh rayMesh =
-		ray.convertToMesh(10.0f, 0.01f, 16, { 0, 255, 0, 255 });
-	idObject = this->addMesh(rayMesh, "mesh_material");
+	updateDebugRay(ray);
 
 	if (!isRightMouseButtonPressed) {
 		return;
@@ -567,22 +560,48 @@ void evan::Engine::handleHandMotionEvent(
 	utility::graphic::OrientationF &orientation, float movementSpeed,
 	float rotationSpeed, float deltaTime)
 {
-	static size_t idObject =
-		std::numeric_limits<size_t>::max();	   // Store the Ray object ID for
-											   // the hand motion event
-
-	if (idObject != std::numeric_limits<size_t>::max()) {
-		this->removeObject(idObject);
-		idObject = std::numeric_limits<size_t>::max();
-	}
-
 	utility::graphic::RayF handRay;
 	handRay.setOrigin(handMotionEvent->getAim().getPosition());
 	handRay.setDirection(
 		handMotionEvent->getAim().getOrientation().getForward());
+	updateDebugRay(handRay);
+}
+
+void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
+{
 	utility::graphic::Mesh rayMesh =
-		handRay.convertToMesh(10.0f, 0.01f, 16, { 0, 255, 0, 255 });
-	idObject = this->addMesh(rayMesh, "mesh_material");
+		ray.convertToMesh(10.0f, 0.01f, 16, { 0, 255, 0, 255 });
+
+	if (_debugRayObjectID == std::numeric_limits<size_t>::max()) {
+		_debugRayObjectID = this->addMesh(rayMesh, "mesh_material");
+		return;
+	}
+
+	auto currentSceneIt = _scenes.find(_currentScene);
+	if (currentSceneIt == _scenes.end()) {
+		return;
+	}
+
+	auto renderObject = currentSceneIt->second->getObject(
+		static_cast<uint32_t>(_debugRayObjectID));
+	if (!renderObject) {
+		// The debug ray was registered in a different scene. Recreate it in
+		// the current scene.
+		_debugRayObjectID = this->addMesh(rayMesh, "mesh_material");
+		return;
+	}
+
+	if (renderObject->getMeshes().empty()) {
+		return;
+	}
+
+	std::vector<GPUVertex> gpuVertices;
+	gpuVertices.reserve(rayMesh.getVertices().size());
+	for (const auto &vertex: rayMesh.getVertices()) {
+		gpuVertices.push_back(GPUVertex::createFromVertex(vertex));
+	}
+
+	renderObject->getMeshes().front()->updateVertices(gpuVertices);
 }
 
 void evan::Engine::updateDeltaTime(void)
