@@ -9,6 +9,7 @@
 
 #include "evan/IPlatform.hpp"
 #include "evan/DeviceContext.hpp"
+#include "evan/openxr/OpenXrOptions.hpp"
 #include "evan/openxr/XrSwapchainContext.hpp"
 
 #include <iostream>
@@ -130,6 +131,32 @@ namespace evan
 		 */
 		virtual const XrBaseInStructure *getInstanceCreateInfo() const = 0;
 
+		/**
+		 * @brief Retrieves the user-configurable OpenXR options (read-only).
+		 *
+		 * @return A const reference to the OpenXR options owned by this
+		 * platform.
+		 */
+		const OpenXrOptions &getOpenXrOptions() const
+		{
+			return _options;
+		}
+
+		/**
+		 * @brief Retrieves the user-configurable OpenXR options (mutable).
+		 *
+		 * Applications may configure options through the concrete platform
+		 * before handing it to the engine. Subclasses may also override the
+		 * defaults in their constructors.
+		 *
+		 * @return A mutable reference to the OpenXR options owned by this
+		 * platform.
+		 */
+		OpenXrOptions &getOpenXrOptions()
+		{
+			return _options;
+		}
+
 		protected:
 		/**
 		 * @brief Process an OpenXR session state change event.
@@ -159,5 +186,11 @@ namespace evan
 		 * OpenXR specific.
 		 */
 		bool _shouldClose = false;
+
+		/**
+		 * User-configurable OpenXR options applied by the device backend and
+		 * swapchain context created from this platform.
+		 */
+		OpenXrOptions _options;
 	};
 }	 // namespace evan

@@ -115,5 +115,51 @@ namespace evan
 			enumerateBoundSourcePathStringsForAction(XrInstance instance,
 													 XrSession session,
 													 XrAction action);
+
+		/**
+		 * @brief Retrieves the default interaction profile candidates.
+		 *
+		 * Profiles are listed in preference order. The first candidate reported
+		 * as supported by the active runtime should be used to suggest action
+		 * bindings.
+		 *
+		 * @return A const reference to the default candidate profile list.
+		 */
+		static const std::vector<std::string> &getDefaultProfileCandidates();
+
+		/**
+		 * @brief Selects the preferred interaction profile path.
+		 *
+		 * Returns the first candidate profile supported by the runtime. If no
+		 * candidate is supported (or the instance is null), the fallback
+		 * profile is returned.
+		 *
+		 * @param instance The OpenXR instance handle.
+		 * @param candidateProfiles The candidate profile paths to try, in
+		 * preference order.
+		 * @param fallbackProfile The profile path to return when no candidate
+		 * is supported.
+		 * @return The preferred interaction profile path.
+		 */
+		static std::string getPreferredInteractionProfilePath(
+			XrInstance instance,
+			const std::vector<std::string> &candidateProfiles,
+			const std::string &fallbackProfile);
+
+		private:
+		/**
+		 * @brief Checks whether the runtime supports the given interaction
+		 * profile.
+		 *
+		 * Support is probed by suggesting an empty binding list for the
+		 * profile.
+		 *
+		 * @param instance The OpenXR instance handle.
+		 * @param profilePath The interaction profile path string.
+		 * @return true if the runtime supports the profile, false otherwise.
+		 */
+		static bool
+			isInteractionProfileSupported(XrInstance instance,
+										  const std::string &profilePath);
 	};
 }	 // namespace evan

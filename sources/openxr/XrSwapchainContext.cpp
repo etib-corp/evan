@@ -50,8 +50,8 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 		swapchainCreateInfo.faceCount = 1;
 		swapchainCreateInfo.sampleCount =
 			viewConfig.recommendedSwapchainSampleCount;
-		swapchainCreateInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT
-			| XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainCreateInfo.usageFlags =
+			backend.getOpenXrOptions().swapchainUsageFlags;
 
 		XrSwapchain swapchain;
 		auto session = backend.getSession();
@@ -123,8 +123,8 @@ void evan::XrSwapchainContext::recreateSwapchain(
 		swapchainCreateInfo.faceCount = 1;
 		swapchainCreateInfo.sampleCount =
 			viewConfig.recommendedSwapchainSampleCount;
-		swapchainCreateInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT
-			| XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainCreateInfo.usageFlags =
+			backend.getOpenXrOptions().swapchainUsageFlags;
 
 		XrSwapchain swapchain;
 		auto session = backend.getSession();
