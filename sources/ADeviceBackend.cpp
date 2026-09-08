@@ -6,6 +6,9 @@
 */
 
 #include "evan/ADeviceBackend.hpp"
+#include "evan/MemoryType.hpp"
+
+#include <cassert>
 
 ////////////////////
 // Public Methods //
@@ -41,10 +44,14 @@ evan::Error evan::ADeviceBackend::createBuffer(
 								  &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize  = memRequirements.size;
-	allocInfo.memoryTypeIndex = this->findMemoryType(
-		memRequirements.memoryTypeBits, properties._properties);
+	allocInfo.sType			 = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	auto memoryType = this->findMemoryType(memRequirements.memoryTypeBits,
+										   properties._properties);
+	if (!isOk(memoryType.code)) {
+		return memoryType.code;
+	}
+	allocInfo.memoryTypeIndex = memoryType.value;
 
 	this->getLogger().info()
 		<< "Allocating buffer memory with size: " << memRequirements.size
@@ -287,10 +294,14 @@ evan::Error evan::ADeviceBackend::createImage(
 	vkGetImageMemoryRequirements(_device, properties._image, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize  = memRequirements.size;
-	allocInfo.memoryTypeIndex = this->findMemoryType(
-		memRequirements.memoryTypeBits, properties._properties);
+	allocInfo.sType			 = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	auto memoryType = this->findMemoryType(memRequirements.memoryTypeBits,
+										   properties._properties);
+	if (!isOk(memoryType.code)) {
+		return memoryType.code;
+	}
+	allocInfo.memoryTypeIndex = memoryType.value;
 
 	this->getLogger().info()
 		<< "Allocating image memory with size: " << memRequirements.size
@@ -460,7 +471,7 @@ bool evan::ADeviceBackend::hasStencilComponent(VkFormat format) const
 		|| format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-uint32_t
+evan::Result<uint32_t>
 	evan::ADeviceBackend::findMemoryType(uint32_t typeFilter,
 										 VkMemoryPropertyFlags properties) const
 {
@@ -471,18 +482,15 @@ uint32_t
 	VkPhysicalDeviceMemoryProperties memProperties;
 
 	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-		if ((typeFilter & (1 << i))
-			&& (memProperties.memoryTypes[i].propertyFlags & properties)
-				== properties) {
-			this->getLogger().info()
-				<< "Found suitable memory type at index: " << i;
-			return i;
-		}
+
+	auto result = findMemoryTypeIndex(memProperties, typeFilter, properties);
+	if (!isOk(result.code)) {
+		this->getLogger().error() << "Failed to find suitable memory type!";
+		assert(false && "No suitable Vulkan memory type found");
+		return result;
 	}
 
-	this->getLogger().error() << "Failed to find suitable memory type!";
-	this->getLogger().warning()
-		<< "Returning 0 as fallback, but this may lead to undefined behavior!";
-	return 0;
+	this->getLogger().info()
+		<< "Found suitable memory type at index: " << result.value;
+	return result;
 }
