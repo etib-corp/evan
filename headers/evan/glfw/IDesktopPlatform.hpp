@@ -10,6 +10,7 @@
 #include "evan/IPlatform.hpp"
 #include "evan/glfw/DesktopBackend.hpp"
 #include "evan/glfw/DesktopSwapchainContext.hpp"
+#include "evan/glfw/GlfwContext.hpp"
 
 #include <utility/event/keyboard_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
@@ -275,5 +276,13 @@ namespace evan
 			_textInputEvents;
 
 		private:
+		/**
+		 * @brief Reference-counted GLFW lifecycle guard.
+		 *
+		 * Acquires GLFW when this platform is constructed and releases it
+		 * when the last platform instance is destroyed, allowing multiple
+		 * `IDesktopPlatform` objects to coexist safely.
+		 */
+		evan::glfw::GlfwContext _glfwContext;
 	};
 }	 // namespace evan

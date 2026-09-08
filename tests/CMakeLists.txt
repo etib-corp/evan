@@ -14,6 +14,7 @@ set(TEST_SOURCES
     sources/test_error.cpp
     sources/test_memory_type.cpp
     sources/test_scene.cpp
+    sources/test_desktop_platform.cpp
 )
 
 # Fetch GoogleTest

@@ -16,20 +16,16 @@ evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name,
 	this->getLogger().info()
 		<< "Initializing WindowsDesktopPlatform with window name: " << name
 		<< ", width: " << width << ", height: " << height;
-	if (!glfwInit()) {
-		throw std::runtime_error("Failed to initialize GLFW");
-	}
 
-	this->getLogger().info() << "GLFW initialized successfully";
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	this->getLogger().info() << "Creating GLFW window";
 	_window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
 	if (!_window) {
+		this->getLogger().error() << "Failed to create GLFW window";
 		throw std::runtime_error("Failed to create GLFW window");
 	}
-	glfwSetWindowAspectRatio(_window, width, height);
 }
 
 ////////////////////
