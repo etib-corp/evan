@@ -67,6 +67,11 @@ namespace xider::tests
 			return _viewSet;
 		}
 
+		VkSampleCountFlagBits getMsaaSamples() const override
+		{
+			return VK_SAMPLE_COUNT_1_BIT;
+		}
+
 		evan::ViewSet _viewSet;
 	};
 
