@@ -122,13 +122,6 @@ void evan::XrManageActions::bindActionSets(XrDeviceBackend &deviceBackend)
 	const auto &candidateProfiles = options.interactionProfileCandidates.empty()
 		? InteractionProfile::getDefaultProfileCandidates()
 		: options.interactionProfileCandidates;
-	const std::string fallbackProfile =
-		"/interaction_profiles/khr/simple_controller";
-	const std::string interactionProfile =
-		InteractionProfile::getPreferredInteractionProfilePath(
-			deviceBackend._XrInstance, candidateProfiles, fallbackProfile);
-	this->getLogger().info()
-		<< "Selected interaction profile: " << interactionProfile;
 
 	std::vector<XrActionSuggestedBinding> coreBindings {
 		{ _handsMotionActions->_handAimAction,
@@ -167,48 +160,59 @@ void evan::XrManageActions::bindActionSets(XrDeviceBackend &deviceBackend)
 	};
 
 	// Menu/system bindings are optional because some runtimes reserve these
-	// inputs. They are appended to the same suggestion so that, when they are
-	// rejected, the core bindings can be re-suggested on their own.
-	std::vector<XrActionSuggestedBinding> bindings = coreBindings;
-	if (options.enableMenuSystemBindings) {
-		bindings.push_back(
-			{ _manageButtonsActions->_buttonMenuAction->getAction(),
-			  InteractionProfile::stringToPath(
-				  deviceBackend._XrInstance,
-				  "/user/hand/left/input/menu/click") });
-		bindings.push_back(
-			{ _manageButtonsActions->_buttonSystemAction->getAction(),
-			  InteractionProfile::stringToPath(
-				  deviceBackend._XrInstance,
-				  "/user/hand/right/input/system/click") });
+	// inputs. They are appended to the suggestion so that, when a profile
+	// rejects them, the core bindings can be re-suggested on their own.
+
+	const auto suggestForProfile =
+		[&deviceBackend](
+			const std::string &profilePath,
+			const std::vector<XrActionSuggestedBinding> &bindings) -> XrResult {
+		XrInteractionProfileSuggestedBinding suggestedBindings {
+			XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING
+		};
+		suggestedBindings.interactionProfile = InteractionProfile::stringToPath(
+			deviceBackend._XrInstance, profilePath);
+		suggestedBindings.countSuggestedBindings =
+			static_cast<uint32_t>(bindings.size());
+		suggestedBindings.suggestedBindings = bindings.data();
+		return xrSuggestInteractionProfileBindings(deviceBackend._XrInstance,
+												   &suggestedBindings);
+	};
+
+	for (const auto &candidateProfile: candidateProfiles) {
+		std::vector<XrActionSuggestedBinding> bindings = coreBindings;
+		if (options.enableMenuSystemBindings) {
+			bindings.push_back(
+				{ _manageButtonsActions->_buttonMenuAction->getAction(),
+				  InteractionProfile::stringToPath(
+					  deviceBackend._XrInstance,
+					  "/user/hand/left/input/menu/click") });
+			bindings.push_back(
+				{ _manageButtonsActions->_buttonSystemAction->getAction(),
+				  InteractionProfile::stringToPath(
+					  deviceBackend._XrInstance,
+					  "/user/hand/right/input/system/click") });
+		}
+
+		XrResult result = suggestForProfile(candidateProfile, bindings);
+		if (result != XR_SUCCESS && options.enableMenuSystemBindings) {
+			this->getLogger().warning()
+				<< "Failed to suggest bindings for profile " << candidateProfile
+				<< " including menu/system, retrying without them: " << result;
+			result = suggestForProfile(candidateProfile, coreBindings);
+		}
+		if (result == XR_SUCCESS) {
+			this->getLogger().info()
+				<< "Successfully suggested bindings for interaction profile: "
+				<< candidateProfile;
+			return;
+		}
+		this->getLogger().warning()
+			<< "Interaction profile rejected the suggested bindings: "
+			<< candidateProfile << " (" << result << ")";
 	}
 
-	XrInteractionProfileSuggestedBinding suggestedBindings {
-		XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING
-	};
-	suggestedBindings.interactionProfile = InteractionProfile::stringToPath(
-		deviceBackend._XrInstance, interactionProfile);
-	suggestedBindings.countSuggestedBindings =
-		static_cast<uint32_t>(bindings.size());
-	suggestedBindings.suggestedBindings = bindings.data();
-	XrResult result						= xrSuggestInteractionProfileBindings(
-		deviceBackend._XrInstance, &suggestedBindings);
-	if (result != XR_SUCCESS && bindings.size() != coreBindings.size()) {
-		this->getLogger().warning()
-			<< "Failed to suggest interaction profile bindings including "
-			   "menu/system, retrying without them: "
-			<< result;
-		suggestedBindings.countSuggestedBindings =
-			static_cast<uint32_t>(coreBindings.size());
-		suggestedBindings.suggestedBindings = coreBindings.data();
-		result = xrSuggestInteractionProfileBindings(deviceBackend._XrInstance,
-													 &suggestedBindings);
-	}
-	if (result != XR_SUCCESS) {
-		this->getLogger().error()
-			<< "Failed to suggest interaction profile bindings: " << result;
-		return;
-	}
-	this->getLogger().info()
-		<< "Successfully suggested interaction profile bindings";
+	this->getLogger().error()
+		<< "Failed to suggest interaction profile bindings on any candidate "
+		   "profile";
 }
