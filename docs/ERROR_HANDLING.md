@@ -23,10 +23,13 @@ Helpers: `isOk`, `isFatal`, `isRecoverable`.
 
 Frame operations return `evan::Error`:
 
-- `Engine::update()` → `Error`
 - `Engine::render()` → `Error`
 - `Renderer::drawFrame()` → `Error`
 - `ADeviceBackend::preprocessFrame/processFrame/postprocessFrame` → `Error`
+
+`Engine::update()` and `Engine::pollEvents()` implement the `utility::Engine`
+interface and return `void`; the reason a platform is closing is queryable via
+`Engine::getLastError()` / `IPlatform::getLastError()`.
 
 Handle recoverable errors (`Suboptimal`, `SwapchainOutOfDate`, `NotReady`) and
 keep running. On a fatal error (`DeviceLost`, `RuntimeLost`, `OutOfMemory`,
@@ -34,9 +37,7 @@ keep running. On a fatal error (`DeviceLost`, `RuntimeLost`, `OutOfMemory`,
 
 ```cpp
 while (!platform->shouldClose()) {
-    if (evan::Error error = engine.update(); evan::isFatal(error)) {
-        break; // stop cleanly
-    }
+    engine.update();
     if (evan::Error error = engine.render(); error != evan::Error::Ok) {
         if (evan::isRecoverable(error)) {
             continue; // swapchain was recreated, retry next frame
@@ -49,9 +50,6 @@ while (!platform->shouldClose()) {
     }
 }
 ```
-
-`pollEvents()` keeps returning the event vector; the reason a platform is
-closing is queryable via `Engine::getLastError()` / `IPlatform::getLastError()`.
 
 ## Backend mappings
 
