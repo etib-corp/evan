@@ -1,0 +1,100 @@
+name: Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine bump type from PR title
+        id: bump
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          lower="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]')"
+          case "$lower" in
+            feat*)
+              echo "type=minor" >> "$GITHUB_OUTPUT"
+              ;;
+            fix*)
+              echo "type=patch" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "type=none" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Skip if no version bump is required
+        if: steps.bump.outputs.type == 'none'
+        run: |
+          echo "PR title does not indicate a feature or fix; skipping version bump."
+          exit 0
+
+      - name: Read current version
+        id: current
+        run: |
+          version="$(grep -oE 'VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | head -1 | awk '{print $2}')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Compute new version
+        id: next
+        run: |
+          current="${{ steps.current.outputs.version }}"
+          year="$(date +%Y)"
+          major="$(printf '%s' "$current" | cut -d. -f1)"
+          minor="$(printf '%s' "$current" | cut -d. -f2)"
+          patch="$(printf '%s' "$current" | cut -d. -f3)"
+
+          if [ "$major" != "$year" ]; then
+            major="$year"
+            minor=0
+            patch=0
+          fi
+
+          if [ "${{ steps.bump.outputs.type }}" = "minor" ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            patch=$((patch + 1))
+          fi
+
+          new="${major}.${minor}.${patch}"
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+
+      - name: Update CMakeLists.txt
+        run: |
+          sed -i -E "s/VERSION ${{ steps.current.outputs.version }}/VERSION ${{ steps.next.outputs.new }}/" CMakeLists.txt
+
+      - name: Update CHANGELOG.md
+        run: |
+          new="${{ steps.next.outputs.new }}"
+          date="$(date +%Y-%m-%d)"
+          if grep -q '^## \[Unreleased\]' CHANGELOG.md; then
+            sed -i "0,/^## \[Unreleased\]/s//## [$new] - $date\n\n## [Unreleased]/" CHANGELOG.md
+          else
+            printf '\n## [%s] - %s\n' "$new" "$date" >> CHANGELOG.md
+          fi
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CMakeLists.txt CHANGELOG.md
+          git commit -m "chore: bump version to ${{ steps.next.outputs.new }}"
+          git push origin HEAD:main
+
+      - name: Create release tag
+        run: |
+          git tag "v${{ steps.next.outputs.new }}"
+          git push origin "v${{ steps.next.outputs.new }}"
