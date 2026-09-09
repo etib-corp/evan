@@ -45,8 +45,8 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 					<< shaderID << ". Defaulting to Albedo.";
 				textureType = GPUTexture::TextureType::Albedo;
 		}
-		_textures.emplace_back(std::make_shared<GPUTexture>(
-			deviceContext, *texture, textureType));
+		_textures.emplace_back(
+			std::make_shared<GPUTexture>(deviceContext, *texture, textureType));
 	}
 
 	_descriptorPool = renderer.getDescriptorPool();
@@ -137,13 +137,13 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 					<< shaderID << ". Defaulting to Albedo.";
 				textureType = GPUTexture::TextureType::Albedo;
 		}
-		_textures.emplace_back(std::make_shared<GPUTexture>(
-			deviceContext, *texture, textureType));
+		_textures.emplace_back(
+			std::make_shared<GPUTexture>(deviceContext, *texture, textureType));
 	}
 
-	vkFreeDescriptorSets(deviceBackend->getDevice(), renderer.getDescriptorPool(),
-						 static_cast<uint32_t>(_descriptorSets.size()),
-						 _descriptorSets.data());
+	vkFreeDescriptorSets(
+		deviceBackend->getDevice(), renderer.getDescriptorPool(),
+		static_cast<uint32_t>(_descriptorSets.size()), _descriptorSets.data());
 	this->createDescriptorSets(
 		deviceBackend->getDevice(), renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());

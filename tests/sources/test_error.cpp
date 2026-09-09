@@ -75,7 +75,7 @@ namespace xider::tests
 	// swapchain-out-of-date from a fatal device-lost.
 	TEST(ErrorTest, SyntheticOutOfDateVsDeviceLost)
 	{
-		evan::Error outOfDate = evan::mapVkResult(VK_ERROR_OUT_OF_DATE_KHR);
+		evan::Error outOfDate  = evan::mapVkResult(VK_ERROR_OUT_OF_DATE_KHR);
 		evan::Error deviceLost = evan::mapVkResult(VK_ERROR_DEVICE_LOST);
 
 		EXPECT_TRUE(evan::isRecoverable(outOfDate));
@@ -99,8 +99,7 @@ namespace xider::tests
 
 	TEST(ErrorTest, SyntheticSessionLossPending)
 	{
-		evan::Error loss =
-			evan::mapSessionState(XR_SESSION_STATE_LOSS_PENDING);
+		evan::Error loss = evan::mapSessionState(XR_SESSION_STATE_LOSS_PENDING);
 		EXPECT_EQ(loss, evan::Error::RuntimeLost);
 		EXPECT_TRUE(evan::isFatal(loss));
 

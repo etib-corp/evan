@@ -52,8 +52,8 @@ bool evan::Scene::removeObject(uint32_t objectID)
 	return _objects.erase(objectID) > 0;
 }
 
-std::shared_ptr<evan::RenderObject> evan::Scene::getObject(uint32_t objectID)
-	const
+std::shared_ptr<evan::RenderObject>
+	evan::Scene::getObject(uint32_t objectID) const
 {
 	auto objectIt = _objects.find(objectID);
 	if (objectIt == _objects.end()) {
@@ -66,8 +66,7 @@ std::shared_ptr<evan::RenderObject> evan::Scene::getObject(uint32_t objectID)
 // Getters //
 /////////////
 
-std::vector<std::shared_ptr<evan::GPUMesh>>
-	evan::Scene::getMeshes() const
+std::vector<std::shared_ptr<evan::GPUMesh>> evan::Scene::getMeshes() const
 {
 	std::vector<std::shared_ptr<GPUMesh>> meshes;
 

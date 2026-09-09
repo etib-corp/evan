@@ -48,18 +48,18 @@ namespace xider::tests
 													  uint32_t width,
 													  uint32_t height)
 		{
-			#if defined(__APPLE__)
+	#if defined(__APPLE__)
 			return std::make_shared<evan::MacOsDesktopPlatform>(name, width,
 																height);
-			#elif defined(__linux__)
+	#elif defined(__linux__)
 			return std::make_shared<evan::LinuxDesktopPlatform>(name, width,
 																height);
-			#elif defined(_WIN32)
+	#elif defined(_WIN32)
 			return std::make_shared<evan::WindowsDesktopPlatform>(name, width,
 																  height);
-			#else
+	#else
 			return nullptr;
-			#endif
+	#endif
 		}
 	}	 // namespace
 
@@ -76,7 +76,7 @@ namespace xider::tests
 		}
 
 		try {
-			auto first = makePlatform("evan test 1", 640, 480);
+			auto first	= makePlatform("evan test 1", 640, 480);
 			auto second = makePlatform("evan test 2", 800, 600);
 
 			EXPECT_FALSE(first->shouldClose());
@@ -127,8 +127,8 @@ namespace xider::tests
 			glfwSetWindowSize(desktop->_window, 1000, 600);
 
 			// Resize is applied asynchronously by the window manager.
-			int width	= 0;
-			int height	= 0;
+			int width  = 0;
+			int height = 0;
 			for (int i = 0; i < 100; ++i) {
 				glfwPollEvents();
 				glfwGetWindowSize(desktop->_window, &width, &height);

@@ -12,9 +12,9 @@
 
 evan::GPUTexture::GPUTexture(std::shared_ptr<DeviceContext> deviceContext,
 							 const utility::graphic::Texture &texture,
-							 TextureType type,
-							 const SamplerSettings &settings)
-              : _deviceContext(deviceContext), type(type)
+							 TextureType type, const SamplerSettings &settings)
+	: _deviceContext(deviceContext)
+	, type(type)
 {
 	this->getLogger().info() << "Creating GPUTexture...";
 
@@ -212,8 +212,8 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 		._graphicsQueue = graphicsQueue,
 		._image			= _image,
 		._imageFormat	= type == TextureType::FontAtlas
-			  ? VK_FORMAT_R8_UNORM
-			  : VK_FORMAT_R8G8B8A8_SRGB,
+			? VK_FORMAT_R8_UNORM
+			: VK_FORMAT_R8G8B8A8_SRGB,
 		._texWidth		= (uint32_t)texWidth,
 		._texHeight		= (uint32_t)texHeight,
 		._mipLevels		= _mipLevel
@@ -228,11 +228,12 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 void evan::GPUTexture::createImageView(const ADeviceBackend &deviceBackend)
 {
 	this->getLogger().info() << "Creating image view...";
-	view = deviceBackend.createImageView(_image,
-										 type == TextureType::FontAtlas
-											 ? VK_FORMAT_R8_UNORM
-											 : VK_FORMAT_R8G8B8A8_SRGB,
-										 VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel)
+	view = deviceBackend
+			   .createImageView(_image,
+								type == TextureType::FontAtlas
+									? VK_FORMAT_R8_UNORM
+									: VK_FORMAT_R8G8B8A8_SRGB,
+								VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel)
 			   .value;
 }
 
@@ -260,7 +261,8 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 	}
 
 	VkPhysicalDeviceProperties properties {};
-	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(), &properties);
+	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(),
+								  &properties);
 
 	// Check if samplerInfo is "empty" by testing its sType field.
 	// If sType is not set, it's likely uninitialized.
@@ -276,7 +278,8 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 					   properties.limits.maxSamplerAnisotropy);
 	}
 
-	if (vkCreateSampler(deviceBackend.getDevice(), &samplerInfo, nullptr, &sampler)
+	if (vkCreateSampler(deviceBackend.getDevice(), &samplerInfo, nullptr,
+						&sampler)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to create texture sampler!";
 		return;
@@ -348,7 +351,7 @@ void evan::GPUTexture::generateMipmaps(
 		blit.srcSubresource.baseArrayLayer = 0;
 		blit.srcSubresource.layerCount	   = 1;
 		blit.dstOffsets[0]				   = { 0, 0, 0 };
-		blit.dstOffsets[1]				   = { mipWidth > 1 ? mipWidth / 2 : 1,
+		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1,
 							   mipHeight > 1 ? mipHeight / 2 : 1, 1 };
 		blit.dstSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.dstSubresource.mipLevel	   = i;

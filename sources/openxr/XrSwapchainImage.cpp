@@ -47,9 +47,8 @@ evan::XrSwapchainImage::XrSwapchainImage(
 	}
 
 	if (properties.resolveToSwapchain) {
-		this->createColorResources(
-			*properties.deviceContext.getDeviceBackend(),
-			properties.msaaSamples);
+		this->createColorResources(*properties.deviceContext.getDeviceBackend(),
+								   properties.msaaSamples);
 	}
 	this->createDepthResources(properties.deviceContext,
 							   properties.msaaSamples);
@@ -89,8 +88,7 @@ void evan::XrSwapchainImage::cleanup()
 				<< "Destroying image view and framebuffer for swapchain "
 				   "image index: "
 				<< i;
-			if (i < _imageViews.size()
-				&& _imageViews[i] != VK_NULL_HANDLE) {
+			if (i < _imageViews.size() && _imageViews[i] != VK_NULL_HANDLE) {
 				vkDestroyImageView(_device, _imageViews[i], nullptr);
 			}
 			if (i < _framebuffers.size()

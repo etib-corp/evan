@@ -51,8 +51,8 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 		<< "Mapping staging buffer memory and copying vertex data...";
 
 	void *data = nullptr;
-	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize, 0,
-				&data);
+	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize,
+				0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 
 	this->getLogger().info() << "Unmapping staging buffer memory...";
@@ -128,7 +128,7 @@ void evan::GPUMesh::updateVertices(const std::vector<GPUVertex> &vertices)
 		return;
 	}
 
-	auto deviceBackend = _deviceContext->getDeviceBackend();
+	auto deviceBackend		= _deviceContext->getDeviceBackend();
 	VkDeviceSize bufferSize = sizeof(GPUVertex) * vertices.size();
 
 	VkBuffer stagingBuffer;
@@ -263,8 +263,8 @@ void evan::GPUMesh::createIndexBuffer(
 
 	this->getLogger().info()
 		<< "Mapping staging buffer memory and copying index data...";
-	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize, 0,
-				&data);
+	vkMapMemory(deviceBackend->getDevice(), stagingBufferMemory, 0, bufferSize,
+				0, &data);
 	memcpy(data, indices.data(), (size_t)bufferSize);
 
 	this->getLogger().info() << "Unmapping staging buffer memory...";

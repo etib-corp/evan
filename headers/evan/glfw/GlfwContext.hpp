@@ -44,9 +44,9 @@ namespace evan::glfw
 		 */
 		~GlfwContext() = default;
 
-		GlfwContext(const GlfwContext &) = default;
-		GlfwContext(GlfwContext &&) noexcept = default;
-		GlfwContext &operator=(const GlfwContext &) = default;
+		GlfwContext(const GlfwContext &)				= default;
+		GlfwContext(GlfwContext &&) noexcept			= default;
+		GlfwContext &operator=(const GlfwContext &)		= default;
 		GlfwContext &operator=(GlfwContext &&) noexcept = default;
 
 		private:

@@ -14,7 +14,7 @@ evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
 		<< "Creating frame with command pool and device backend...";
 
 	auto deviceBackend = _deviceContext->getDeviceBackend();
-	auto commandPool = _deviceContext->getCommandPool();
+	auto commandPool   = _deviceContext->getCommandPool();
 
 	this->createCommandBuffer(deviceBackend->getDevice(), commandPool);
 	this->createSyncObjects(deviceBackend->getDevice());
@@ -183,6 +183,6 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 
 	this->getLogger().info() << "Uniform buffer created and memory allocated "
 								"successfully. Mapping memory...";
-	vkMapMemory(deviceBackend.getDevice(), _uniformBufferMemory, 0, bufferSize, 0,
-				&_uniformBufferMapped);
+	vkMapMemory(deviceBackend.getDevice(), _uniformBufferMemory, 0, bufferSize,
+				0, &_uniformBufferMapped);
 }

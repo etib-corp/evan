@@ -71,9 +71,8 @@ void evan::ASwapchainContext::createRenderPass(
 	VkAttachmentReference colorAttachmentResolveRef {};
 	colorAttachmentResolveRef.attachment = 2;
 
-	std::vector<VkAttachmentDescription> attachments = {
-		colorAttachment, depthAttachment
-	};
+	std::vector<VkAttachmentDescription> attachments = { colorAttachment,
+														 depthAttachment };
 
 	VkSubpassDescription subpass {};
 	subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -82,14 +81,15 @@ void evan::ASwapchainContext::createRenderPass(
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	if (resolveToSwapchain) {
-		colorAttachmentResolve.format		   = swapchainFormat;
-		colorAttachmentResolve.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachmentResolve.loadOp		   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachmentResolve.finalLayout	  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachmentResolve.format		 = swapchainFormat;
+		colorAttachmentResolve.samples		 = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachmentResolve.loadOp		 = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.storeOp		 = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.stencilStoreOp =
+			VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachmentResolve.finalLayout	 = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		colorAttachmentResolveRef.layout =
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -113,8 +113,7 @@ void evan::ASwapchainContext::createRenderPass(
 		<< subpass.pipelineBindPoint
 		<< ", color attachment count: " << subpass.colorAttachmentCount
 		<< ", depth-stencil attachment reference: "
-		<< depthAttachmentRef.attachment
-		<< ", and color attachment reference: "
+		<< depthAttachmentRef.attachment << ", and color attachment reference: "
 		<< colorAttachmentRef.attachment;
 
 	VkSubpassDependency dependency {};
@@ -186,7 +185,8 @@ bool evan::ASwapchainContext::needsSwapchainRecreation() const
 	return false;
 }
 
-utility::graphic::ViewF evan::ASwapchainContext::getView(std::size_t index) const
+utility::graphic::ViewF
+	evan::ASwapchainContext::getView(std::size_t index) const
 {
 	return getViewSet().getView(index);
 }
@@ -297,8 +297,8 @@ utility::math::Vector2F evan::ASwapchainContext::getViewportSize() const
 	return viewportSize;
 }
 
-void evan::ASwapchainContext::updateViewForExtent(
-	utility::graphic::ViewF &view, VkExtent2D extent)
+void evan::ASwapchainContext::updateViewForExtent(utility::graphic::ViewF &view,
+												  VkExtent2D extent)
 {
 	const auto width  = static_cast<float>(extent.width);
 	const auto height = static_cast<float>(extent.height);

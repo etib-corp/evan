@@ -399,9 +399,8 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 	}
 
 	if (result != VK_SUCCESS) {
-		throw std::runtime_error(
-			"Failed to create Vulkan instance! VkResult: "
-			+ std::to_string(result));
+		throw std::runtime_error("Failed to create Vulkan instance! VkResult: "
+								 + std::to_string(result));
 	}
 	this->getLogger().info() << "Vulkan instance created successfully!";
 }
@@ -506,9 +505,8 @@ void evan::DesktopBackend::createLogicalDevice()
 	VkResult result =
 		vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device);
 	if (result != VK_SUCCESS) {
-		throw std::runtime_error(
-			"Failed to create logical device! VkResult: "
-			+ std::to_string(result));
+		throw std::runtime_error("Failed to create logical device! VkResult: "
+								 + std::to_string(result));
 	}
 	this->getLogger().info() << "Logical device created successfully!";
 }
@@ -695,8 +693,7 @@ void evan::DesktopBackend::setupCallbackEvent(const IPlatform &platform)
 	this->getLogger().info()
 		<< "Setting GLFW cursor position callback for mouse motion events...";
 	glfwSetCursorPosCallback(
-		glfwPlatform._window,
-		[](GLFWwindow *window, double xpos, double ypos) {
+		glfwPlatform._window, [](GLFWwindow *window, double xpos, double ypos) {
 			auto *self = static_cast<evan::IDesktopPlatform *>(
 				glfwGetWindowUserPointer(window));
 

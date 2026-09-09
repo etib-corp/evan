@@ -59,8 +59,7 @@ namespace xider::tests
 			return 0;
 		}
 
-		std::vector<int64_t>
-			enumerateSwapchainFormats(uint32_t) const override
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t) const override
 		{
 			return {};
 		}
@@ -75,8 +74,8 @@ namespace xider::tests
 			return evan::Error::Ok;
 		}
 
-		evan::Error
-			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error processFrame(VkPresentInfoKHR,
+								 evan::ASwapchainImage &) override
 		{
 			return evan::Error::Ok;
 		}
@@ -113,8 +112,7 @@ namespace xider::tests
 			return 0;
 		}
 
-		std::vector<int64_t>
-			enumerateSwapchainFormats(uint32_t) const override
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t) const override
 		{
 			return {};
 		}
@@ -129,8 +127,8 @@ namespace xider::tests
 			return evan::Error::Ok;
 		}
 
-		evan::Error
-			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error processFrame(VkPresentInfoKHR,
+								 evan::ASwapchainImage &) override
 		{
 			return evan::Error::Ok;
 		}
