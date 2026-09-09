@@ -6,8 +6,7 @@
 include(FetchContent)
 FetchContent_Declare(
     googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-    GIT_TAG v1.9.1
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/googlebenchmark
 )
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)

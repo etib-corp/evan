@@ -13,8 +13,7 @@ function(add_project_docs)
     include(FetchContent)
     FetchContent_Declare(
         doxygen-awesome-css
-        GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
-        GIT_TAG v2.4.1
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/doxygen-awesome-css
     )
     FetchContent_MakeAvailable(doxygen-awesome-css)
     FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
