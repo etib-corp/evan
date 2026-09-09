@@ -14,8 +14,7 @@ set(TEST_SOURCES
 include(FetchContent)
 FetchContent_Declare(
     googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.17.0
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/googletest
 )
 # Prevent GoogleTest from overriding our compiler/linker settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

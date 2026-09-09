@@ -96,18 +96,12 @@ if(NOT BUILD_DOCS_ONLY)
 
     set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(glm
-        GIT_REPOSITORY https://github.com/g-truc/glm.git
-        GIT_TAG 1.0.2
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
     )
     FetchContent_MakeAvailable(glm)
 
     FetchContent_Declare(stb
-        GIT_REPOSITORY https://github.com/nothings/stb.git
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
     )
     FetchContent_MakeAvailable(stb)
 
@@ -220,10 +214,7 @@ if(NOT BUILD_DOCS_ONLY)
     # OpenXR fetch
     if(BUILD_FOR_OPENXR)
         FetchContent_Declare(OpenXR-SDK
-            GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK-Source.git
-            GIT_TAG release-1.1.54
-            GIT_SHALLOW TRUE
-            GIT_PROGRESS TRUE
+            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/OpenXR-SDK
         )
         FetchContent_MakeAvailable(OpenXR-SDK)
     endif()
@@ -256,10 +247,7 @@ if(NOT BUILD_DOCS_ONLY)
         message(STATUS "Building with GLFW support")
 
         FetchContent_Declare(glfw
-            GIT_REPOSITORY https://github.com/glfw/glfw.git
-            GIT_TAG 3.4
-            GIT_SHALLOW TRUE
-            GIT_PROGRESS TRUE
+            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glfw
         )
         FetchContent_MakeAvailable(glfw)
     endif()
