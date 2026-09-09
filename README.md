@@ -39,7 +39,7 @@ cmake --build build
 
 - CMake 3.10+
 - A C++20 compiler
-- The Vulkan SDK
+- The Vulkan SDK (download from [LunarG](https://vulkan.lunarg.com/sdk/home))
 - Doxygen + Graphviz (only for `-DBUILD_DOCS=ON`)
 
 Evan fetches its dependencies (Utility, GLM, STB) via CMake `FetchContent`.
