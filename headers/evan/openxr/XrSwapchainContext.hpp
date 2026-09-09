@@ -305,7 +305,7 @@ namespace evan
 		 * in the scene. Objects closer than this distance will not be visible
 		 * in the rendered output.
 		 */
-		float _nearPlane;
+		float _nearPlane = 1.0f;
 
 		/**
 		 * The far clipping plane distance for the projection matrix, which is
@@ -313,6 +313,6 @@ namespace evan
 		 * in the scene. Objects beyond this distance will not be visible in the
 		 * rendered output.
 		 */
-		float _farPlane;
+		float _farPlane = 1000.0f;
 	};
 }	 // namespace evan
