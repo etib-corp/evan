@@ -23,9 +23,11 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 
 	this->getLogger().info() << "Current frame index: " << _currentFrameIndex;
 
-	this->createDescriptorSetLayout(deviceContext->getDeviceBackend()->getDevice());
-	this->createGraphicsPipelines(deviceContext->getDeviceBackend()->getDevice(),
-								  renderPass, msaaSamples);
+	this->createDescriptorSetLayout(
+		deviceContext->getDeviceBackend()->getDevice());
+	this->createGraphicsPipelines(
+		deviceContext->getDeviceBackend()->getDevice(), renderPass,
+		msaaSamples);
 	this->createDescriptorPool(
 		deviceContext->getDeviceBackend()->getDevice(),
 		1000);	  // TODO: Change this with the AssetManager when it will be

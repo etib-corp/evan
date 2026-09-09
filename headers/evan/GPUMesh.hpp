@@ -168,7 +168,8 @@ namespace evan
 		 *
 		 * @note The method performs a staging upload followed by a buffer copy,
 		 * so it should not be called every frame for large meshes. It avoids
-		 * buffer creation and destruction, but still performs a device transfer.
+		 * buffer creation and destruction, but still performs a device
+		 * transfer.
 		 */
 		void updateVertices(const std::vector<GPUVertex> &vertices);
 

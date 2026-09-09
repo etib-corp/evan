@@ -26,7 +26,7 @@ namespace evan
 	 * @return Target& A reference to the casted object.
 	 * @throws std::logic_error If the cast fails.
 	 */
-	template <typename Target, typename Source>
+	template<typename Target, typename Source>
 	Target &checkedCast(Source &source)
 	{
 		Target *result = dynamic_cast<Target *>(&source);

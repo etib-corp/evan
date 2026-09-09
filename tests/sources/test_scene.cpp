@@ -69,10 +69,11 @@ namespace xider::tests
 	 */
 	TEST(SceneTest, GetMeshesReturnsByValue)
 	{
-		static_assert(!std::is_reference_v<decltype(
-						  std::declval<const evan::Scene &>().getMeshes())>,
-					  "Scene::getMeshes() must return by value, not by "
-					  "reference");
+		static_assert(
+			!std::is_reference_v<
+				decltype(std::declval<const evan::Scene &>().getMeshes())>,
+			"Scene::getMeshes() must return by value, not by "
+			"reference");
 
 		evan::Scene first;
 		evan::Scene second;
@@ -84,4 +85,5 @@ namespace xider::tests
 
 		EXPECT_TRUE(firstMeshes.empty());
 		EXPECT_TRUE(secondMeshes.empty());
-	}}	 // namespace xider::tests
+	}
+}	 // namespace xider::tests

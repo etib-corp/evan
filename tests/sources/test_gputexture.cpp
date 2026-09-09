@@ -72,9 +72,8 @@ namespace xider::tests
 	TEST_F(TestGPUTexture, AllGeneratedMipLevelsAreSampleable)
 	{
 		const std::vector<std::pair<uint32_t, uint32_t>> dimensions = {
-			{ 1, 1 },	  { 2, 1 },		 { 64, 64 },
-			{ 128, 256 }, { 800, 600 },	 { 1024, 1024 },
-			{ 2048, 512 },
+			{ 1, 1 },	  { 2, 1 },		  { 64, 64 },	 { 128, 256 },
+			{ 800, 600 }, { 1024, 1024 }, { 2048, 512 },
 		};
 
 		for (const auto &[width, height]: dimensions) {
@@ -108,7 +107,7 @@ namespace xider::tests
 		appInfo.apiVersion = VK_API_VERSION_1_0;
 
 		VkInstanceCreateInfo createInfo {};
-		createInfo.sType			 = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
 
 		VkInstance probe = VK_NULL_HANDLE;
@@ -118,18 +117,19 @@ namespace xider::tests
 		vkDestroyInstance(probe, nullptr);
 
 		try {
-			#if defined(__APPLE__)
+	#if defined(__APPLE__)
 			auto platform = std::make_shared<evan::MacOsDesktopPlatform>(
 				"evan test", 64, 64);
-			#elif defined(__linux__)
+	#elif defined(__linux__)
 			auto platform = std::make_shared<evan::LinuxDesktopPlatform>(
 				"evan test", 64, 64);
-			#elif defined(_WIN32)
+	#elif defined(_WIN32)
 			auto platform = std::make_shared<evan::WindowsDesktopPlatform>(
 				"evan test", 64, 64);
-			#endif
+	#endif
 
-			auto deviceContext = std::make_shared<evan::DeviceContext>(*platform);
+			auto deviceContext =
+				std::make_shared<evan::DeviceContext>(*platform);
 			utility::graphic::Texture texture(
 				64, 64, utility::graphic::Texture::TextureType::Albedo);
 			evan::GPUTexture gpuTexture(deviceContext, texture);

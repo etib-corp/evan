@@ -32,7 +32,7 @@ namespace xider::tests
 	class TestGPUTexture: public ::testing::Test
 	{
 		protected:
-		TestGPUTexture(void)		  = default;
+		TestGPUTexture(void)		   = default;
 		~TestGPUTexture(void) override = default;
 
 		void SetUp(void) override;

@@ -290,7 +290,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error render();	  // For rendering the current scene.
+		Error render();	   // For rendering the current scene.
 
 		/**
 		 * @brief Returns the last error recorded by the platform.
