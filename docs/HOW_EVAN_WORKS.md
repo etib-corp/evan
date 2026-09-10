@@ -13,7 +13,7 @@ Evan runs a platform-driven render loop around a shared engine instance.
 ## Runtime Responsibilities
 
 - `pollEvents()` gathers input and platform events.
-- `update()` advances scene and application state.
+- `update()` advances application state.
 - `render()` records Vulkan commands and presents the current frame.
 
 ## Backends

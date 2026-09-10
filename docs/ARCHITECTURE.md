@@ -1,7 +1,7 @@
 # Evan Architecture
 
 Evan is split into a small set of runtime layers so rendering code, platform
-code, and scene logic stay separated.
+code, and engine content stay separated.
 
 ## Module Layout
 
@@ -10,12 +10,12 @@ graph TD
     Engine[Engine] --> Platform[Platform]
     Engine --> Device[DeviceContext]
     Engine --> Swapchain[SwapchainContext]
-    Engine --> Scene[Scene]
+    Engine --> Renderer[Renderer]
 
-    Scene --> RenderObject[RenderObject]
+    Renderer --> RenderObject[RenderObject]
     RenderObject --> GPUMesh[GPUMesh]
-    Scene --> GPUMaterial[GPUMaterial]
-    Scene --> GPUShader[GPUShader]
+    Renderer --> MaterialManager[RessourceManager]
+    MaterialManager --> GPUMaterial[GPUMaterial]
 
     Platform --> Backend[Backend: OpenXR / GLFW]
 ```
@@ -23,7 +23,8 @@ graph TD
 - **Engine** owns the frame loop and coordinates update, draw, and present.
 - **Platform** abstracts the target backend (OpenXR or GLFW) and platform.
 - **Device & swapchain** manage Vulkan resources and frame ownership.
-- **Scene** holds renderable objects, meshes, and materials.
+- **Renderer** owns the registry of render objects and their GPU meshes, and
+  draws them each frame; GPU materials are managed by the `RessourceManager`.
 
 ## Frame Lifecycle
 
@@ -32,11 +33,12 @@ sequenceDiagram
     participant Engine
     participant Platform
     participant Device as DeviceContext
-    participant Scene
+    participant Renderer
 
     loop each frame
         Engine->>Platform: poll events
-        Engine->>Scene: update state
+        Engine->>Engine: update state
+        Engine->>Renderer: drawFrame(render objects)
         Engine->>Device: record command buffers
         Engine->>Platform: present image
     end
