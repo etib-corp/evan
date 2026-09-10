@@ -49,6 +49,17 @@ std::vector<std::string>
 	return std::vector<std::string>(extensions.begin(), extensions.end());
 }
 
+VkInstanceCreateFlags evan::MacOsDesktopPlatform::getInstanceCreateFlags() const
+{
+	return VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+}
+
+std::vector<std::string>
+	evan::MacOsDesktopPlatform::getRequiredDeviceExtensions() const
+{
+	return { "VK_KHR_portability_subset" };
+}
+
 VkSurfaceKHR
 	evan::MacOsDesktopPlatform::createSurface(VkInstance instance) const
 {

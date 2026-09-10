@@ -51,6 +51,33 @@ namespace evan
 			getRequiredInstanceExtensions() const = 0;
 
 		/**
+		 * @brief Get platform-specific Vulkan instance creation flags.
+		 *
+		 * @return Flags to OR into VkInstanceCreateInfo::flags.
+		 *
+		 * Platforms that require special instance creation flags (e.g. the
+		 * portability enumeration bit on macOS/MoltenVK) override this method.
+		 */
+		virtual VkInstanceCreateFlags getInstanceCreateFlags() const
+		{
+			return 0;
+		}
+
+		/**
+		 * @brief Get platform-specific required Vulkan device extensions.
+		 *
+		 * @return A vector of strings representing the required device
+		 * extensions.
+		 *
+		 * Platforms that require additional device extensions (e.g. the
+		 * portability subset on macOS/MoltenVK) override this method.
+		 */
+		virtual std::vector<std::string> getRequiredDeviceExtensions() const
+		{
+			return {};
+		}
+
+		/**
 		 * @brief Check if the platform should close.
 		 *
 		 * @return true if the platform should close, false otherwise.
