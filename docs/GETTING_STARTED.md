@@ -30,16 +30,17 @@ The `evan::Engine` receives the platform and prepares Vulkan resources:
 // Construct the engine with a platform implementation.
 ```
 
-## 4. Populate a scene
+## 4. Add renderable content
 
-Add renderable objects, meshes, and materials to a `Scene`:
+Add renderable objects (meshes, primitives, models, or text) through the
+`Engine`:
 
 ```cpp
-#include <evan/Scene.hpp>
-
-evan::Scene scene;
-// scene.addObject(id, renderObject);
+#include <evan/Engine.hpp>
 ```
+
+Each `add*()` call registers a render object in the engine and returns its
+object ID, which can later be passed to `removeObject()`.
 
 ## 5. Run the frame loop
 
