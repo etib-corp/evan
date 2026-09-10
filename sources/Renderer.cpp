@@ -126,6 +126,12 @@ void evan::Renderer::destroy(VkDevice device)
 {
 	this->getLogger().info() << "Destroying Renderer resources...";
 
+	this->getLogger().info() << "Destroying render objects...";
+	for (auto &[_, object]: _objects) {
+		object->destroy(device);
+	}
+	_objects.clear();
+
 	this->getLogger().info() << "Destroying descriptor pool...";
 	vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
 
@@ -148,9 +154,34 @@ void evan::Renderer::destroy(VkDevice device)
 	}
 }
 
+size_t evan::Renderer::addObject(std::shared_ptr<RenderObject> object)
+{
+	this->getLogger().info() << "Registering render object with ID "
+							 << _nextObjectID << " in Renderer...";
+	const size_t objectID = _nextObjectID++;
+	_objects[objectID]	  = object;
+	return objectID;
+}
+
+bool evan::Renderer::removeObject(size_t objectID)
+{
+	this->getLogger().info()
+		<< "Removing render object with ID " << objectID << " from Renderer...";
+	return _objects.erase(objectID) > 0;
+}
+
+std::shared_ptr<evan::RenderObject>
+	evan::Renderer::getObject(size_t objectID) const
+{
+	auto objectIt = _objects.find(objectID);
+	if (objectIt == _objects.end()) {
+		return nullptr;
+	}
+	return objectIt->second;
+}
+
 evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
-									  ASwapchainContext &swapchainContext,
-									  const Scene &scene)
+									  ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Drawing frame...";
 
@@ -175,6 +206,13 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		swapchainContext.recreateSwapchain(deviceContext,
 										   swapchainContext.getRenderPass());
 		return Error::SwapchainOutOfDate;
+	}
+
+	std::vector<std::shared_ptr<GPUMesh>> meshes;
+	meshes.reserve(_objects.size());
+	for (const auto &[_, object]: _objects) {
+		const auto &objectMeshes = object->getMeshes();
+		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
 	}
 
 	auto &frame						 = *_frames[_currentFrameIndex];
@@ -268,11 +306,11 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
 
-		this->updateUniformBuffer(scene, view.view, i);
+		this->updateUniformBuffer(view.view, i);
 		frame.resetCommandBuffer(i);
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), scene, i, view.view);
+								  imageSet.getExtent(), i, view.view);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -683,8 +721,7 @@ void evan::Renderer::resetCommandBuffers()
 	}
 }
 
-void evan::Renderer::updateUniformBuffer(const Scene &scene,
-										 const utility::graphic::ViewF &view,
+void evan::Renderer::updateUniformBuffer(const utility::graphic::ViewF &view,
 										 std::size_t viewSlot)
 {
 	this->getLogger().info()
@@ -704,7 +741,6 @@ void evan::Renderer::updateUniformBuffer(const Scene &scene,
 void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkFramebuffer swapChainFramebuffer,
 										 VkExtent2D swapChainExtent,
-										 const Scene &scene,
 										 std::size_t viewSlot,
 										 const utility::graphic::ViewF &view)
 {
