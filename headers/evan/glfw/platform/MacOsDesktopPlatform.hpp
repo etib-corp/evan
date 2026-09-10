@@ -58,6 +58,28 @@ namespace evan
 		std::vector<std::string> getRequiredInstanceExtensions() const override;
 
 		/**
+		 * @brief Get the Vulkan instance creation flags for the MacOS desktop
+		 * platform.
+		 *
+		 * @return Flags to OR into VkInstanceCreateInfo::flags.
+		 *
+		 * MoltenVK requires the portability enumeration bit to expose the
+		 * VK_KHR_portability_subset device extension.
+		 */
+		VkInstanceCreateFlags getInstanceCreateFlags() const override;
+
+		/**
+		 * @brief Get the required Vulkan device extensions for the MacOS
+		 * desktop platform.
+		 *
+		 * @return A vector of strings representing the required device
+		 * extensions.
+		 *
+		 * MoltenVK requires the VK_KHR_portability_subset device extension.
+		 */
+		std::vector<std::string> getRequiredDeviceExtensions() const override;
+
+		/**
 		 * @brief Create a Vulkan surface for the MacOS desktop platform.
 		 *
 		 * @param instance The Vulkan instance to use for creating the surface.

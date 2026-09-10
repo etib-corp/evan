@@ -83,6 +83,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL defaultDebugCallback(
 }
 
 evan::DesktopBackend::DesktopBackend(const IPlatform &platform)
+	: _platform(&platform)
 {
 	this->getLogger().info() << "Initializing DesktopBackend...";
 
@@ -359,6 +360,8 @@ void evan::DesktopBackend::createInstance(const evan::IPlatform &platform,
 		static_cast<uint32_t>(extensionsWrapped.size());
 	createInfo.ppEnabledExtensionNames = extensionsWrapped.data();
 
+	createInfo.flags |= platform.getInstanceCreateFlags();
+
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
 
 	if (useValidationLayers) {
@@ -411,9 +414,10 @@ void evan::DesktopBackend::createLogicalDevice()
 
 	std::vector<const char *> desktopExtensions = deviceExtensions;
 
-#ifdef __APPLE__
-	desktopExtensions.push_back("VK_KHR_portability_subset");
-#endif
+	auto platformDeviceExtensions = _platform->getRequiredDeviceExtensions();
+	for (const auto &extension: platformDeviceExtensions) {
+		desktopExtensions.push_back(extension.c_str());
+	}
 
 	this->getLogger().info()
 		<< "Required device extensions for logical device creation: "
@@ -484,20 +488,10 @@ void evan::DesktopBackend::createLogicalDevice()
 	createInfo.ppEnabledExtensionNames = desktopExtensions.data();
 
 	this->getLogger().info()
-		<< "Enabling validation layers for logical device creation...";
-	if (enableValidationLayers) {
-		this->getLogger().info()
-			<< "Validation layers enabled. Setting up validation layers for "
-			   "logical device creation...";
-		createInfo.enabledLayerCount =
-			static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	} else {
-		this->getLogger().info()
-			<< "Validation layers not enabled. Skipping validation layer setup "
-			   "for logical device creation.";
-		createInfo.enabledLayerCount = 0;
-	}
+		<< "Device layers are deprecated; skipping validation layer setup for "
+		   "logical device creation.";
+	createInfo.enabledLayerCount   = 0;
+	createInfo.ppEnabledLayerNames = nullptr;
 
 	this->getLogger().info()
 		<< "Creating logical device with the specified queue create infos, "
