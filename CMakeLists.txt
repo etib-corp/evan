@@ -113,12 +113,6 @@ if(NOT BUILD_DOCS_ONLY)
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
-    # Prefer a local utility checkout (../utility) for development so that
-    # local fixes are picked up without pushing to GitHub first.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../utility/CMakeLists.txt")
-        set(FETCHCONTENT_SOURCE_DIR_UTILITY
-            "${CMAKE_CURRENT_SOURCE_DIR}/../utility" CACHE PATH "" FORCE)
-    endif()
     FetchContent_MakeAvailable(utility)
 
     # 04. Library definition
