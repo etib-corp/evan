@@ -15,7 +15,6 @@
 
 #include "evan/DeviceContext.hpp"
 #include "evan/Renderer.hpp"
-#include "evan/Scene.hpp"
 #include "evan/ASwapchainContext.hpp"
 #include "evan/IPlatform.hpp"
 
@@ -35,8 +34,6 @@
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
-#include "Scene.hpp"
-#include "RenderObject.hpp"
 #include "RessourceManager.hpp"
 
 #include <string>
@@ -47,17 +44,17 @@ namespace evan
 	/**
 	 * @brief The Engine class is the main entry point for the Evan Engine. It
 	 * manages the core components of the engine, including the device context,
-	 * renderer, scenes, swapchain context, and platform abstraction. The
+	 * renderer, swapchain context, and platform abstraction. The
 	 * Engine class is responsible for initializing these components, running
 	 * the main loop of the engine, and providing methods for updating and
-	 * rendering scenes. It serves as the central hub for managing the engine's
-	 * functionality and orchestrating the various subsystems to create a
-	 * cohesive experience.
+	 * rendering its render objects. It serves as the central hub for managing
+	 * the engine's functionality and orchestrating the various subsystems to
+	 * create a cohesive experience.
 	 *
 	 * The Engine class provides a high-level interface for interacting with
-	 * the engine, allowing users to add scenes, handle updates, and manage
-	 * rendering without needing to directly interact with the lower-level
-	 * components. It abstracts away the complexities of Vulkan and
+	 * the engine, allowing users to add render objects, handle updates, and
+	 * manage rendering without needing to directly interact with the
+	 * lower-level components. It abstracts away the complexities of Vulkan and
 	 * platform-specific details, providing a more user-friendly API for
 	 * developers using the Evan Engine.
 	 *
@@ -275,11 +272,11 @@ namespace evan
 		Error update();
 
 		/**
-		 * @brief Renders the current scene. This method is responsible for
-		 * drawing the objects in the current scene to the screen using the
-		 * renderer. It typically involves setting up the necessary graphics
-		 * pipelines, binding resources, and issuing draw calls to render the
-		 * objects in the scene. The render method may also handle
+		 * @brief Renders the engine's render objects. This method is
+		 * responsible for drawing the render objects registered in the engine
+		 * to the screen using the renderer. It typically involves setting up
+		 * the necessary graphics pipelines, binding resources, and issuing draw
+		 * calls to render the objects. The render method may also handle
 		 * post-processing effects, such as bloom or anti-aliasing, depending on
 		 * the specific requirements of the application being developed with the
 		 * engine.
@@ -290,7 +287,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error render();	   // For rendering the current scene.
+		Error render();	   // For rendering the render objects.
 
 		/**
 		 * @brief Returns the last error recorded by the platform.
@@ -330,37 +327,6 @@ namespace evan
 		 * derived classes representing specific types of events.
 		 */
 		std::vector<std::shared_ptr<utility::event::Event>> pollEvents();
-
-		/**
-		 * @brief Adds a new scene to the engine. This method allows users to
-		 * add a new scene to the engine by providing the necessary data, such
-		 * as texture paths and mesh data. The method takes in a vector of
-		 * texture paths, which are used to load the textures for the scene, and
-		 * a map of mesh data, which contains the information about the meshes
-		 * to be rendered in the scene. The method creates a new Scene object
-		 * using the provided data and adds it to the vector of scenes managed
-		 * by the engine. This allows users to easily create and manage multiple
-		 * scenes within the engine, enabling them to switch between different
-		 * scenes as needed.
-		 *
-		 * @param sceneIndex Scene identifier.
-		 *
-		 * @note The Engine class is designed to be flexible and extensible,
-		 * allowing for future enhancements and additions to the engine's
-		 * capabilities. The current implementation focuses on establishing the
-		 * core structure and functionality of the engine, with plans for
-		 * further improvements and optimizations in the future.
-		 */
-		void addScene(size_t sceneIndex);
-
-		/**
-		 * @brief Switches the current scene to the scene with the specified
-		 * index. This method allows users to navigate between different scenes
-		 * managed by the engine.
-		 *
-		 * @param sceneIndex The index of the scene to switch to.
-		 */
-		void switchScene(size_t sceneIndex);
 
 		/**
 		 * @brief Checks if the engine should capture viewport input. This
@@ -433,28 +399,6 @@ namespace evan
 		std::shared_ptr<Renderer> _renderer;
 
 		/**
-		 * A map of scenes managed by the engine, where the key is a unique
-		 * identifier (size_t) for each scene, and the value is a Scene object
-		 * containing the data and resources for that scene. This allows the
-		 * engine to manage multiple scenes simultaneously, enabling users to
-		 * switch between different scenes as needed. Each Scene object contains
-		 * the necessary data for rendering, such as meshes, materials, and
-		 * textures, allowing the engine to efficiently manage and render
-		 * multiple scenes within the application.
-		 */
-		std::map<size_t, std::shared_ptr<Scene>> _scenes;
-
-		/**
-		 * An index to keep track of the current scene being rendered or
-		 * managed. This allows the engine to switch between different scenes as
-		 * needed, enabling users to easily navigate through different parts of
-		 * their application or game. The _currentScene index can be used to
-		 * determine which scene is currently active and should be rendered or
-		 * updated during the main loop of the engine.
-		 */
-		size_t _currentScene;
-
-		/**
 		 * A shared pointer to an ASwapchainContext object, which manages the
 		 * Vulkan swapchain and related resources. The ASwapchainContext is
 		 * responsible for creating and managing the swapchain, handling
@@ -500,17 +444,6 @@ namespace evan
 		std::shared_ptr<RessourceManager> _ressourceManager;
 
 		private:
-		/**
-		 * A counter to generate unique object IDs for scenes, render objects,
-		 * or other entities managed by the engine. This counter is incremented
-		 * each time a new object is created, ensuring that each object receives
-		 * a unique identifier that can be used for tracking and management
-		 * purposes within the engine. The _nextObjectID can be used to assign
-		 * IDs to new scenes, render objects, or any other entities that require
-		 * unique identification within the engine's data structures.
-		 */
-		size_t _nextObjectID = 1;
-
 		/**
 		 * When true, the engine copies keyboard and mouse input for movement:
 		 * - Keyboard events are copied for entity movement and related actions.

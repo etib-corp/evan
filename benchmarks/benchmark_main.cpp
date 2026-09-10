@@ -22,46 +22,4 @@
 
 #include <benchmark/benchmark.h>
 
-#include <memory>
-
-#include <evan/Scene.hpp>
-
-namespace
-{
-
-	// Scene::addObject/removeObject are CPU-side map operations that do not
-	// require a live Vulkan device, so they are safe to benchmark directly.
-
-	void BM_SceneAddObject(benchmark::State &state)
-	{
-		evan::Scene scene;
-		for (auto _: state) {
-			for (std::uint32_t i = 0; i < state.range(0); ++i) {
-				scene.addObject(i, nullptr);
-			}
-			state.PauseTiming();
-			for (std::uint32_t i = 0; i < state.range(0); ++i) {
-				scene.removeObject(i);
-			}
-			state.ResumeTiming();
-		}
-	}
-	BENCHMARK(BM_SceneAddObject)->Range(8, 8 << 10);
-
-	void BM_SceneRemoveObject(benchmark::State &state)
-	{
-		evan::Scene scene;
-		for (std::uint32_t i = 0; i < state.range(0); ++i) {
-			scene.addObject(i, nullptr);
-		}
-		for (auto _: state) {
-			for (std::uint32_t i = 0; i < state.range(0); ++i) {
-				benchmark::DoNotOptimize(scene.removeObject(i));
-			}
-		}
-	}
-	BENCHMARK(BM_SceneRemoveObject)->Range(8, 8 << 10);
-
-}	 // namespace
-
 BENCHMARK_MAIN();

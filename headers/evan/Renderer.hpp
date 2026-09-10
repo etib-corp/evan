@@ -17,8 +17,9 @@
 
 #include "evan/GPUShader.hpp"
 #include "evan/GPUVertex.hpp"
+#include "evan/GPUMesh.hpp"
 
-#include "evan/Scene.hpp"
+#include "evan/RenderObject.hpp"
 
 #include <utility/graphic/view.hpp>
 
@@ -28,6 +29,8 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <memory>
+#include <vector>
 
 namespace evan
 {
@@ -110,25 +113,52 @@ namespace evan
 		void destroy(VkDevice device);
 
 		/**
+		 * @brief Registers a render object in the renderer's object registry.
+		 *
+		 * The renderer owns the registry of render objects drawn each frame.
+		 * The object is assigned a unique object ID, which can later be used
+		 * to remove it or to access it (e.g. for in-place mesh updates).
+		 *
+		 * @param object A shared pointer to the RenderObject to register.
+		 * @return The unique object ID assigned to the render object.
+		 */
+		size_t addObject(std::shared_ptr<RenderObject> object);
+
+		/**
+		 * @brief Removes a render object from the renderer's registry.
+		 *
+		 * @param objectID The object ID of the render object to remove.
+		 * @return True if the object was found and removed, false otherwise.
+		 */
+		bool removeObject(size_t objectID);
+
+		/**
+		 * @brief Retrieves a render object from the renderer's registry.
+		 *
+		 * @param objectID The object ID of the render object to retrieve.
+		 * @return A shared pointer to the RenderObject if found, or nullptr if
+		 * no object with the given ID exists.
+		 */
+		std::shared_ptr<RenderObject> getObject(size_t objectID) const;
+
+		/**
 		 * @brief Draws a frame by recording command buffers and submitting them
 		 * to the graphics queue.
 		 *
 		 * This method handles the rendering of a frame by updating the uniform
-		 * buffer with scene data, recording the command buffer with the
+		 * buffer, recording the command buffer with the
 		 * appropriate render pass and framebuffer, and submitting the command
 		 * buffer to the graphics queue for execution. It takes references to
-		 * the DeviceContext, ASwapchainContext, and Scene as parameters to
-		 * access the necessary resources and data for rendering. Implement this
-		 * method to ensure that frames are rendered correctly based on the
-		 * current scene and swapchain context.
+		 * the DeviceContext and ASwapchainContext as parameters to access the
+		 * necessary resources and data for rendering. Implement this method to
+		 * ensure that frames are rendered correctly based on the registered
+		 * render objects and the swapchain context.
 		 *
 		 * @param deviceContext A reference to the DeviceContext, which provides
 		 * access to the Vulkan device and related resources.
 		 * @param swapchainContext A reference to the ASwapchainContext, which
 		 * provides access to the swapchain and render pass for rendering
 		 * operations.
-		 * @param scene A reference to the Scene, which contains the data to be
-		 * rendered in the frame, including meshes, materials, and textures.
 		 *
 		 * @return evan::Error::Ok on success. evan::Error::Suboptimal or
 		 * evan::Error::SwapchainOutOfDate when the swapchain was recreated and
@@ -136,14 +166,13 @@ namespace evan
 		 * (e.g. evan::Error::DeviceLost) and the caller should stop cleanly.
 		 *
 		 * @note This method should be called for each frame that needs to be
-		 * rendered. Ensure that the DeviceContext, ASwapchainContext, and Scene
-		 * are properly initialized and contain valid data before calling this
+		 * rendered. Ensure that the DeviceContext and ASwapchainContext are
+		 * properly initialized and contain valid data before calling this
 		 * method to avoid rendering issues or exceptions during command buffer
 		 * recording and submission.
 		 */
 		Error drawFrame(const DeviceContext &deviceContext,
-						ASwapchainContext &swapchainContext,
-						const Scene &scene);
+						ASwapchainContext &swapchainContext);
 
 		/**
 		 * @brief Creates a frame for rendering.
@@ -301,21 +330,35 @@ namespace evan
 		 */
 		VkDescriptorPool _descriptorPool;
 
+		/**
+		 * @brief The registry of render objects owned by the renderer.
+		 *
+		 * The key is the unique object ID returned by addObject(), and the
+		 * value is the RenderObject whose GPU meshes are drawn each frame.
+		 * This is the single owner of the renderable content registered by
+		 * the application.
+		 */
+		std::map<size_t, std::shared_ptr<RenderObject>> _objects;
+
+		/**
+		 * @brief A counter to generate unique object IDs for the registered
+		 * render objects. Incremented each time a new object is added.
+		 */
+		size_t _nextObjectID = 1;
+
 		private:
 		/**
-		 * @brief Updates the uniform buffer with scene data for the current
+		 * @brief Updates the uniform buffer with view data for the current
 		 * frame.
 		 *
 		 * This method is responsible for updating the uniform buffer with the
-		 * necessary data from the Scene for the current frame being rendered.
-		 * It takes references to the Scene, ASwapchainContext, and the current
-		 * frame index as parameters to access the relevant data and resources
+		 * view data for the current frame being rendered.
+		 * It takes the current view as parameter to access the relevant data
 		 * needed for updating the uniform buffer. Implement this method to
 		 * ensure that the uniform buffer contains the correct data for
-		 * rendering the scene in each frame.
+		 * rendering in each frame.
 		 */
-		void updateUniformBuffer(const Scene &scene,
-								 const utility::graphic::ViewF &view);
+		void updateUniformBuffer(const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Resets the command buffers for the current frame.
@@ -334,17 +377,17 @@ namespace evan
 		 *
 		 * This method is responsible for recording the command buffer with the
 		 * necessary commands to render a frame based on the provided render
-		 * pass, framebuffer, swap chain extent, and scene data. It takes
+		 * pass, framebuffer, swap chain extent, and mesh list. It takes
 		 * references to the render pass, framebuffer, swap chain extent, and
-		 * scene as parameters to access the relevant resources and data needed
-		 * for recording the command buffer. Implement this method to ensure
-		 * that the command buffer contains the correct commands for rendering
-		 * the scene in each frame.
+		 * the GPU meshes to draw as parameters to access the relevant
+		 * resources and data needed for recording the command buffer.
+		 * Implement this method to ensure that the command buffer contains the
+		 * correct commands for rendering the meshes in each frame.
 		 */
-		void recordCommandBuffer(VkRenderPass renderPass,
-								 VkFramebuffer swapChainFramebuffer,
-								 VkExtent2D swapChainExtent,
-								 const Scene &scene);
+		void recordCommandBuffer(
+			VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
+			VkExtent2D swapChainExtent,
+			const std::vector<std::shared_ptr<GPUMesh>> &meshes);
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering

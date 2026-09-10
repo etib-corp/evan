@@ -50,6 +50,12 @@ void evan::Renderer::destroy(VkDevice device)
 {
 	this->getLogger().info() << "Destroying Renderer resources...";
 
+	this->getLogger().info() << "Destroying render objects...";
+	for (auto &[_, object]: _objects) {
+		object->destroy(device);
+	}
+	_objects.clear();
+
 	this->getLogger().info() << "Destroying descriptor pool...";
 	vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
 
@@ -72,9 +78,34 @@ void evan::Renderer::destroy(VkDevice device)
 	}
 }
 
+size_t evan::Renderer::addObject(std::shared_ptr<RenderObject> object)
+{
+	this->getLogger().info() << "Registering render object with ID "
+							 << _nextObjectID << " in Renderer...";
+	const size_t objectID = _nextObjectID++;
+	_objects[objectID]	  = object;
+	return objectID;
+}
+
+bool evan::Renderer::removeObject(size_t objectID)
+{
+	this->getLogger().info()
+		<< "Removing render object with ID " << objectID << " from Renderer...";
+	return _objects.erase(objectID) > 0;
+}
+
+std::shared_ptr<evan::RenderObject>
+	evan::Renderer::getObject(size_t objectID) const
+{
+	auto objectIt = _objects.find(objectID);
+	if (objectIt == _objects.end()) {
+		return nullptr;
+	}
+	return objectIt->second;
+}
+
 evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
-									  ASwapchainContext &swapchainContext,
-									  const Scene &scene)
+									  ASwapchainContext &swapchainContext)
 {
 	this->getLogger().info() << "Drawing frame...";
 
@@ -95,6 +126,13 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		swapchainContext.recreateSwapchain(deviceContext,
 										   swapchainContext.getRenderPass());
 		return Error::SwapchainOutOfDate;
+	}
+
+	std::vector<std::shared_ptr<GPUMesh>> meshes;
+	meshes.reserve(_objects.size());
+	for (const auto &[_, object]: _objects) {
+		const auto &objectMeshes = object->getMeshes();
+		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
 	}
 
 	auto &frame						 = *_frames[_currentFrameIndex];
@@ -178,13 +216,13 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
 
-		this->updateUniformBuffer(scene, view.view);
+		this->updateUniformBuffer(view.view);
 
 		frame.resetCommandBuffer();
 
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), scene);
+								  imageSet.getExtent(), meshes);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -586,8 +624,7 @@ void evan::Renderer::resetCommandBuffers()
 	_frames[_currentFrameIndex]->resetCommandBuffer();
 }
 
-void evan::Renderer::updateUniformBuffer(const Scene &scene,
-										 const utility::graphic::ViewF &view)
+void evan::Renderer::updateUniformBuffer(const utility::graphic::ViewF &view)
 {
 	this->getLogger().info()
 		<< "Updating uniform buffer for current frame index: "
@@ -603,10 +640,10 @@ void evan::Renderer::updateUniformBuffer(const Scene &scene,
 	this->getLogger().info() << "Uniform buffer updated successfully.";
 }
 
-void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
-										 VkFramebuffer swapChainFramebuffer,
-										 VkExtent2D swapChainExtent,
-										 const Scene &scene)
+void evan::Renderer::recordCommandBuffer(
+	VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
+	VkExtent2D swapChainExtent,
+	const std::vector<std::shared_ptr<GPUMesh>> &meshes)
 {
 	this->getLogger().info()
 		<< "Recording command buffer for current frame index: "
@@ -670,9 +707,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	std::map<uint32_t, bool> materialBound;
 
 	this->getLogger().info()
-		<< "Iterating over meshes in the scene to record draw commands...";
+		<< "Iterating over meshes to record draw commands...";
 
-	for (const auto &mesh: scene.getMeshes()) {
+	for (const auto &mesh: meshes) {
 		this->getLogger().info()
 			<< "Processing mesh with material ID: " << mesh->getMaterialID();
 		auto materialID = mesh->getMaterialID();
