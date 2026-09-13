@@ -1,15 +1,5 @@
 # evan — Vulkan/OpenXR Performance Audit
 
-This document is the `evan`-scoped extraction of the top-level
-[`PERFORMANCE_AUDIT.md`](../PERFORMANCE_AUDIT.md). It contains only the findings
-that concern `evan` (the Vulkan + OpenXR renderer). Line references are relative
-to the `evan` repository root and match the top-level audit.
-
-Companion audits: [`guillaume`](PERFORMANCE_AUDIT_GUILLAUME.md),
-[`utility`](PERFORMANCE_AUDIT_UTILITY.md), [`xider`](PERFORMANCE_AUDIT_XIDER.md).
-
----
-
 ## Role in the rendering architecture
 
 `evan` sits at the bottom of the rendering stack and owns everything GPU:
