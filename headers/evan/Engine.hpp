@@ -35,6 +35,8 @@
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
+#include <utility/engine.hpp>
+
 #include "Scene.hpp"
 #include "RenderObject.hpp"
 #include "RessourceManager.hpp"
@@ -78,9 +80,7 @@ namespace evan
 	 * establishing the core structure and functionality of the engine, with
 	 * plans for further enhancements and optimizations in the future.
 	 */
-	class Engine:
-		protected utility::logging::Loggable<Engine,
-											 utility::logging::DefaultLogger>
+	class Engine: public utility::Engine
 	{
 		public:
 		/**
@@ -139,6 +139,13 @@ namespace evan
 		 * within the scene, which can be used for future reference or
 		 * manipulation of the text object in the scene.
 		 */
+		size_t addText(utility::graphic::Text text) override;
+
+		/**
+		 * @brief Adds a text object to the scene from a shared pointer.
+		 * @param text A shared pointer to the Text object to be added.
+		 * @return The unique identifier of the added text object.
+		 */
 		size_t addText(std::shared_ptr<utility::graphic::Text> text);
 
 		/**
@@ -147,13 +154,23 @@ namespace evan
 		 * @param objectID The identifier returned by addText or addMesh.
 		 * @return True when the object was removed from the scene.
 		 */
-		bool removeObject(size_t objectID);
+		bool removeObject(size_t objectID) override;
 
 		/**
 		 * @brief Get the mirrored view state.
 		 * @return The current view.
 		 */
-		utility::graphic::ViewF getView(void) const;
+		utility::graphic::ViewF getView(void) const override;
+
+		/**
+		 * @brief Measures the pixel dimensions of a given text string when
+		 * rendered with a specific font.
+		 * @param text The text to measure.
+		 * @return A 2D vector containing the width and height of the rendered
+		 * text in pixels.
+		 */
+		utility::graphic::SizeF
+			measureText(const utility::graphic::Text &text) const override;
 
 		/**
 		 * @brief Adds a primitive object to the scene. This method takes a
@@ -198,7 +215,8 @@ namespace evan
 		 * within the scene, which can be used for future reference or
 		 * manipulation of the model object in the scene.
 		 */
-		size_t addModel(std::shared_ptr<utility::graphic::Model> model);
+		size_t
+			addModel(std::shared_ptr<utility::graphic::Model> model) override;
 
 		/**
 		 * @brief Adds a generic renderable object to the scene. This method
@@ -251,9 +269,20 @@ namespace evan
 		 * renderer, which can be used for future reference or manipulation of
 		 * the mesh in the renderer.
 		 */
+		size_t addMesh(
+			const utility::graphic::Mesh &mesh,
+			const std::string &materialName = "default_material") override;
+
+		/**
+		 * @brief Adds a mesh to the renderer with an explicit shader.
+		 * @param mesh The Mesh object to be added to the renderer.
+		 * @param materialName The name of the material to use for rendering.
+		 * @param shader The name of the shader to use for rendering the mesh.
+		 * @return The unique identifier of the added mesh.
+		 */
 		size_t addMesh(const utility::graphic::Mesh &mesh,
-					   const std::string &materialName = "default_material",
-					   const std::string &shader	   = "default");
+					   const std::string &materialName,
+					   const std::string &shader);
 
 		/**
 		 * @brief Updates the state of the engine. This method is responsible
@@ -272,7 +301,22 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error update();
+		void update() override;
+
+		/**
+		 * @brief Clears the current rendering target.
+		 *
+		 * Vulkan clears the render target through the render pass clear values,
+		 * so this is a no-op for the Evan engine.
+		 */
+		void clear(void) override;
+
+		/**
+		 * @brief Presents the composed back buffer to the screen.
+		 *
+		 * Delegates to the renderer's frame drawing pipeline.
+		 */
+		void present(void) override;
 
 		/**
 		 * @brief Renders the current scene. This method is responsible for
@@ -329,7 +373,7 @@ namespace evan
 		 * see utility::event::Event for more details on the Event class and its
 		 * derived classes representing specific types of events.
 		 */
-		std::vector<std::shared_ptr<utility::event::Event>> pollEvents();
+		void pollEvents() override;
 
 		/**
 		 * @brief Adds a new scene to the engine. This method allows users to
@@ -351,7 +395,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		void addScene(size_t sceneIndex);
+		void addScene(size_t sceneIndex) override;
 
 		/**
 		 * @brief Switches the current scene to the scene with the specified
@@ -361,33 +405,6 @@ namespace evan
 		 * @param sceneIndex The index of the scene to switch to.
 		 */
 		void switchScene(size_t sceneIndex);
-
-		/**
-		 * @brief Checks if the engine should capture viewport input. This
-		 * method returns a boolean value indicating whether the engine is
-		 * currently set to capture input events for the viewport, such as mouse
-		 * movements or keyboard inputs.
-		 *
-		 * @return True if the engine should capture viewport input, false
-		 * otherwise.
-		 */
-		bool shouldCaptureViewportInput(void) const
-		{
-			return _shouldCaptureViewportInput;
-		}
-
-		/**
-		 * @brief Sets whether the engine should capture viewport input. This
-		 * method allows users to enable or disable the capturing of input
-		 * events for the viewport, such as mouse movements or keyboard inputs.
-		 *
-		 * @param shouldCapture A boolean value indicating whether the engine
-		 * should capture viewport input (true) or not (false).
-		 */
-		void setShouldCaptureViewportInput(bool shouldCapture)
-		{
-			_shouldCaptureViewportInput = shouldCapture;
-		}
 
 		protected:
 		/**
@@ -510,18 +527,6 @@ namespace evan
 		 * unique identification within the engine's data structures.
 		 */
 		size_t _nextObjectID = 1;
-
-		/**
-		 * When true, the engine copies keyboard and mouse input for movement:
-		 * - Keyboard events are copied for entity movement and related actions.
-		 * - Mouse movement is copied for view/camera rotation.
-		 * - Event copying to UI entities is disabled.
-		 *
-		 * This flag is typically true when the UI does not have focus on
-		 * any entity. When false, input is routed to the UI instead of the
-		 * viewport.
-		 */
-		bool _shouldCaptureViewportInput = true;
 
 		/**
 		 * A vector of shared pointers to Event objects representing the events
