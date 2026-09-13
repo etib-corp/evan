@@ -155,7 +155,8 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 // Getters //
 /////////////
 
-std::vector<VkDescriptorSet> evan::GPUMaterial::getDescriptorSets() const
+const std::vector<VkDescriptorSet> &
+evan::GPUMaterial::getDescriptorSets() const
 {
 	return _descriptorSets;
 }

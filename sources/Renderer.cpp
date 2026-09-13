@@ -709,7 +709,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			<< swapChainExtent.width << "x" << swapChainExtent.height;
 	}
 
-	std::map<uint32_t, bool> materialBound;
+	VkDescriptorSet  lastBoundDescriptorSet  = VK_NULL_HANDLE;
+	VkPipelineLayout lastBoundPipelineLayout = VK_NULL_HANDLE;
 
 	const auto &meshes = scene.getMeshes();
 
@@ -791,22 +792,24 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
 							 VK_INDEX_TYPE_UINT32);
 
-		if (isDrawLogEnabled()) {
-			this->getLogger().debug() << "Binding index buffer for mesh...";
-		}
+		VkDescriptorSet  descriptorSet  =
+			material->getDescriptorSets()[_currentFrameIndex];
+		VkPipelineLayout pipelineLayout =
+			_pipelineLayouts[correspondingPipelineID];
 
-		if (!materialBound[materialID]) {
+		if (descriptorSet != lastBoundDescriptorSet ||
+			pipelineLayout != lastBoundPipelineLayout) {
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
 					<< "Binding descriptor set for material ID: "
 					<< materialID;
 			}
-			materialBound[materialID] = true;
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				_pipelineLayouts[correspondingPipelineID], 0, 1,
-				&material->getDescriptorSets()[_currentFrameIndex], 0, nullptr);
-			++stats.descriptorBinds;
+				pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+			lastBoundDescriptorSet  = descriptorSet;
+			lastBoundPipelineLayout = pipelineLayout;
+      ++stats.descriptorBinds;
 		}
 
 		glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
