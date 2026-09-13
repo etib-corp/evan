@@ -63,6 +63,7 @@ void evan::RessourceManager::cleanup()
 	_materials.clear();
 	_textures.clear();
 	_shaders.clear();
+	_shaderIdByName.clear();
 }
 
 void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
@@ -76,7 +77,10 @@ void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 
 void evan::RessourceManager::sync(bool refresh)
 {
-	this->getLogger().info() << "Synchronizing RessourceManager...";
+	this->getLogger().debug() << "Synchronizing RessourceManager...";
+	if (refresh) {
+		_shaderIdByName.clear();
+	}
 	auto renderer = _renderer.lock();
 	if (!renderer) {
 		this->getLogger().info()
@@ -93,9 +97,9 @@ void evan::RessourceManager::sync(bool refresh)
 	std::map<uint32_t, std::shared_ptr<utility::graphic::Texture>> textures =
 		_ressourceProvider->getTextures();
 
-	this->getLogger().info() << "Synchronizing shaders...";
+	this->getLogger().debug() << "Synchronizing shaders...";
 	for (const auto &[id, shader]: shaders) {
-		this->getLogger().info() << "Synchronizing shader ID " << id;
+		this->getLogger().debug() << "Synchronizing shader ID " << id;
 		auto it = _shaders.find(id);
 
 		if (it == _shaders.end()) {
@@ -105,7 +109,7 @@ void evan::RessourceManager::sync(bool refresh)
 				_deviceContext->getDeviceBackend()->getDevice(), *shader);
 		}
 		if (refresh) {
-			this->getLogger().info()
+			this->getLogger().debug()
 				<< "Refreshing GPUShader for shader ID " << id;
 			if (auto it = _shaders.find(id); it != _shaders.end()) {
 				it->second->destroy();
@@ -115,11 +119,10 @@ void evan::RessourceManager::sync(bool refresh)
 		}
 	}
 
-	this->getLogger().info() << "Synchronizing materials...";
+	this->getLogger().debug() << "Synchronizing materials...";
 	for (const auto &[id, material]: materials) {
-		this->getLogger().info() << "Synchronizing material ID " << id;
-		auto shaderID =
-			_ressourceProvider->getShaderID(material->getShaderName());
+		this->getLogger().debug() << "Synchronizing material ID " << id;
+		auto shaderID = resolveShaderID(material->getShaderName());
 		auto it = _materials.find(id);
 
 		if (it == _materials.end()) {
@@ -140,7 +143,7 @@ void evan::RessourceManager::sync(bool refresh)
 					<< "' not found for material ID " << id;
 				continue;	 // Skip this material if its shader is not found
 			}
-			this->getLogger().info()
+			this->getLogger().debug()
 				<< "Refreshing GPUMaterial for material ID " << id;
 			it->second->destroy(device);
 			_materials[id] = std::make_shared<GPUMaterial>(
@@ -151,9 +154,9 @@ void evan::RessourceManager::sync(bool refresh)
 		}
 	}
 
-	this->getLogger().info() << "Synchronizing textures...";
+	this->getLogger().debug() << "Synchronizing textures...";
 	for (const auto &[id, texture]: textures) {
-		this->getLogger().info() << "Synchronizing texture ID " << id;
+		this->getLogger().debug() << "Synchronizing texture ID " << id;
 		auto it = _textures.find(id);
 
 		if (it == _textures.end()) {
@@ -164,13 +167,31 @@ void evan::RessourceManager::sync(bool refresh)
 			_textures[id] =
 				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		} else if (refresh) {
-			this->getLogger().info()
+			this->getLogger().debug()
 				<< "Refreshing GPUTexture for texture ID " << id;
 			it->second->destroy(device);
 			_textures[id] =
 				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		}
 	}
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+uint32_t evan::RessourceManager::resolveShaderID(const std::string &shaderName)
+{
+	auto it = _shaderIdByName.find(shaderName);
+
+	if (it != _shaderIdByName.end()) {
+		return it->second;
+	}
+
+	uint32_t id = _ressourceProvider->getShaderID(shaderName);
+
+	_shaderIdByName[shaderName] = id;
+	return id;
 }
 
 /////////////

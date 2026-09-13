@@ -7,7 +7,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include <utility/ressource_provider.hpp>
@@ -156,6 +158,17 @@ namespace evan
 
 		protected:
 		/**
+		 * @brief Resolves a shader ID from a logical shader name.
+		 *
+		 * The result is cached so repeated lookups for the same shader name
+		 * are O(1) instead of scanning the provider element table each time.
+		 *
+		 * @param shaderName The logical shader name (e.g. "mesh", "text").
+		 * @return The shader ID, or 0 if the shader name is not found.
+		 */
+		uint32_t resolveShaderID(const std::string &shaderName);
+
+		/**
 		 * @brief Internal method to retrieve the next unique ID for a resource.
 		 *
 		 * This method can be used to generate unique IDs for GPU resources
@@ -202,5 +215,11 @@ namespace evan
 		 * retrieval based on their unique IDs.
 		 */
 		std::unordered_map<uint32_t, std::shared_ptr<GPUShader>> _shaders;
+
+		/**
+		 * @brief Cache mapping logical shader names to their shader IDs,
+		 * populated lazily by resolveShaderID to avoid repeated prefix scans.
+		 */
+		std::unordered_map<std::string, uint32_t> _shaderIdByName;
 	};
 }	 // namespace evan
