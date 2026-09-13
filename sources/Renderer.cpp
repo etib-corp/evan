@@ -612,8 +612,6 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		<< "Recording command buffer for current frame index: "
 		<< _currentFrameIndex;
 
-	_ressourceManager->sync();
-
 	auto commandBuffer = _frames[_currentFrameIndex]->_commandBuffer;
 
 	VkCommandBufferBeginInfo beginInfo {};
