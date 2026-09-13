@@ -151,10 +151,12 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		}
 	}
 
-	// 3. Render each view into the acquired image of its swapchain. The
-	// uniform buffer is updated per view, not per acquired image index.
-	// Views referencing an invalid swapchain index are filtered out up front
-	// so they cannot leave the in-flight fence in an inconsistent state.
+	// 3. Render each view into the acquired image of its swapchain. Each view
+	// owns a command buffer and a uniform buffer slot, so all views can be
+	// recorded and submitted back-to-back without waiting for the GPU between
+	// them. The in-flight fence is signaled only by the last submission: the
+	// graphics queue executes submissions in order, so its completion implies
+	// every earlier view has completed as well.
 	std::vector<std::size_t> renderableViews;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const std::size_t s = viewSet[v].swapchainIndex;
@@ -165,6 +167,14 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			continue;
 		}
 		renderableViews.push_back(v);
+	}
+
+	if (renderableViews.size() > MAX_SWAPCHAINS) {
+		this->getLogger().error()
+			<< "Frame has " << renderableViews.size() << " views, but only "
+			<< MAX_SWAPCHAINS
+			<< " per-view resources are available. Aborting frame rendering.";
+		return Error::RuntimeError;
 	}
 
 	if (!renderableViews.empty()) {
@@ -178,13 +188,11 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
 
-		this->updateUniformBuffer(scene, view.view);
-
-		frame.resetCommandBuffer();
-
+		this->updateUniformBuffer(scene, view.view, i);
+		frame.resetCommandBuffer(i);
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), scene);
+								  imageSet.getExtent(), scene, i);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -196,43 +204,29 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			waitOnImageAvailable ? &frame._imageAvailable[s] : nullptr;
 		submitInfo.pWaitDstStageMask	= waitStages;
 		submitInfo.commandBufferCount	= 1;
-		submitInfo.pCommandBuffers		= &frame._commandBuffer;
+		submitInfo.pCommandBuffers		= &frame._commandBuffers[i];
 		submitInfo.signalSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
 		submitInfo.pSignalSemaphores =
 			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
+		const bool isLastView = (i + 1 == renderableViews.size());
+		VkFence submitFence = isLastView ? frame._inFlight : VK_NULL_HANDLE;
+
 		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
-											  1, &submitInfo, frame._inFlight);
+											  1, &submitInfo, submitFence);
 		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to submit draw command buffer for view " << v
 				<< ". Aborting frame rendering.";
 			return mapVkResult(submitResult);
 		}
-
-		// The command buffer and the uniform buffer are shared across the
-		// views of a frame. Before recording the next view, wait for this
-		// view's submission to complete, otherwise the command buffer would
-		// be reset while still in flight and its uniform data overwritten
-		// (both eyes would end up rendered with the same, most recently
-		// written, view).
-		const bool isLastView = (i + 1 == renderableViews.size());
-		if (!isLastView) {
-			VkResult viewWaitResult = vkWaitForFences(
-				device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
-			if (viewWaitResult != VK_SUCCESS) {
-				this->getLogger().error()
-					<< "Failed to wait for in-flight fence between views. "
-					   "Aborting frame rendering.";
-				return mapVkResult(viewWaitResult);
-			}
-			vkResetFences(device, 1, &frame._inFlight);
-		}
 	}
 
-	// Backends that do not use presentation semaphores (OpenXR) present on
-	// their own timeline, so wait for the render submission to complete
-	// before handing the images back for composition.
+	// OpenXR does not hand a Vulkan semaphore to the runtime, so the host must
+	// guarantee the render completed before the swapchain images are released
+	// and xrEndFrame hands them to the compositor. This is now a single
+	// end-of-frame synchronization point covering all views, instead of one
+	// wait between the eyes plus another before release.
 	if (!waitOnImageAvailable && !renderableViews.empty()) {
 		VkResult renderWaitResult =
 			vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
@@ -326,9 +320,10 @@ void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-	// UBO
+	// UBO — dynamic so one buffer with per-view slots can be bound with a
+	// per-view dynamic offset.
 	bindings.push_back(
-		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1,
 		  VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 	this->getLogger().info()
 		<< "Added uniform buffer binding to descriptor set layout.";
@@ -559,7 +554,7 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 		<< "Descriptor count calculated: " << descriptorCount;
 
 	std::array<VkDescriptorPoolSize, 2> poolSizes {};
-	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	poolSizes[0].descriptorCount = descriptorCount;
 	poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = descriptorCount;
@@ -581,40 +576,45 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 void evan::Renderer::resetCommandBuffers()
 {
 	this->getLogger().info()
-		<< "Resetting command buffer for current frame index: "
+		<< "Resetting command buffers for current frame index: "
 		<< _currentFrameIndex;
-	_frames[_currentFrameIndex]->resetCommandBuffer();
+	for (std::size_t viewSlot = 0; viewSlot < MAX_SWAPCHAINS; ++viewSlot) {
+		_frames[_currentFrameIndex]->resetCommandBuffer(viewSlot);
+	}
 }
 
 void evan::Renderer::updateUniformBuffer(const Scene &scene,
-										 const utility::graphic::ViewF &view)
+										 const utility::graphic::ViewF &view,
+										 std::size_t viewSlot)
 {
 	this->getLogger().info()
 		<< "Updating uniform buffer for current frame index: "
-		<< _currentFrameIndex;
+		<< _currentFrameIndex << ", view slot: " << viewSlot;
 
 	Frame::UniformBufferObject ubo {};
 	ubo.model = glm::mat4(1.0f);
 	ubo.view  = view.toViewMatrix();
 	ubo.proj  = view.getProjectionMatrix();
 
-	memcpy(_frames[_currentFrameIndex]->_uniformBufferMapped, &ubo,
-		   sizeof(ubo));
+	memcpy(_frames[_currentFrameIndex]->getUniformBufferMapped(viewSlot),
+		   &ubo, sizeof(ubo));
 	this->getLogger().info() << "Uniform buffer updated successfully.";
 }
 
 void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkFramebuffer swapChainFramebuffer,
 										 VkExtent2D swapChainExtent,
-										 const Scene &scene)
+										 const Scene &scene,
+										 std::size_t viewSlot)
 {
 	this->getLogger().info()
 		<< "Recording command buffer for current frame index: "
-		<< _currentFrameIndex;
+		<< _currentFrameIndex << ", view slot: " << viewSlot;
 
 	_ressourceManager->sync();
 
-	auto commandBuffer = _frames[_currentFrameIndex]->_commandBuffer;
+	auto &frame = *_frames[_currentFrameIndex];
+	auto commandBuffer = frame.getCommandBuffer(viewSlot);
 
 	VkCommandBufferBeginInfo beginInfo {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -730,6 +730,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		VkPipelineLayout pipelineLayout =
 			_pipelineLayouts[correspondingPipelineID];
 
+		uint32_t dynamicOffset = static_cast<uint32_t>(
+			viewSlot * frame.getUniformBufferAlignedSize());
+
 		if (descriptorSet != lastBoundDescriptorSet ||
 			pipelineLayout != lastBoundPipelineLayout) {
 			this->getLogger().info()
@@ -737,7 +740,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 				<< mesh->getMaterialID();
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+				pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
 			lastBoundDescriptorSet  = descriptorSet;
 			lastBoundPipelineLayout = pipelineLayout;
 		}

@@ -315,7 +315,8 @@ namespace evan
 		 * rendering the scene in each frame.
 		 */
 		void updateUniformBuffer(const Scene &scene,
-								 const utility::graphic::ViewF &view);
+								 const utility::graphic::ViewF &view,
+								 std::size_t viewSlot);
 
 		/**
 		 * @brief Resets the command buffers for the current frame.
@@ -344,7 +345,8 @@ namespace evan
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
 								 VkExtent2D swapChainExtent,
-								 const Scene &scene);
+								 const Scene &scene,
+								 std::size_t viewSlot);
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering
