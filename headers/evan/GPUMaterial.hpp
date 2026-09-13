@@ -142,12 +142,12 @@ namespace evan
 		 * shader programs to access the material's texture data and other
 		 * associated resources during rendering operations.
 		 *
-		 * @return A vector of VkDescriptorSet objects representing the
-		 * descriptor sets associated with this material. These descriptor sets
-		 * can be bound to shader stages to provide access to the material's
-		 * resources during rendering.
+		 * @return A const reference to the vector of VkDescriptorSet objects
+		 * representing the descriptor sets associated with this material. These
+		 * descriptor sets can be bound to shader stages to provide access to
+		 * the material's resources during rendering.
 		 */
-		std::vector<VkDescriptorSet> getDescriptorSets() const;
+		const std::vector<VkDescriptorSet> &getDescriptorSets() const;
 
 		/**
 		 * @brief Retrieves the unique shader ID associated with this material.
