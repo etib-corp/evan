@@ -172,6 +172,22 @@ namespace evan
 			getMousePosition() const;
 
 		/**
+		 * @brief Convert a GLFW cursor position to framebuffer coordinates.
+		 *
+		 * GLFW reports cursor positions in screen coordinates (points on
+		 * high-DPI displays), while the swapchain viewport is sized in
+		 * framebuffer pixels. Scaling keeps ray picking and the debug pointer
+		 * aligned with the on-screen mouse cursor.
+		 *
+		 * @param xPos Horizontal cursor position in screen coordinates.
+		 * @param yPos Vertical cursor position in screen coordinates.
+		 *
+		 * @return Cursor position in framebuffer pixel coordinates.
+		 */
+		utility::event::MouseMotionEvent::MousePosition
+			convertCursorPosition(double xPos, double yPos) const;
+
+		/**
 		 * @brief Get the current state of movement keys.
 		 *
 		 * Polls the current state of movement keys (WASD, QE, arrows) and
