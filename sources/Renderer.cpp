@@ -667,7 +667,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		<< "Scissor set to cover entire swapchain extent: "
 		<< swapChainExtent.width << "x" << swapChainExtent.height;
 
-	std::map<uint32_t, bool> materialBound;
+	VkDescriptorSet  lastBoundDescriptorSet  = VK_NULL_HANDLE;
+	VkPipelineLayout lastBoundPipelineLayout = VK_NULL_HANDLE;
 
 	this->getLogger().info()
 		<< "Iterating over meshes in the scene to record draw commands...";
@@ -724,15 +725,21 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
 							 VK_INDEX_TYPE_UINT32);
 
-		if (!materialBound[mesh->getMaterialID()]) {
+		VkDescriptorSet  descriptorSet  =
+			material->getDescriptorSets()[_currentFrameIndex];
+		VkPipelineLayout pipelineLayout =
+			_pipelineLayouts[correspondingPipelineID];
+
+		if (descriptorSet != lastBoundDescriptorSet ||
+			pipelineLayout != lastBoundPipelineLayout) {
 			this->getLogger().info()
 				<< "Binding descriptor set for material ID: "
 				<< mesh->getMaterialID();
-			materialBound[mesh->getMaterialID()] = true;
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				_pipelineLayouts[correspondingPipelineID], 0, 1,
-				&material->getDescriptorSets()[_currentFrameIndex], 0, nullptr);
+				pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+			lastBoundDescriptorSet  = descriptorSet;
+			lastBoundPipelineLayout = pipelineLayout;
 		}
 
 		glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
