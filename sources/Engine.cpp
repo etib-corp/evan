@@ -14,6 +14,8 @@
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
 #include <utility/event/hand_thumb_stick_event.hpp>
+#include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_button_event.hpp>
 
 #include "evan/Engine.hpp"
 
@@ -448,6 +450,22 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 				applyViewOffset(handMotionEvent->getAim(), viewOffset));
 			handMotionEvent->setGrip(
 				applyViewOffset(handMotionEvent->getGrip(), viewOffset));
+		}
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			thumbStickEvent->setAim(
+				applyViewOffset(thumbStickEvent->getAim(), viewOffset));
+			thumbStickEvent->setGrip(
+				applyViewOffset(thumbStickEvent->getGrip(), viewOffset));
+		}
+		if (auto handButtonEvent =
+				std::dynamic_pointer_cast<utility::event::HandButtonEvent>(
+					event)) {
+			handButtonEvent->setAim(
+				applyViewOffset(handButtonEvent->getAim(), viewOffset));
+			handButtonEvent->setGrip(
+				applyViewOffset(handButtonEvent->getGrip(), viewOffset));
 		}
 	}
 
