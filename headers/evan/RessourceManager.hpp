@@ -100,6 +100,11 @@ namespace evan
 		 * @note This method should be called whenever there are changes in the
 		 * loaded materials or textures to ensure that the GPU resources are up
 		 * to date.
+		 *
+		 * @note This method binds const references to the provider's live maps.
+		 * It must run on the same thread as, and never interleaved with, any
+		 * provider mutation (e.g. font-atlas generation), otherwise iteration
+		 * would race with map reallocation.
 		 */
 		void sync(bool refresh = false);
 
@@ -147,27 +152,18 @@ namespace evan
 		std::shared_ptr<GPUShader> getShader(uint32_t id) const;
 
 		/**
-		 * @brief Retrieves a map of all GPUShaders managed by the
+		 * @brief Retrieves the map of all GPUShaders managed by the
 		 * RessourceManager.
 		 *
-		 * @return An unordered map where the key is the unique shader ID and
-		 * the value is a shared pointer to the corresponding GPUShader.
+		 * @return A const reference to the unordered map where the key is the
+		 * unique shader ID and the value is a shared pointer to the
+		 * corresponding GPUShader.
 		 */
-		std::unordered_map<uint32_t, std::shared_ptr<GPUShader>>
+		[[nodiscard]] const std::unordered_map<uint32_t,
+											   std::shared_ptr<GPUShader>> &
 			getShaders() const;
 
 		protected:
-		/**
-		 * @brief Resolves a shader ID from a logical shader name.
-		 *
-		 * The result is cached so repeated lookups for the same shader name
-		 * are O(1) instead of scanning the provider element table each time.
-		 *
-		 * @param shaderName The logical shader name (e.g. "mesh", "text").
-		 * @return The shader ID, or 0 if the shader name is not found.
-		 */
-		uint32_t resolveShaderID(const std::string &shaderName);
-
 		/**
 		 * @brief Internal method to retrieve the next unique ID for a resource.
 		 *
@@ -217,9 +213,20 @@ namespace evan
 		std::unordered_map<uint32_t, std::shared_ptr<GPUShader>> _shaders;
 
 		/**
-		 * @brief Cache mapping logical shader names to their shader IDs,
-		 * populated lazily by resolveShaderID to avoid repeated prefix scans.
+		 * @brief Version of the provider at the last full synchronization pass.
+		 *
+		 * Snapshot taken before the pass and stored after it, so a mutation
+		 * occurring mid-pass stays unseen and triggers another pass next sync.
 		 */
-		std::unordered_map<std::string, uint32_t> _shaderIdByName;
+		uint64_t _syncedVersion = 0;
+
+		/**
+		 * @brief Whether at least one full synchronization pass has completed.
+		 *
+		 * Prevents the first sync() from being skipped: the provider starts at
+		 * version 0, so a bare version comparison would treat it as "already
+		 * synchronized".
+		 */
+		bool _synchronized = false;
 	};
 }	 // namespace evan

@@ -15,8 +15,7 @@ evan::RessourceManager::RessourceManager(
 {
 	this->getLogger().info() << "Initializing RessourceManager...";
 
-	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
-		_ressourceProvider->getShaders();
+	const auto &shaders = _ressourceProvider->getShaders();
 
 	this->getLogger().info() << "Loading shaders from RessourceProvider...";
 	for (const auto &[id, shader]: shaders) {
@@ -63,7 +62,6 @@ void evan::RessourceManager::cleanup()
 	_materials.clear();
 	_textures.clear();
 	_shaders.clear();
-	_shaderIdByName.clear();
 }
 
 void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
@@ -78,9 +76,6 @@ void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 void evan::RessourceManager::sync(bool refresh)
 {
 	this->getLogger().debug() << "Synchronizing RessourceManager...";
-	if (refresh) {
-		_shaderIdByName.clear();
-	}
 	auto renderer = _renderer.lock();
 	if (!renderer) {
 		this->getLogger().info()
@@ -88,14 +83,17 @@ void evan::RessourceManager::sync(bool refresh)
 		return;
 	}
 
+	const uint64_t version = _ressourceProvider->version();
+
+	if (!refresh && _synchronized && version == _syncedVersion) {
+		return;
+	}
+
 	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
-	std::map<uint32_t, std::shared_ptr<utility::graphic::Shader>> shaders =
-		_ressourceProvider->getShaders();
-	std::map<uint32_t, std::shared_ptr<utility::graphic::Material>> materials =
-		_ressourceProvider->getMaterials();
-	std::map<uint32_t, std::shared_ptr<utility::graphic::Texture>> textures =
-		_ressourceProvider->getTextures();
+	const auto &shaders   = _ressourceProvider->getShaders();
+	const auto &materials = _ressourceProvider->getMaterials();
+	const auto &textures  = _ressourceProvider->getTextures();
 
 	this->getLogger().debug() << "Synchronizing shaders...";
 	for (const auto &[id, shader]: shaders) {
@@ -122,7 +120,8 @@ void evan::RessourceManager::sync(bool refresh)
 	this->getLogger().debug() << "Synchronizing materials...";
 	for (const auto &[id, material]: materials) {
 		this->getLogger().debug() << "Synchronizing material ID " << id;
-		auto shaderID = resolveShaderID(material->getShaderName());
+		auto shaderID =
+			_ressourceProvider->getShaderID(material->getShaderName());
 		auto it = _materials.find(id);
 
 		if (it == _materials.end()) {
@@ -174,24 +173,9 @@ void evan::RessourceManager::sync(bool refresh)
 				std::make_shared<GPUTexture>(_deviceContext, *texture);
 		}
 	}
-}
 
-///////////////////////
-// Protected Methods //
-///////////////////////
-
-uint32_t evan::RessourceManager::resolveShaderID(const std::string &shaderName)
-{
-	auto it = _shaderIdByName.find(shaderName);
-
-	if (it != _shaderIdByName.end()) {
-		return it->second;
-	}
-
-	uint32_t id = _ressourceProvider->getShaderID(shaderName);
-
-	_shaderIdByName[shaderName] = id;
-	return id;
+	_syncedVersion = version;
+	_synchronized  = true;
 }
 
 /////////////
@@ -231,7 +215,7 @@ std::shared_ptr<evan::GPUShader>
 	return nullptr;
 }
 
-std::unordered_map<uint32_t, std::shared_ptr<evan::GPUShader>>
+const std::unordered_map<uint32_t, std::shared_ptr<evan::GPUShader>> &
 	evan::RessourceManager::getShaders() const
 {
 	return _shaders;
