@@ -1,2 +1,6 @@
 # CMake build files
-/build/
+build/
+.gradle
+
+# Android example assets (large binaries, provided out of band)
+examples/OpenXR-android-base/app/assets/

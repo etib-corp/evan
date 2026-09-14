@@ -34,9 +34,62 @@
 #include <evan/Engine.hpp>
 #include <iostream>
 
+#include <utility/graphic/color.hpp>
+#include <utility/graphic/mesh.hpp>
+#include <utility/graphic/primitive.hpp>
+#include <utility/graphic/vertex.hpp>
+
 #include <evan/openxr/platform/AndroidXrPlatform.hpp>
 
 #include "command_handler.hpp"
+
+namespace
+{
+	/**
+	 * @brief Builds a plain white cube placed in front of the viewer.
+	 * @return A mesh for the cube, with vertices already in world space.
+	 */
+	utility::graphic::Mesh buildWhiteCubeMesh()
+	{
+		constexpr float half = 0.15f;
+		const utility::graphic::PositionF center(0.0f, 0.0f, -0.8f);
+		const utility::graphic::Color32Bit white(255, 255, 255, 255);
+
+		utility::graphic::Mesh mesh(std::vector<utility::graphic::VertexF> {},
+									std::vector<uint32_t> {});
+
+		const auto addVertex = [&](float x, float y, float z) {
+			utility::graphic::VertexF vertex;
+			vertex.setPosition(utility::graphic::PositionF(
+				center.x + x, center.y + y, center.z + z));
+			vertex.setColor(white);
+			mesh.addVertex(vertex);
+		};
+
+		// 8 corners of an axis-aligned cube.
+		addVertex(-half, -half, -half);	   // 0
+		addVertex(half, -half, -half);	   // 1
+		addVertex(half, half, -half);	   // 2
+		addVertex(-half, half, -half);	   // 3
+		addVertex(-half, -half, half);	   // 4
+		addVertex(half, -half, half);	   // 5
+		addVertex(half, half, half);	   // 6
+		addVertex(-half, half, half);	   // 7
+
+		// 12 triangles (36 indices), CCW as seen from outside.
+		for (const uint32_t index:
+			 { 0u, 3u, 2u, 0u, 2u, 1u,		  // back   (-Z)
+			   4u, 5u, 6u, 4u, 6u, 7u,		  // front  (+Z)
+			   0u, 1u, 5u, 0u, 5u, 4u,		  // bottom (-Y)
+			   3u, 7u, 6u, 3u, 6u, 2u,		  // top    (+Y)
+			   0u, 4u, 7u, 0u, 7u, 3u,		  // left   (-X)
+			   1u, 2u, 6u, 1u, 6u, 5u }) {	  // right  (+X)
+			mesh.addIndex(index);
+		}
+
+		return mesh;
+	}
+}	 // namespace
 
 extern "C" {
 
@@ -71,6 +124,11 @@ void android_main(struct android_app *android_app)
 	// Initialize Evan engine
 	evan::Engine engine(ressourceProvider, xrPlatform);
 
+	std::shared_ptr<utility::graphic::Primitive> cubePrimitive =
+		std::make_shared<utility::graphic::Primitive>(
+			std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
+	int id = engine.addPrimitive(cubePrimitive);
+
 	while (!android_app->destroyRequested) {
 		// Process Android events
 		for (;;) {
@@ -93,6 +151,7 @@ void android_main(struct android_app *android_app)
 
 		// Application lifecycle
 		engine.update();
+		engine.addPrimitive(cubePrimitive);
 		engine.render();
 		engine.pollEvents();
 	}
