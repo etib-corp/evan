@@ -294,6 +294,19 @@ namespace evan
 							 const utility::graphic::ViewF &view);
 
 		/**
+		 * @brief Retrieves the persistent world-space view offset.
+		 *
+		 * Backends that track the viewer independently of the virtual body
+		 * (OpenXR) store locomotion in this offset so it survives the per-frame
+		 * pose refresh. The engine reads it to keep tracked hands attached to
+		 * the virtual body. Backends that do not use it return the identity
+		 * pose.
+		 *
+		 * @return The current view offset.
+		 */
+		const utility::graphic::PoseF &getViewOffset(void) const;
+
+		/**
 		 * @brief Retrieves the number of views in the swapchain context.
 		 *
 		 * This is a convenience accessor delegating to the ViewSet.
@@ -362,6 +375,17 @@ namespace evan
 		 * the rendering operations being performed.
 		 */
 		VkRenderPass _renderPass;
+
+		/**
+		 * @brief Persistent world-space offset applied on top of the tracked
+		 * poses.
+		 *
+		 * Defaults to the identity pose. Backends that refresh tracked poses
+		 * every frame (OpenXR) use it to carry locomotion across frames, and
+		 * the engine reads it to offset tracked hands so they move with the
+		 * viewer.
+		 */
+		utility::graphic::PoseF _viewOffset {};
 
 		/**
 		 * @brief Creates the Vulkan render pass for the swapchain context.

@@ -33,6 +33,7 @@
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
 #include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
@@ -715,6 +716,26 @@ namespace evan
 		void handleHandMotionEvent(
 			const std::shared_ptr<utility::event::HandMotionEvent>
 				&handMotionEvent,
+			utility::graphic::PositionF &position,
+			utility::graphic::OrientationF &orientation, float movementSpeed,
+			float rotationSpeed, float deltaTime);
+
+		/**
+		 * @brief Processes thumb stick events for camera movement and rotation.
+		 *
+		 * The left hand thumb stick translates the camera relative to its
+		 * current orientation, while the right hand thumb stick yaws it.
+		 *
+		 * @param thumbStickEvent The thumb stick event to process.
+		 * @param position Current camera position (modified in place).
+		 * @param orientation Current camera orientation (modified in place).
+		 * @param movementSpeed Movement speed multiplier.
+		 * @param rotationSpeed Rotation speed multiplier.
+		 * @param deltaTime Time elapsed since the last frame in seconds.
+		 */
+		void handleThumbStickEvent(
+			const std::shared_ptr<utility::event::HandThumbStickEvent>
+				&thumbStickEvent,
 			utility::graphic::PositionF &position,
 			utility::graphic::OrientationF &orientation, float movementSpeed,
 			float rotationSpeed, float deltaTime);

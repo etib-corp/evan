@@ -7,16 +7,55 @@
 
 #include <typeindex>
 #include <limits>
+#include <cmath>
 
 #include <utility/event/quit_event.hpp>
 #include <utility/event/keyboard_event.hpp>
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include "evan/Engine.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+
+namespace
+{
+	/**
+	 * @brief Applies a world-space view offset to a tracked pose.
+	 *
+	 * Matches how XrSwapchainContext applies the offset to the tracked eye
+	 * poses: the offset position is added and the offset orientation is
+	 * pre-multiplied onto the tracked orientation.
+	 *
+	 * @param pose The tracked pose to offset.
+	 * @param offset The world-space offset to apply.
+	 * @return The offset pose.
+	 */
+	utility::graphic::PoseF
+		applyViewOffset(const utility::graphic::PoseF &pose,
+						const utility::graphic::PoseF &offset)
+	{
+		const auto &position	 = pose.getPosition();
+		const auto &orientation	 = pose.getOrientation();
+		const auto &offsetPos	 = offset.getPosition();
+		const auto &offsetOrient = offset.getOrientation();
+
+		glm::quat baseQ(orientation.w, orientation.x, orientation.y,
+						orientation.z);
+		glm::quat offsetQ(offsetOrient.w, offsetOrient.x, offsetOrient.y,
+						  offsetOrient.z);
+		glm::quat finalQ = glm::normalize(offsetQ * baseQ);
+
+		return utility::graphic::PoseF(
+			utility::graphic::PositionF(position.getX() + offsetPos.getX(),
+										position.getY() + offsetPos.getY(),
+										position.getZ() + offsetPos.getZ()),
+			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
+										   finalQ.w));
+	}
+}	 // namespace
 
 evan::Engine::Engine(
 	std::shared_ptr<utility::RessourceProvider> ressourceProvider,
@@ -397,6 +436,21 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 	utility::event::QuitEvent::Factory quitEventFactory;
 	auto events = _platform->pollEvents(*_deviceContext->getDeviceBackend());
 
+	// The view offset moves the viewer without moving the raw tracking space,
+	// so tracked hands must be offset by the same amount to stay attached to
+	// the virtual body (and keep the debug ray aligned with the hand).
+	const auto &viewOffset = _swapchainContext->getViewOffset();
+	for (auto &event: events) {
+		if (auto handMotionEvent =
+				std::dynamic_pointer_cast<utility::event::HandMotionEvent>(
+					event)) {
+			handMotionEvent->setAim(
+				applyViewOffset(handMotionEvent->getAim(), viewOffset));
+			handMotionEvent->setGrip(
+				applyViewOffset(handMotionEvent->getGrip(), viewOffset));
+		}
+	}
+
 	if (_platform->shouldClose())
 		events.emplace_back(quitEventFactory.create());
 
@@ -469,6 +523,14 @@ void evan::Engine::handleViewportInput(
 					event)) {
 			handleHandMotionEvent(handMotionEvent, position, orientation,
 								  100.0f, 0.1f, _deltaTime);
+			continue;
+		}
+
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			handleThumbStickEvent(thumbStickEvent, position, orientation, 10.0f,
+								  0.1f, _deltaTime);
 			continue;
 		}
 	}
@@ -611,6 +673,53 @@ void evan::Engine::handleHandMotionEvent(
 	handRay.setDirection(
 		handMotionEvent->getAim().getOrientation().getForward());
 	updateDebugRay(handRay);
+}
+
+void evan::Engine::handleThumbStickEvent(
+	const std::shared_ptr<utility::event::HandThumbStickEvent> &thumbStickEvent,
+	utility::graphic::PositionF &position,
+	utility::graphic::OrientationF &orientation, float movementSpeed,
+	float rotationSpeed, float deltaTime)
+{
+	constexpr float deadZone = 0.15f;
+
+	const float axisX = thumbStickEvent->getX();
+	const float axisY = thumbStickEvent->getY();
+
+	if (std::abs(axisX) < deadZone && std::abs(axisY) < deadZone) {
+		return;
+	}
+
+	glm::quat q(orientation.w, orientation.x, orientation.y, orientation.z);
+
+	switch (thumbStickEvent->getHandType()) {
+		case utility::event::HandEvent::HandType::Left: {
+			glm::vec3 forward =
+				glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f));
+			glm::vec3 right = glm::normalize(q * glm::vec3(1.0f, 0.0f, 0.0f));
+
+			glm::vec3 movement =
+				(forward * axisY + right * axisX) * movementSpeed * deltaTime;
+
+			position = utility::graphic::PositionF(
+				position.getX() + movement.x, position.getY() + movement.y,
+				position.getZ() + movement.z);
+			break;
+		}
+		case utility::event::HandEvent::HandType::Right: {
+			glm::quat yawRotation = glm::angleAxis(
+				axisX * rotationSpeed * deltaTime, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			glm::quat newOrientation = glm::normalize(yawRotation * q);
+
+			orientation = utility::graphic::OrientationF(
+				newOrientation.x, newOrientation.y, newOrientation.z,
+				newOrientation.w);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
