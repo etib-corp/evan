@@ -7,11 +7,13 @@
 
 #include <typeindex>
 #include <limits>
+#include <cmath>
 
 #include <utility/event/quit_event.hpp>
 #include <utility/event/keyboard_event.hpp>
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include "evan/Engine.hpp"
 
@@ -425,6 +427,14 @@ void evan::Engine::handleViewportInput(
 								  100.0f, 0.1f, _deltaTime);
 			continue;
 		}
+
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			handleThumbStickEvent(thumbStickEvent, position, orientation,
+								  100.0f, 0.1f, _deltaTime);
+			continue;
+		}
 	}
 
 	_isRightMouseButtonPressed = isRightMouseButtonPressed;
@@ -565,6 +575,53 @@ void evan::Engine::handleHandMotionEvent(
 	handRay.setDirection(
 		handMotionEvent->getAim().getOrientation().getForward());
 	updateDebugRay(handRay);
+}
+
+void evan::Engine::handleThumbStickEvent(
+	const std::shared_ptr<utility::event::HandThumbStickEvent> &thumbStickEvent,
+	utility::graphic::PositionF &position,
+	utility::graphic::OrientationF &orientation, float movementSpeed,
+	float rotationSpeed, float deltaTime)
+{
+	constexpr float deadZone = 0.15f;
+
+	const float axisX = thumbStickEvent->getX();
+	const float axisY = thumbStickEvent->getY();
+
+	if (std::abs(axisX) < deadZone && std::abs(axisY) < deadZone) {
+		return;
+	}
+
+	glm::quat q(orientation.w, orientation.x, orientation.y, orientation.z);
+
+	switch (thumbStickEvent->getHandType()) {
+		case utility::event::HandEvent::HandType::Left: {
+			glm::vec3 forward =
+				glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f));
+			glm::vec3 right = glm::normalize(q * glm::vec3(1.0f, 0.0f, 0.0f));
+
+			glm::vec3 movement =
+				(forward * axisY + right * axisX) * movementSpeed * deltaTime;
+
+			position = utility::graphic::PositionF(
+				position.getX() + movement.x, position.getY() + movement.y,
+				position.getZ() + movement.z);
+			break;
+		}
+		case utility::event::HandEvent::HandType::Right: {
+			glm::quat yawRotation = glm::angleAxis(
+				axisX * rotationSpeed * deltaTime, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			glm::quat newOrientation = glm::normalize(yawRotation * q);
+
+			orientation = utility::graphic::OrientationF(
+				newOrientation.x, newOrientation.y, newOrientation.z,
+				newOrientation.w);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)

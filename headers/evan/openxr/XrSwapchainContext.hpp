@@ -239,8 +239,10 @@ namespace evan
 		 * @brief Sets the view matrix for a specific view index.
 		 *
 		 * For OpenXR this method updates the near and far clipping planes used
-		 * to build the per-eye projection matrices. The actual eye pose and
-		 * field of view are refreshed by syncViewSet each frame.
+		 * to build the per-eye projection matrices. The eye pose and field of
+		 * view are refreshed by syncViewSet each frame. The requested pose is
+		 * reduced to a persistent world-space offset relative to the tracked
+		 * head center so locomotion survives the per-frame pose refresh.
 		 *
 		 * @param index The index of the view for which to set the view matrix.
 		 * @param view The view matrix to set for the specified view index.
@@ -314,5 +316,30 @@ namespace evan
 		 * rendered output.
 		 */
 		float _farPlane;
+
+		/**
+		 * @brief Persistent world-space offset applied on top of the tracked
+		 * eye poses.
+		 *
+		 * The OpenXR runtime overwrites the eye poses from xrLocateViews every
+		 * frame, so locomotion (keyboard/mouse/thumb stick) cannot be baked
+		 * into the stored views. Instead the requested view is reduced to this
+		 * offset relative to the tracked head center, and syncViewSet
+		 * re-applies it to the fresh eye poses each frame.
+		 */
+		utility::graphic::PoseF _viewOffset {};
+
+		/**
+		 * @brief Head center pose derived from the raw tracked eye poses.
+		 *
+		 * Updated by syncViewSet before the offset is applied. It is the
+		 * reference used by setView to derive _viewOffset.
+		 */
+		utility::graphic::PoseF _baseCenterPose {};
+
+		/**
+		 * @brief Whether _baseCenterPose holds a valid tracked head pose.
+		 */
+		bool _hasBaseCenter { false };
 	};
 }	 // namespace evan
