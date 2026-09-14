@@ -81,19 +81,37 @@ void evan::Frame::cleanup()
 	}
 }
 
-void evan::Frame::resetCommandBuffer()
+void evan::Frame::resetCommandBuffer(std::size_t viewSlot)
 {
-	this->getLogger().info() << "Resetting command buffer for frame...";
-	vkResetCommandBuffer(_commandBuffer, /*VkCommandBufferResetFlagBits*/ 0);
+	this->getLogger().info()
+		<< "Resetting command buffer for view slot " << viewSlot << "...";
+	vkResetCommandBuffer(_commandBuffers[viewSlot],
+						 /*VkCommandBufferResetFlagBits*/ 0);
 }
 
 /////////////
 // Getters //
 /////////////
 
+VkCommandBuffer evan::Frame::getCommandBuffer(std::size_t viewSlot) const
+{
+	return _commandBuffers[viewSlot];
+}
+
 VkBuffer evan::Frame::getUniformBuffer() const
 {
 	return _uniformBuffer;
+}
+
+VkDeviceSize evan::Frame::getUniformBufferAlignedSize() const
+{
+	return _uniformBufferAlignedSize;
+}
+
+void *evan::Frame::getUniformBufferMapped(std::size_t viewSlot) const
+{
+	return static_cast<char *>(_uniformBufferMapped)
+		+ viewSlot * _uniformBufferAlignedSize;
 }
 
 /////////////////////
@@ -109,18 +127,21 @@ void evan::Frame::createCommandBuffer(VkDevice device,
 	allocInfo.sType		  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = commandPool;
 	allocInfo.level		  = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = MAX_SWAPCHAINS;
 
 	this->getLogger().info()
-		<< "Allocating command buffer from command pool...";
+		<< "Allocating " << MAX_SWAPCHAINS
+		<< " command buffers from command pool...";
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &_commandBuffer)
+	_commandBuffers.resize(MAX_SWAPCHAINS);
+	if (vkAllocateCommandBuffers(device, &allocInfo, _commandBuffers.data())
 		!= VK_SUCCESS) {
 		this->getLogger().error()
-			<< "Failed to allocate command buffer for frame!";
+			<< "Failed to allocate command buffers for frame!";
+		_commandBuffers.clear();
 		return;
 	}
-	this->getLogger().info() << "Command buffer allocated successfully.";
+	this->getLogger().info() << "Command buffers allocated successfully.";
 }
 
 void evan::Frame::createSyncObjects(VkDevice device)
@@ -160,7 +181,25 @@ void evan::Frame::createSyncObjects(VkDevice device)
 void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 {
 	this->getLogger().info() << "Creating uniform buffer for frame...";
-	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	VkPhysicalDeviceProperties deviceProperties {};
+	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(),
+								  &deviceProperties);
+	const VkDeviceSize minAlignment =
+		deviceProperties.limits.minUniformBufferOffsetAlignment;
+
+	const auto alignUp = [](VkDeviceSize value, VkDeviceSize alignment) {
+		return (value + alignment - 1) & ~(alignment - 1);
+	};
+	_uniformBufferAlignedSize =
+		alignUp(sizeof(UniformBufferObject), minAlignment);
+	const VkDeviceSize bufferSize =
+		_uniformBufferAlignedSize * MAX_SWAPCHAINS;
+
+	this->getLogger().info()
+		<< "Uniform buffer: " << MAX_SWAPCHAINS << " view slot(s) of "
+		<< _uniformBufferAlignedSize << " bytes (" << bufferSize
+		<< " total).";
 
 	this->getLogger().info()
 		<< "Setting up buffer properties for uniform buffer...";

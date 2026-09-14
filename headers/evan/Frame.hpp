@@ -104,24 +104,50 @@ namespace evan
 		void destroy(VkDevice device);
 
 		/**
-		 * @brief Resets the command buffer for this frame.
+		 * @brief Resets the command buffer of the given view slot.
 		 *
-		 * This function resets the command buffer to the initial state,
-		 * allowing it to be recorded again for the next frame. It should be
-		 * called at the beginning of each frame before recording commands.
+		 * Each view owns its own command buffer so that stereo views can be
+		 * recorded back-to-back without waiting for the GPU between them.
+		 *
+		 * @param viewSlot Index of the view whose command buffer is reset.
 		 */
-		void resetCommandBuffer();
+		void resetCommandBuffer(std::size_t viewSlot);
 
 		/**
-		 * @brief Gets the Vulkan command buffer associated with this frame.
+		 * @brief Gets the command buffer of the given view slot.
 		 *
-		 * This function returns the command buffer that is used for recording
-		 * rendering commands for this frame. It can be used to begin command
-		 * buffer recording and submit commands to the graphics queue.
+		 * @param viewSlot Index of the view whose command buffer is returned.
+		 * @return The Vulkan command buffer for this view.
+		 */
+		VkCommandBuffer getCommandBuffer(std::size_t viewSlot) const;
+
+		/**
+		 * @brief Gets the Vulkan uniform buffer associated with this frame.
 		 *
-		 * @return The Vulkan command buffer for this frame.
+		 * This buffer holds one aligned slot per view. Descriptor sets bind it
+		 * as a dynamic uniform buffer and select the view slot through a
+		 * dynamic offset at bind time.
+		 *
+		 * @return The Vulkan buffer for this frame.
 		 */
 		VkBuffer getUniformBuffer() const;
+
+		/**
+		 * @brief Gets the aligned byte size of one uniform buffer slot.
+		 *
+		 * @return The aligned size, a multiple of
+		 * minUniformBufferOffsetAlignment.
+		 */
+		VkDeviceSize getUniformBufferAlignedSize() const;
+
+		/**
+		 * @brief Gets the mapped CPU pointer of a view's uniform slot.
+		 *
+		 * @param viewSlot Index of the view slot.
+		 * @return Mapped pointer to the slot, ready for a memcpy of one
+		 * UniformBufferObject.
+		 */
+		void *getUniformBufferMapped(std::size_t viewSlot) const;
 
 		/**
 		 * In-flight fence ensuring that a frame's resources (command buffer,
@@ -140,9 +166,9 @@ namespace evan
 		std::vector<VkSemaphore> _imageAvailable;
 
 		/**
-		 * Vulkan command buffer recorded for this frame.
+		 * Vulkan command buffers recorded for this frame, one per view.
 		 */
-		VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
+		std::vector<VkCommandBuffer> _commandBuffers;
 
 		/**
 		 * Per-swapchain semaphores signaled when rendering to a swapchain
@@ -221,6 +247,14 @@ namespace evan
 		 * updating the UBO data before rendering.
 		 */
 		VkDeviceMemory _uniformBufferMemory = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Aligned byte size of one view's uniform buffer slot.
+		 *
+		 * Computed from minUniformBufferOffsetAlignment so each view slot
+		 * starts on an offset the dynamic uniform buffer binding accepts.
+		 */
+		VkDeviceSize _uniformBufferAlignedSize = 0;
 
 		/**
 		 * @brief The device context used to create this frame, kept alive for
