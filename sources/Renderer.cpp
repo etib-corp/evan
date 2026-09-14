@@ -7,6 +7,8 @@
 
 #include "evan/Renderer.hpp"
 
+#include "evan/Frustum.hpp"
+
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <cstddef>
@@ -19,7 +21,9 @@ namespace
 	 * instead of per mesh.
 	 */
 	struct DrawStats {
+		std::size_t totalMeshes = 0;
 		std::size_t visibleMeshes = 0;
+		std::size_t culledMeshes = 0;
 		std::size_t drawCalls = 0;
 		std::size_t pipelineBinds = 0;
 		std::size_t descriptorBinds = 0;
@@ -41,6 +45,22 @@ namespace
 		}();
 		return enabled;
 	}
+
+	/**
+	 * @brief Whether frustum/distance culling is disabled.
+	 *
+	 * Controlled by the EVAN_DEBUG_DISABLE_CULLING environment variable. Off
+	 * by default; set to any non-empty, non-"0" value to draw every mesh
+	 * regardless of its bounds.
+	 */
+	bool isCullingDisabledEnv()
+	{
+		static const bool disabled = [] {
+			const char *value = std::getenv("EVAN_DEBUG_DISABLE_CULLING");
+			return value != nullptr && value[0] != '\0' && value[0] != '0';
+		}();
+		return disabled;
+	}
 }	 // namespace
 
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
@@ -51,6 +71,8 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 	, _deviceContext(deviceContext)
 {
 	this->getLogger().info() << "Initializing Renderer...";
+
+	_cullingEnabled = !isCullingDisabledEnv();
 
 	_ressourceManager->sync();
 	this->_currentFrameIndex = 0;
@@ -226,7 +248,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		frame.resetCommandBuffer(i);
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), scene, i);
+								  imageSet.getExtent(), scene, i, view.view);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -639,7 +661,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkFramebuffer swapChainFramebuffer,
 										 VkExtent2D swapChainExtent,
 										 const Scene &scene,
-										 std::size_t viewSlot)
+										 std::size_t viewSlot,
+										 const utility::graphic::ViewF &view)
 {
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
@@ -715,9 +738,40 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	const auto &meshes = scene.getMeshes();
 
 	DrawStats stats {};
-	stats.visibleMeshes = meshes.size();
+	stats.totalMeshes = meshes.size();
+
+	const glm::mat4 projection = view.getProjectionMatrix();
+	const glm::mat4 viewMatrix = view.toViewMatrix();
+	const Frustum frustum =
+		Frustum::fromViewProjection(projection * viewMatrix);
+
+	const auto cameraPosition = view.getPose().getPosition();
+	const glm::vec3 cameraPos(cameraPosition.x, cameraPosition.y,
+							  cameraPosition.z);
 
 	for (const auto &mesh: meshes) {
+		if (_cullingEnabled) {
+			const auto &bounds = mesh->getBounds();
+			if (!bounds.isEmpty()) {
+				if (_maxDrawDistance > 0.0f) {
+					const glm::vec3 center(bounds.center().x,
+										   bounds.center().y,
+										   bounds.center().z);
+					if (glm::distance(cameraPos, center)
+							- bounds.radius()
+						> _maxDrawDistance) {
+						++stats.culledMeshes;
+						continue;
+					}
+				}
+				if (!frustum.intersects(bounds)) {
+					++stats.culledMeshes;
+					continue;
+				}
+			}
+		}
+		++stats.visibleMeshes;
+
 		if (isDrawLogEnabled()) {
 			this->getLogger().debug()
 				<< "Processing mesh with material ID: "
@@ -833,7 +887,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
-			<< "Draw stats: visibleMeshes=" << stats.visibleMeshes
+			<< "Draw stats: totalMeshes=" << stats.totalMeshes
+			<< " visibleMeshes=" << stats.visibleMeshes
+			<< " culledMeshes=" << stats.culledMeshes
 			<< " drawCalls=" << stats.drawCalls
 			<< " pipelineBinds=" << stats.pipelineBinds
 			<< " descriptorBinds=" << stats.descriptorBinds

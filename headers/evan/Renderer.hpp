@@ -218,6 +218,48 @@ namespace evan
 		 */
 		VkDescriptorSetLayout getDescriptorSetLayout() const;
 
+		/**
+		 * @brief Enables or disables frustum and distance culling.
+		 *
+		 * When enabled, meshes whose bounds are fully outside the current
+		 * view frustum (or beyond the maximum draw distance) are skipped
+		 * before recording their draw commands. Disable for debugging: a
+		 * wrong bound then never hides geometry.
+		 *
+		 * @param enabled True to cull, false to draw every mesh.
+		 */
+		void setCullingEnabled(bool enabled) { _cullingEnabled = enabled; }
+
+		/**
+		 * @brief Checks whether culling is currently enabled.
+		 *
+		 * @return True when culling is enabled.
+		 */
+		[[nodiscard]] bool isCullingEnabled() const { return _cullingEnabled; }
+
+		/**
+		 * @brief Sets the maximum draw distance for distance culling.
+		 *
+		 * Meshes whose bounding sphere is entirely beyond this distance from
+		 * the view are culled. A value of 0 disables distance culling.
+		 *
+		 * @param maxDistance Maximum draw distance in world units (0 disables).
+		 */
+		void setMaxDrawDistance(float maxDistance)
+		{
+			_maxDrawDistance = maxDistance;
+		}
+
+		/**
+		 * @brief Retrieves the maximum draw distance.
+		 *
+		 * @return The maximum draw distance (0 means disabled).
+		 */
+		[[nodiscard]] float getMaxDrawDistance() const
+		{
+			return _maxDrawDistance;
+		}
+
 		protected:
 		std::map<uint32_t, VkPipeline>
 			_pipelines;	   ///< A map of pipeline layer identifiers to Vulkan
@@ -341,12 +383,15 @@ namespace evan
 		 * for recording the command buffer. Implement this method to ensure
 		 * that the command buffer contains the correct commands for rendering
 		 * the scene in each frame.
+		 *
+		 * @param view The view state used to build the culling frustum.
 		 */
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
 								 VkExtent2D swapChainExtent,
 								 const Scene &scene,
-								 std::size_t viewSlot);
+								 std::size_t viewSlot,
+								 const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering
@@ -406,5 +451,15 @@ namespace evan
 								  ///< allows the Renderer to efficiently manage
 								  ///< and utilize resources during the
 								  ///< rendering process.
+
+		/**
+		 * @brief Whether frustum and distance culling are active.
+		 */
+		bool _cullingEnabled = true;
+
+		/**
+		 * @brief Maximum draw distance for distance culling (0 disables it).
+		 */
+		float _maxDrawDistance = 0.0f;
 	};
 }	 // namespace evan
