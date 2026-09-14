@@ -19,6 +19,7 @@ evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
 	this->createCommandBuffer(deviceBackend->getDevice(), commandPool);
 	this->createSyncObjects(deviceBackend->getDevice());
 	this->createUniformBuffer(*deviceBackend);
+	this->createInstanceBuffer(*deviceBackend);
 
 	this->getLogger().info() << "Frame created successfully.";
 }
@@ -79,6 +80,18 @@ void evan::Frame::cleanup()
 		vkFreeMemory(device, _uniformBufferMemory, nullptr);
 		_uniformBufferMemory = VK_NULL_HANDLE;
 	}
+
+	this->getLogger().info()
+		<< "Destroying instance buffer and freeing memory...";
+	if (_instanceBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _instanceBuffer, nullptr);
+		_instanceBuffer = VK_NULL_HANDLE;
+	}
+	if (_instanceBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _instanceBufferMemory, nullptr);
+		_instanceBufferMemory = VK_NULL_HANDLE;
+	}
+	_instanceBufferMapped = nullptr;
 }
 
 void evan::Frame::resetCommandBuffer(std::size_t viewSlot)
@@ -112,6 +125,22 @@ void *evan::Frame::getUniformBufferMapped(std::size_t viewSlot) const
 {
 	return static_cast<char *>(_uniformBufferMapped)
 		+ viewSlot * _uniformBufferAlignedSize;
+}
+
+VkBuffer evan::Frame::getInstanceBuffer() const
+{
+	return _instanceBuffer;
+}
+
+void *evan::Frame::getInstanceBufferMapped(std::size_t viewSlot) const
+{
+	return static_cast<char *>(_instanceBufferMapped)
+		+ viewSlot * _instanceBufferAlignedSize;
+}
+
+VkDeviceSize evan::Frame::getInstanceBufferAlignedSize() const
+{
+	return _instanceBufferAlignedSize;
 }
 
 /////////////////////
@@ -224,4 +253,45 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 								"successfully. Mapping memory...";
 	vkMapMemory(deviceBackend.getDevice(), _uniformBufferMemory, 0, bufferSize,
 				0, &_uniformBufferMapped);
+}
+
+void evan::Frame::createInstanceBuffer(const ADeviceBackend &deviceBackend)
+{
+	this->getLogger().info() << "Creating instance buffer for frame...";
+
+	VkPhysicalDeviceProperties deviceProperties {};
+	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(),
+								  &deviceProperties);
+	const VkDeviceSize minAlignment =
+		deviceProperties.limits.minUniformBufferOffsetAlignment;
+
+	const auto alignUp = [](VkDeviceSize value, VkDeviceSize alignment) {
+		return (value + alignment - 1) & ~(alignment - 1);
+	};
+	const VkDeviceSize instanceStride = sizeof(glm::mat4);
+	_instanceBufferAlignedSize =
+		alignUp(instanceStride * MAX_INSTANCES_PER_VIEW, minAlignment);
+	const VkDeviceSize bufferSize =
+		_instanceBufferAlignedSize * MAX_SWAPCHAINS;
+
+	this->getLogger().info()
+		<< "Instance buffer: " << MAX_SWAPCHAINS << " view slot(s) of "
+		<< _instanceBufferAlignedSize << " bytes (" << bufferSize
+		<< " total).";
+
+	ADeviceBackend::CreateBufferProperties bufferProperties = {
+		._size		 = bufferSize,
+		._usage		 = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		._buffer	   = _instanceBuffer,
+		._bufferMemory = _instanceBufferMemory
+	};
+
+	deviceBackend.createBuffer(bufferProperties);
+
+	this->getLogger().info() << "Instance buffer created and memory allocated "
+								"successfully. Mapping memory...";
+	vkMapMemory(deviceBackend.getDevice(), _instanceBufferMemory, 0,
+				bufferSize, 0, &_instanceBufferMapped);
 }
