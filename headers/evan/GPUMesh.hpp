@@ -13,6 +13,8 @@
 
 #include "evan/GPUVertex.hpp"
 
+#include <utility/math/aabb.hpp>
+
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
@@ -154,6 +156,18 @@ namespace evan
 		uint32_t getMaterialID() const;
 
 		/**
+		 * @brief Retrieves the axis-aligned bounding box of this mesh.
+		 *
+		 * The box is computed from the vertex positions at creation time and
+		 * refreshed whenever updateVertices() is called. An empty box
+		 * (isEmpty()) means the mesh has no vertices and must be treated as
+		 * always visible by culling code.
+		 *
+		 * @return A constant reference to the mesh bounding box.
+		 */
+		[[nodiscard]] const utility::math::AabbF &getBounds() const;
+
+		/**
 		 * @brief Updates the vertex data of the mesh in place.
 		 *
 		 * This method re-uploads vertex data to the already-allocated vertex
@@ -260,6 +274,12 @@ namespace evan
 		 * properties.
 		 */
 		uint32_t _materialID = 0;
+
+		/**
+		 * The mesh bounding box, computed from vertex positions and refreshed
+		 * by updateVertices(). Empty when the mesh has no vertices.
+		 */
+		utility::math::AabbF _bounds;
 
 		/**
 		 * The device context used to create this mesh, kept alive for the

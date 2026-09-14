@@ -20,6 +20,10 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 	_vertexCount	   = vertices.size();
 	_materialID		   = materialID;
 
+	for (const auto &vertex : vertices) {
+		_bounds.include(utility::math::Vector<float, 3>(vertex.pos));
+	}
+
 	this->getLogger().info()
 		<< "GPUMesh set up with " << vertices.size() << " vertices and "
 		<< indices.size() << " indices. Creating vertex buffer...";
@@ -162,6 +166,12 @@ void evan::GPUMesh::updateVertices(const std::vector<GPUVertex> &vertices)
 
 	vkDestroyBuffer(deviceBackend->getDevice(), stagingBuffer, nullptr);
 	vkFreeMemory(deviceBackend->getDevice(), stagingBufferMemory, nullptr);
+
+	utility::math::AabbF bounds;
+	for (const auto &vertex : vertices) {
+		bounds.include(utility::math::Vector<float, 3>(vertex.pos));
+	}
+	_bounds = bounds;
 }
 
 ///////////////////////
@@ -220,6 +230,11 @@ uint32_t evan::GPUMesh::getIndexCount() const
 uint32_t evan::GPUMesh::getMaterialID() const
 {
 	return _materialID;
+}
+
+const utility::math::AabbF &evan::GPUMesh::getBounds() const
+{
+	return _bounds;
 }
 
 ///////////////////////

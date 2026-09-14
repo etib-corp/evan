@@ -12,6 +12,7 @@ set(EVAN_SOURCES_COMMON
     sources/Engine.cpp
     sources/Error.cpp
     sources/Frame.cpp
+    sources/Frustum.cpp
     sources/GPUMaterial.cpp
     sources/GPUMesh.cpp
     sources/GPUShader.cpp
