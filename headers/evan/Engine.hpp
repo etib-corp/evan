@@ -166,6 +166,43 @@ namespace evan
 		bool setObjectTransform(size_t objectID, const glm::mat4 &transform);
 
 		/**
+		 * @brief Enables or disables instanced rendering.
+		 *
+		 * Forwards to the underlying Renderer. See
+		 * Renderer::setInstancingEnabled for details: the application must
+		 * use local-space geometry, per-object transforms and a vertex
+		 * shader that consumes the per-instance matrix for this to render
+		 * correctly.
+		 *
+		 * @param enabled True to merge identical meshes into instanced draws.
+		 */
+		void setInstancingEnabled(bool enabled);
+
+		/**
+		 * @brief Checks whether instanced rendering is enabled.
+		 *
+		 * @return True when instancing is enabled.
+		 */
+		[[nodiscard]] bool isInstancingEnabled() const;
+
+		/**
+		 * @brief Enables or disables indirect drawing.
+		 *
+		 * Forwards to the underlying Renderer. See
+		 * Renderer::setIndirectDrawingEnabled for details.
+		 *
+		 * @param enabled True to batch draws through the indirect buffer.
+		 */
+		void setIndirectDrawingEnabled(bool enabled);
+
+		/**
+		 * @brief Checks whether indirect drawing is enabled.
+		 *
+		 * @return True when indirect drawing is enabled.
+		 */
+		[[nodiscard]] bool isIndirectDrawingEnabled() const;
+
+		/**
 		 * @brief Get the mirrored view state.
 		 * @return The current view.
 		 */
