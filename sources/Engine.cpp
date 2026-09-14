@@ -14,6 +14,8 @@
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
 #include <utility/event/hand_thumb_stick_event.hpp>
+#include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_button_event.hpp>
 
 #include "evan/Engine.hpp"
 
