@@ -90,8 +90,8 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 							   uint32_t shaderID)
 {
 	if (material.getVersion() == _uploadedVersion) {
-		this->getLogger().info()
-			<< "GREP No update needed for GPUMaterial with shader ID: "
+		this->getLogger().debug()
+			<< "No update needed for GPUMaterial with shader ID: "
 			<< shaderID << " and material version: " << material.getVersion()
 			<< ". Material version is unchanged.";
 		return;
