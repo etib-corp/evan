@@ -9,6 +9,40 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <cstddef>
+#include <cstdlib>
+
+namespace
+{
+	/**
+	 * @brief Per-frame draw statistics, emitted once per command buffer
+	 * instead of per mesh.
+	 */
+	struct DrawStats {
+		std::size_t visibleMeshes = 0;
+		std::size_t drawCalls = 0;
+		std::size_t pipelineBinds = 0;
+		std::size_t descriptorBinds = 0;
+		std::size_t skippedMeshes = 0;
+	};
+
+	/**
+	 * @brief Whether verbose per-mesh draw logging is enabled.
+	 *
+	 * Controlled by the EVAN_DEBUG_DRAW_LOG environment variable. Off by
+	 * default; set to any non-empty, non-"0" value to re-enable per-mesh
+	 * trace output and the aggregate draw statistics.
+	 */
+	bool isDrawLogEnabled()
+	{
+		static const bool enabled = [] {
+			const char *value = std::getenv("EVAN_DEBUG_DRAW_LOG");
+			return value != nullptr && value[0] != '\0' && value[0] != '0';
+		}();
+		return enabled;
+	}
+}	 // namespace
+
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
@@ -151,10 +185,12 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		}
 	}
 
-	// 3. Render each view into the acquired image of its swapchain. The
-	// uniform buffer is updated per view, not per acquired image index.
-	// Views referencing an invalid swapchain index are filtered out up front
-	// so they cannot leave the in-flight fence in an inconsistent state.
+	// 3. Render each view into the acquired image of its swapchain. Each view
+	// owns a command buffer and a uniform buffer slot, so all views can be
+	// recorded and submitted back-to-back without waiting for the GPU between
+	// them. The in-flight fence is signaled only by the last submission: the
+	// graphics queue executes submissions in order, so its completion implies
+	// every earlier view has completed as well.
 	std::vector<std::size_t> renderableViews;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const std::size_t s = viewSet[v].swapchainIndex;
@@ -165,6 +201,14 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			continue;
 		}
 		renderableViews.push_back(v);
+	}
+
+	if (renderableViews.size() > MAX_SWAPCHAINS) {
+		this->getLogger().error()
+			<< "Frame has " << renderableViews.size() << " views, but only "
+			<< MAX_SWAPCHAINS
+			<< " per-view resources are available. Aborting frame rendering.";
+		return Error::RuntimeError;
 	}
 
 	if (!renderableViews.empty()) {
@@ -178,13 +222,11 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 		auto &imageSet = *swapchainContext._swapchainImages[s];
 
-		this->updateUniformBuffer(scene, view.view);
-
-		frame.resetCommandBuffer();
-
+		this->updateUniformBuffer(scene, view.view, i);
+		frame.resetCommandBuffer(i);
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), scene);
+								  imageSet.getExtent(), scene, i);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -196,43 +238,29 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			waitOnImageAvailable ? &frame._imageAvailable[s] : nullptr;
 		submitInfo.pWaitDstStageMask	= waitStages;
 		submitInfo.commandBufferCount	= 1;
-		submitInfo.pCommandBuffers		= &frame._commandBuffer;
+		submitInfo.pCommandBuffers		= &frame._commandBuffers[i];
 		submitInfo.signalSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
 		submitInfo.pSignalSemaphores =
 			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
+		const bool isLastView = (i + 1 == renderableViews.size());
+		VkFence submitFence = isLastView ? frame._inFlight : VK_NULL_HANDLE;
+
 		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
-											  1, &submitInfo, frame._inFlight);
+											  1, &submitInfo, submitFence);
 		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to submit draw command buffer for view " << v
 				<< ". Aborting frame rendering.";
 			return mapVkResult(submitResult);
 		}
-
-		// The command buffer and the uniform buffer are shared across the
-		// views of a frame. Before recording the next view, wait for this
-		// view's submission to complete, otherwise the command buffer would
-		// be reset while still in flight and its uniform data overwritten
-		// (both eyes would end up rendered with the same, most recently
-		// written, view).
-		const bool isLastView = (i + 1 == renderableViews.size());
-		if (!isLastView) {
-			VkResult viewWaitResult = vkWaitForFences(
-				device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
-			if (viewWaitResult != VK_SUCCESS) {
-				this->getLogger().error()
-					<< "Failed to wait for in-flight fence between views. "
-					   "Aborting frame rendering.";
-				return mapVkResult(viewWaitResult);
-			}
-			vkResetFences(device, 1, &frame._inFlight);
-		}
 	}
 
-	// Backends that do not use presentation semaphores (OpenXR) present on
-	// their own timeline, so wait for the render submission to complete
-	// before handing the images back for composition.
+	// OpenXR does not hand a Vulkan semaphore to the runtime, so the host must
+	// guarantee the render completed before the swapchain images are released
+	// and xrEndFrame hands them to the compositor. This is now a single
+	// end-of-frame synchronization point covering all views, instead of one
+	// wait between the eyes plus another before release.
 	if (!waitOnImageAvailable && !renderableViews.empty()) {
 		VkResult renderWaitResult =
 			vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
@@ -326,9 +354,10 @@ void evan::Renderer::createDescriptorSetLayout(VkDevice device)
 
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-	// UBO
+	// UBO — dynamic so one buffer with per-view slots can be bound with a
+	// per-view dynamic offset.
 	bindings.push_back(
-		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1,
 		  VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 	this->getLogger().info()
 		<< "Added uniform buffer binding to descriptor set layout.";
@@ -559,7 +588,7 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 		<< "Descriptor count calculated: " << descriptorCount;
 
 	std::array<VkDescriptorPoolSize, 2> poolSizes {};
-	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	poolSizes[0].descriptorCount = descriptorCount;
 	poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = descriptorCount;
@@ -581,38 +610,47 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 void evan::Renderer::resetCommandBuffers()
 {
 	this->getLogger().info()
-		<< "Resetting command buffer for current frame index: "
+		<< "Resetting command buffers for current frame index: "
 		<< _currentFrameIndex;
-	_frames[_currentFrameIndex]->resetCommandBuffer();
+	for (std::size_t viewSlot = 0; viewSlot < MAX_SWAPCHAINS; ++viewSlot) {
+		_frames[_currentFrameIndex]->resetCommandBuffer(viewSlot);
+	}
 }
 
 void evan::Renderer::updateUniformBuffer(const Scene &scene,
-										 const utility::graphic::ViewF &view)
+										 const utility::graphic::ViewF &view,
+										 std::size_t viewSlot)
 {
 	this->getLogger().info()
 		<< "Updating uniform buffer for current frame index: "
-		<< _currentFrameIndex;
+		<< _currentFrameIndex << ", view slot: " << viewSlot;
 
 	Frame::UniformBufferObject ubo {};
 	ubo.model = glm::mat4(1.0f);
 	ubo.view  = view.toViewMatrix();
 	ubo.proj  = view.getProjectionMatrix();
 
-	memcpy(_frames[_currentFrameIndex]->_uniformBufferMapped, &ubo,
-		   sizeof(ubo));
+	memcpy(_frames[_currentFrameIndex]->getUniformBufferMapped(viewSlot),
+		   &ubo, sizeof(ubo));
 	this->getLogger().info() << "Uniform buffer updated successfully.";
 }
 
 void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkFramebuffer swapChainFramebuffer,
 										 VkExtent2D swapChainExtent,
-										 const Scene &scene)
+										 const Scene &scene,
+										 std::size_t viewSlot)
 {
-	this->getLogger().info()
-		<< "Recording command buffer for current frame index: "
-		<< _currentFrameIndex;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Recording command buffer for current frame index: "
+			<< _currentFrameIndex << ", view slot: " << viewSlot;
+	}
 
-	auto commandBuffer = _frames[_currentFrameIndex]->_commandBuffer;
+	_ressourceManager->sync();
+
+	auto &frame = *_frames[_currentFrameIndex];
+	auto commandBuffer = frame.getCommandBuffer(viewSlot);
 
 	VkCommandBufferBeginInfo beginInfo {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -639,7 +677,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues	   = clearValues.data();
 
-	this->getLogger().info() << "Beginning render pass...";
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug() << "Beginning render pass...";
+	}
 	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,
 						 VK_SUBPASS_CONTENTS_INLINE);
 
@@ -652,71 +692,100 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-	this->getLogger().info()
-		<< "Viewport set to cover entire swapchain extent: "
-		<< swapChainExtent.width << "x" << swapChainExtent.height;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Viewport set to cover entire swapchain extent: "
+			<< swapChainExtent.width << "x" << swapChainExtent.height;
+	}
 
 	VkRect2D scissor {};
 	scissor.offset = { 0, 0 };
 	scissor.extent = swapChainExtent;
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-	this->getLogger().info()
-		<< "Scissor set to cover entire swapchain extent: "
-		<< swapChainExtent.width << "x" << swapChainExtent.height;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Scissor set to cover entire swapchain extent: "
+			<< swapChainExtent.width << "x" << swapChainExtent.height;
+	}
 
 	VkDescriptorSet  lastBoundDescriptorSet  = VK_NULL_HANDLE;
 	VkPipelineLayout lastBoundPipelineLayout = VK_NULL_HANDLE;
 
-	this->getLogger().info()
-		<< "Iterating over meshes in the scene to record draw commands...";
+	const auto &meshes = scene.getMeshes();
 
-	for (const auto &mesh: scene.getMeshes()) {
-		this->getLogger().info()
-			<< "Processing mesh with material ID: " << mesh->getMaterialID();
+	DrawStats stats {};
+	stats.visibleMeshes = meshes.size();
+
+	for (const auto &mesh: meshes) {
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Processing mesh with material ID: "
+				<< mesh->getMaterialID();
+		}
 		auto materialID = mesh->getMaterialID();
 		auto material	= _ressourceManager->getMaterial(materialID);
 
 		if (!material) {
-			this->getLogger().warning() << "Material with ID " << materialID
-										<< " not found! Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Material with ID " << materialID
+					<< " not found! Skipping mesh.";
+			}
 			continue;
 		}
 
 		auto correspondingPipelineID = material->getShaderID();
 
 		if (_pipelines.find(correspondingPipelineID) == _pipelines.end()) {
-			this->getLogger().warning()
-				<< "No pipeline found for shader ID: "
-				<< correspondingPipelineID << ". Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "No pipeline found for shader ID: "
+					<< correspondingPipelineID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
-		this->getLogger().info()
-			<< "Binding pipeline for shader ID: " << correspondingPipelineID;
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Binding pipeline for shader ID: "
+				<< correspondingPipelineID;
+		}
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 						  _pipelines[correspondingPipelineID]);
+		++stats.pipelineBinds;
 
 		VkDeviceSize offsets[] = { 0 };
 		VkBuffer vertexBuffer  = mesh->getVertexBuffer();
 
-		this->getLogger().info() << "Binding vertex buffer for ->..";
-
 		if (vertexBuffer == VK_NULL_HANDLE) {
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Vertex buffer is null for mesh with material ID: "
+					<< materialID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
 
-		this->getLogger().info() << "Binding index buffer for mesh...";
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug() << "Binding vertex buffer for ->..";
+		}
 
 		auto indexBuffer = mesh->getIndexBuffer();
 
 		if (indexBuffer == VK_NULL_HANDLE) {
-			this->getLogger().warning()
-				<< "Index buffer is null for mesh with material ID: "
-				<< mesh->getMaterialID() << ". Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Index buffer is null for mesh with material ID: "
+					<< materialID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
@@ -728,16 +797,22 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		VkPipelineLayout pipelineLayout =
 			_pipelineLayouts[correspondingPipelineID];
 
+		uint32_t dynamicOffset = static_cast<uint32_t>(
+			viewSlot * frame.getUniformBufferAlignedSize());
+
 		if (descriptorSet != lastBoundDescriptorSet ||
 			pipelineLayout != lastBoundPipelineLayout) {
-			this->getLogger().info()
-				<< "Binding descriptor set for material ID: "
-				<< mesh->getMaterialID();
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Binding descriptor set for material ID: "
+					<< materialID;
+			}
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+				pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
 			lastBoundDescriptorSet  = descriptorSet;
 			lastBoundPipelineLayout = pipelineLayout;
+      ++stats.descriptorBinds;
 		}
 
 		glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
@@ -746,18 +821,28 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			commandBuffer, _pipelineLayouts[correspondingPipelineID],
 			VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
 
-		this->getLogger().info() << "Drawing indexed mesh with index count: "
-								 << mesh->getIndexCount();
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Drawing indexed mesh with index count: "
+				<< mesh->getIndexCount();
+		}
 
 		vkCmdDrawIndexed(commandBuffer, mesh->getIndexCount(), 1, 0, 0, 0);
+		++stats.drawCalls;
 	}
 
-	this->getLogger().info() << "All meshes processed. Ending render pass...";
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Draw stats: visibleMeshes=" << stats.visibleMeshes
+			<< " drawCalls=" << stats.drawCalls
+			<< " pipelineBinds=" << stats.pipelineBinds
+			<< " descriptorBinds=" << stats.descriptorBinds
+			<< " skippedMeshes=" << stats.skippedMeshes;
+		this->getLogger().debug() << "All meshes processed. Ending render "
+									 "pass...";
+	}
 
 	vkCmdEndRenderPass(commandBuffer);
-
-	this->getLogger().info()
-		<< "Render pass ended. Ending command buffer recording...";
 
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to record command buffer!";

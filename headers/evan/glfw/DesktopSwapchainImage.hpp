@@ -174,10 +174,10 @@ namespace evan
 		 *
 		 * This function selects the most suitable present mode for the
 		 * swapchain from the list of available present modes provided by the
-		 * physical device. The selection process typically involves checking
-		 * for preferred present modes (such as VK_PRESENT_MODE_MAILBOX_KHR)
-		 * that offer better performance and reduced latency for presenting
-		 * rendered images to the screen.
+		 * physical device. FIFO (vsync) is preferred so the loop is paced by
+		 * presentation and does not spin at unbounded frame rates; MAILBOX may
+		 * be chosen by callers that explicitly opt into an uncapped present
+		 * mode.
 		 *
 		 * @param availablePresentModes A vector of VkPresentModeKHR values
 		 * representing the present modes supported by the physical device. The

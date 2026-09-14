@@ -389,6 +389,35 @@ namespace evan
 			_shouldCaptureViewportInput = shouldCapture;
 		}
 
+		/**
+		 * @brief Gets the configured target frame rate for the loop limiter.
+		 *
+		 * A value of 0 means the loop is uncapped and paced by the
+		 * presentation mechanism (vsync on desktop, xrWaitFrame on OpenXR).
+		 *
+		 * @return The target FPS, or 0 when the limiter is disabled.
+		 */
+		float getTargetFps(void) const
+		{
+			return _targetFps;
+		}
+
+		/**
+		 * @brief Sets an optional frame-rate limiter for the main loop.
+		 *
+		 * When set to a value greater than 0, updateDeltaTime() sleeps to
+		 * prevent the loop from running faster than this rate. When set to 0
+		 * (the default), no artificial limit is applied and the loop is paced
+		 * by the presentation mechanism (vsync on desktop, xrWaitFrame on
+		 * OpenXR).
+		 *
+		 * @param fps The target frame rate, or 0 to disable the limiter.
+		 */
+		void setTargetFps(float fps)
+		{
+			_targetFps = fps;
+		}
+
 		protected:
 		/**
 		 * The name of the engine.
@@ -657,6 +686,15 @@ namespace evan
 		 * @brief Stores the delta time from the last frame in seconds.
 		 */
 		float _deltaTime { 0.0f };
+
+		/**
+		 * @brief Optional frame-rate limiter for the main loop.
+		 *
+		 * When greater than 0, updateDeltaTime() sleeps to hold the loop at
+		 * this frame rate. When 0 (the default), the loop is uncapped and
+		 * paced by the presentation mechanism.
+		 */
+		float _targetFps { 0.0f };
 
 		/**
 		 * @brief Get the delta time from the last frame in seconds.

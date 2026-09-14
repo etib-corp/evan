@@ -247,7 +247,7 @@ void evan::GPUMaterial::createDescriptorSets(
 		uboWrite.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		uboWrite.dstSet			 = _descriptorSets[i];
 		uboWrite.dstBinding		 = 0;
-		uboWrite.descriptorType	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboWrite.descriptorType	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		uboWrite.descriptorCount = 1;
 		uboWrite.pBufferInfo	 = &bufferInfo;
 

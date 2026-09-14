@@ -606,16 +606,17 @@ void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 
 void evan::Engine::updateDeltaTime(void)
 {
-	static constexpr auto targetFrameTime =
-		std::chrono::duration<float>(1.0f / 60.0f);
-
 	auto currentTime = std::chrono::steady_clock::now();
 	auto elapsed	 = currentTime - _lastFrameTime;
 
-	if (elapsed < targetFrameTime) {
-		std::this_thread::sleep_for(targetFrameTime - elapsed);
-		currentTime = std::chrono::steady_clock::now();
-		elapsed		= currentTime - _lastFrameTime;
+	if (_targetFps > 0.0f) {
+		const auto targetFrameTime =
+			std::chrono::duration<float>(1.0f / _targetFps);
+		if (elapsed < targetFrameTime) {
+			std::this_thread::sleep_for(targetFrameTime - elapsed);
+			currentTime = std::chrono::steady_clock::now();
+			elapsed		= currentTime - _lastFrameTime;
+		}
 	}
 
 	_deltaTime	   = std::chrono::duration<float>(elapsed).count();
