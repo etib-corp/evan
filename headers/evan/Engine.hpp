@@ -19,6 +19,8 @@
 #include "evan/ASwapchainContext.hpp"
 #include "evan/IPlatform.hpp"
 
+#include <glm/glm.hpp>
+
 #include <utility/graphic/model.hpp>
 #include <utility/graphic/primitive.hpp>
 #include <utility/graphic/view.hpp>
@@ -148,6 +150,20 @@ namespace evan
 		 * @return True when the object was removed from the scene.
 		 */
 		bool removeObject(size_t objectID);
+
+		/**
+		 * @brief Sets the model transform of an object in the current scene.
+		 *
+		 * The transform is stored per mesh and applied by the vertex shader
+		 * only when renderer instancing is enabled (see
+		 * Renderer::setInstancingEnabled). Before that, object transforms
+		 * continue to be baked into the uploaded vertex data.
+		 *
+		 * @param objectID The identifier returned by addText/addMesh/addObject.
+		 * @param transform The 4x4 model matrix to apply to the object.
+		 * @return True when the object was found and updated.
+		 */
+		bool setObjectTransform(size_t objectID, const glm::mat4 &transform);
 
 		/**
 		 * @brief Get the mirrored view state.
