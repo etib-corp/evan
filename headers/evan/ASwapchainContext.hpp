@@ -436,15 +436,27 @@ namespace evan
 		 * Implement this function to ensure that the selected swapchain format
 		 * is compatible with the rendering operations and provides optimal
 		 * performance for presenting rendered frames to the display.
+		 *
+		 * Reported values are treated as untrusted: preferred formats are
+		 * matched exactly, other candidates are range-checked before being
+		 * narrowed to VkFormat, and are only accepted when the physical device
+		 * supports them as color attachments. An empty or fully invalid list
+		 * falls back to a format the device is required to support.
+		 *
+		 * @param physicalDevice The Vulkan physical device used to validate
+		 * that a candidate format is usable as a color attachment. Pass
+		 * VK_NULL_HANDLE to skip the device support query.
 		 * @param swapchainFormats A vector of int64_t values representing the
-		 * available swapchain formats provided by the Vulkan physical device.
-		 * These formats should be evaluated to determine the most suitable
-		 * format for the swapchain.
+		 * available swapchain formats provided by the runtime or Vulkan
+		 * physical device. These formats should be evaluated to determine the
+		 * most suitable format for the swapchain.
 		 *
 		 * @return The selected VkFormat that best matches the requirements of
 		 * the rendering system for the swapchain. This format should be
 		 * compatible with the rendering operations and provide optimal
-		 * performance for presenting rendered frames to the display.
+		 * performance for presenting rendered frames to the display. When no
+		 * candidate is usable, a guaranteed color-attachment format is
+		 * returned.
 		 *
 		 * @note Implement this function to ensure that the selected swapchain
 		 * format is chosen based on the specific requirements of the rendering
@@ -455,7 +467,8 @@ namespace evan
 		 * @see VkFormat, Vulkan physical device swapchain formats
 		 */
 		VkFormat
-			selectSwapchainFormat(const std::vector<int64_t> &swapchainFormats);
+			selectSwapchainFormat(VkPhysicalDevice physicalDevice,
+								  const std::vector<int64_t> &swapchainFormats);
 
 		/**
 		 * @brief Finds a supported format from a list of candidates based on
@@ -502,5 +515,48 @@ namespace evan
 									 const std::vector<VkFormat> &candidates,
 									 VkImageTiling tiling,
 									 VkFormatFeatureFlags features);
+
+		private:
+		/**
+		 * @brief Checks whether a raw swapchain format value is within the
+		 * representable VkFormat range.
+		 *
+		 * OpenXR reports swapchain formats as int64_t. A runtime may hand back
+		 * values that are negative, out of range or otherwise not a VkFormat.
+		 * This cheap guard rejects those before any narrowing cast or Vulkan
+		 * call is attempted.
+		 *
+		 * @param value The raw format value reported by the runtime.
+		 * @return True when the value can be narrowed to a VkFormat.
+		 */
+		static bool isPlausibleVkFormat(int64_t value);
+
+		/**
+		 * @brief Checks whether a physical device supports a format as an
+		 * optimal tiling color attachment.
+		 *
+		 * @param physicalDevice The physical device to query.
+		 * @param format The format to test.
+		 * @return True when the format supports optimal tiling color
+		 * attachment usage.
+		 */
+		static bool supportsColorAttachment(VkPhysicalDevice physicalDevice,
+											VkFormat format);
+
+		/**
+		 * @brief Returns a swapchain color format that the device is required
+		 * to support.
+		 *
+		 * B8G8R8A8_UNORM and R8G8B8A8_UNORM are both mandated by the Vulkan
+		 * specification for optimal tiling color attachments, making them safe
+		 * last-resort fallbacks. When no physical device is available the first
+		 * candidate is returned without a support query.
+		 *
+		 * @param physicalDevice The physical device used to validate the
+		 * fallback, or VK_NULL_HANDLE to skip the support query.
+		 * @return A guaranteed color attachment format.
+		 */
+		static VkFormat
+			fallbackSwapchainFormat(VkPhysicalDevice physicalDevice);
 	};
 }	 // namespace evan

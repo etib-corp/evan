@@ -10,6 +10,7 @@ set(TEST_SOURCES
     sources/test_backend_abstraction.cpp
     sources/test_desktop_backend.cpp
     sources/test_swapchain_view.cpp
+    sources/test_swapchain_format.cpp
     sources/test_gputexture.cpp
     sources/test_error.cpp
     sources/test_frustum.cpp

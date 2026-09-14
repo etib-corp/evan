@@ -69,7 +69,9 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
 					 _resolveToSwapchain);
 
-	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
+	auto swapchainFormat = selectSwapchainFormat(
+		deviceContext.getDeviceBackend()->getPhysicalDevice(),
+		swapchainFormats);
 
 	for (const auto &viewConfig: _viewsConfigurations) {
 		this->getLogger().info() << "Creating swapchain for view configuration";
@@ -182,6 +184,7 @@ void evan::XrSwapchainContext::recreateSwapchain(
 		swapchainCreateInfo.type	  = XR_TYPE_SWAPCHAIN_CREATE_INFO;
 		swapchainCreateInfo.arraySize = 1;
 		swapchainCreateInfo.format	  = selectSwapchainFormat(
+			   deviceContext.getDeviceBackend()->getPhysicalDevice(),
 			   deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
 				   deviceContext.getDeviceBackend()->countSwapchainFormats()));
 		swapchainCreateInfo.width	  = viewConfig.recommendedImageRectWidth;
