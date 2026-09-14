@@ -79,6 +79,15 @@ const int MAX_SWAPCHAINS = 8;
  */
 const int MAX_INSTANCES_PER_VIEW = 1024;
 
+/*
+ * @brief Maximum number of indirect draw commands per view slot.
+ *
+ * Bounds the indirect draw buffer: each frame keeps one slot per view, each
+ * slot holding up to this many VkDrawIndexedIndirectCommand entries used to
+ * batch the sorted, surviving draws.
+ */
+const int MAX_INDIRECT_COMMANDS_PER_VIEW = 4096;
+
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>
