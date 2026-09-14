@@ -199,6 +199,12 @@ void evan::ASwapchainContext::setView(std::size_t index,
 	getViewSet().setView(index, view);
 }
 
+const utility::graphic::PoseF &
+	evan::ASwapchainContext::getViewOffset(void) const
+{
+	return _viewOffset;
+}
+
 std::size_t evan::ASwapchainContext::getViewCount(void) const
 {
 	return getViewSet().size();

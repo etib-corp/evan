@@ -150,6 +150,63 @@ namespace evan
 		void *getUniformBufferMapped(std::size_t viewSlot) const;
 
 		/**
+		 * @brief Gets the Vulkan instance buffer associated with this frame.
+		 *
+		 * This buffer holds one slot per view, each slot storing up to
+		 * MAX_INSTANCES_PER_VIEW model matrices consumed by the vertex
+		 * shader when instancing is enabled.
+		 *
+		 * @return The Vulkan buffer for this frame.
+		 */
+		VkBuffer getInstanceBuffer() const;
+
+		/**
+		 * @brief Gets the mapped CPU pointer of a view's instance slot.
+		 *
+		 * @param viewSlot Index of the view slot.
+		 * @return Mapped pointer to the slot, ready for a memcpy of instance
+		 * transforms.
+		 */
+		void *getInstanceBufferMapped(std::size_t viewSlot) const;
+
+		/**
+		 * @brief Gets the aligned byte size of one instance buffer slot.
+		 *
+		 * @return The aligned size, a multiple of
+		 * minUniformBufferOffsetAlignment.
+		 */
+		VkDeviceSize getInstanceBufferAlignedSize() const;
+
+		/**
+		 * @brief Gets the Vulkan indirect draw buffer associated with this
+		 * frame.
+		 *
+		 * This buffer holds one slot per view, each slot storing up to
+		 * MAX_INDIRECT_COMMANDS_PER_VIEW indirect draw commands used to batch
+		 * the sorted draws when indirect drawing is enabled.
+		 *
+		 * @return The Vulkan buffer for this frame.
+		 */
+		VkBuffer getIndirectBuffer() const;
+
+		/**
+		 * @brief Gets the mapped CPU pointer of a view's indirect slot.
+		 *
+		 * @param viewSlot Index of the view slot.
+		 * @return Mapped pointer to the slot, ready for a memcpy of
+		 * VkDrawIndexedIndirectCommand entries.
+		 */
+		void *getIndirectBufferMapped(std::size_t viewSlot) const;
+
+		/**
+		 * @brief Gets the aligned byte size of one indirect buffer slot.
+		 *
+		 * @return The aligned size, a multiple of
+		 * minUniformBufferOffsetAlignment.
+		 */
+		VkDeviceSize getIndirectBufferAlignedSize() const;
+
+		/**
 		 * In-flight fence ensuring that a frame's resources (command buffer,
 		 * uniform buffer and semaphores) are not reused until the previous
 		 * frame using them has finished on the GPU. One fence is kept per
@@ -230,6 +287,28 @@ namespace evan
 		void createUniformBuffer(const ADeviceBackend &deviceBackend);
 
 		/**
+		 * @brief Creates the instance buffer for this frame.
+		 *
+		 * This buffer stores per-instance model matrices for instanced
+		 * rendering, with one aligned slot per view.
+		 *
+		 * @param deviceBackend A reference to the device backend used to
+		 * create the buffer and allocate memory.
+		 */
+		void createInstanceBuffer(const ADeviceBackend &deviceBackend);
+
+		/**
+		 * @brief Creates the indirect draw buffer for this frame.
+		 *
+		 * This buffer stores VkDrawIndexedIndirectCommand entries used to
+		 * batch the sorted draws, with one aligned slot per view.
+		 *
+		 * @param deviceBackend A reference to the device backend used to
+		 * create the buffer and allocate memory.
+		 */
+		void createIndirectBuffer(const ADeviceBackend &deviceBackend);
+
+		/**
 		 * @brief Vulkan buffer for the uniform buffer object (UBO) used in this
 		 * frame.
 		 *
@@ -255,6 +334,46 @@ namespace evan
 		 * starts on an offset the dynamic uniform buffer binding accepts.
 		 */
 		VkDeviceSize _uniformBufferAlignedSize = 0;
+
+		/**
+		 * @brief Vulkan buffer storing per-instance model matrices.
+		 */
+		VkBuffer _instanceBuffer = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Vulkan device memory associated with the instance buffer.
+		 */
+		VkDeviceMemory _instanceBufferMemory = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Pointer to the mapped memory of the instance buffer.
+		 */
+		void *_instanceBufferMapped = nullptr;
+
+		/**
+		 * @brief Aligned byte size of one view's instance buffer slot.
+		 */
+		VkDeviceSize _instanceBufferAlignedSize = 0;
+
+		/**
+		 * @brief Vulkan buffer storing indirect draw commands.
+		 */
+		VkBuffer _indirectBuffer = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Vulkan device memory associated with the indirect buffer.
+		 */
+		VkDeviceMemory _indirectBufferMemory = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Pointer to the mapped memory of the indirect buffer.
+		 */
+		void *_indirectBufferMapped = nullptr;
+
+		/**
+		 * @brief Aligned byte size of one view's indirect buffer slot.
+		 */
+		VkDeviceSize _indirectBufferAlignedSize = 0;
 
 		/**
 		 * @brief The device context used to create this frame, kept alive for

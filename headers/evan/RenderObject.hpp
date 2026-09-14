@@ -17,6 +17,8 @@
 #include "DeviceContext.hpp"
 #include "GPUMesh.hpp"
 
+#include <glm/glm.hpp>
+
 namespace evan
 {
 	/**
@@ -77,6 +79,16 @@ namespace evan
 		 * prevent memory leaks in the rendering process.
 		 */
 		void destroy(VkDevice device);
+
+		/**
+		 * @brief Sets the per-instance transform on every mesh of this object.
+		 *
+		 * Applies the same model matrix to each GPUMesh owned by this object.
+		 * Only consumed when renderer instancing is enabled.
+		 *
+		 * @param transform The 4x4 model matrix applied to every mesh.
+		 */
+		void setTransform(const glm::mat4 &transform);
 
 		/**
 		 * @brief Retrieves the vector of GPUMesh instances associated with this
