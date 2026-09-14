@@ -62,28 +62,63 @@ namespace xider::tests
 		EXPECT_TRUE(scene.getMeshes().empty());
 	}
 	/**
-	 * @brief Ensures getMeshes() returns its result by value rather than a
-	 * reference to shared (static) state. Returning by value guarantees that
-	 * the result is scoped to the Scene instance and to the calling thread,
-	 * which previously was not the case.
+	 * @brief Ensures getMeshes() returns a constant reference to the Scene's
+	 * cached mesh vector, so repeated per-frame calls do not allocate.
 	 */
-	TEST(SceneTest, GetMeshesReturnsByValue)
+	TEST(SceneTest, GetMeshesReturnsConstReference)
 	{
 		static_assert(
-			!std::is_reference_v<
-				decltype(std::declval<const evan::Scene &>().getMeshes())>,
-			"Scene::getMeshes() must return by value, not by "
-			"reference");
+			std::is_same_v<
+				decltype(std::declval<const evan::Scene &>().getMeshes()),
+				const std::vector<std::shared_ptr<evan::GPUMesh>> &>,
+			"Scene::getMeshes() must return a const reference");
 
-		evan::Scene first;
-		evan::Scene second;
+		evan::Scene scene;
 
-		const std::vector<std::shared_ptr<evan::GPUMesh>> firstMeshes =
-			first.getMeshes();
-		const std::vector<std::shared_ptr<evan::GPUMesh>> secondMeshes =
-			second.getMeshes();
+		EXPECT_TRUE(scene.getMeshes().empty());
+	}
 
-		EXPECT_TRUE(firstMeshes.empty());
-		EXPECT_TRUE(secondMeshes.empty());
+	/**
+	 * @brief Ensures consecutive getMeshes() calls return the same cached
+	 * vector, i.e. no per-call allocation.
+	 */
+	TEST(SceneTest, GetMeshesIsCached)
+	{
+		evan::Scene scene;
+
+		const auto &first  = scene.getMeshes();
+		const auto &second = scene.getMeshes();
+
+		EXPECT_EQ(&first, &second);
+	}
+
+	/**
+	 * @brief Ensures adding an object invalidates the mesh cache. Null
+	 * objects are skipped when flattening, but the invalidation path is
+	 * still exercised.
+	 */
+	TEST(SceneTest, AddObjectInvalidatesMeshesCache)
+	{
+		evan::Scene scene;
+
+		EXPECT_TRUE(scene.getMeshes().empty());
+
+		scene.addObject(1, nullptr);
+
+		EXPECT_TRUE(scene.getMeshes().empty());
+	}
+
+	/**
+	 * @brief Ensures removing an object invalidates the mesh cache.
+	 */
+	TEST(SceneTest, RemoveObjectInvalidatesMeshesCache)
+	{
+		evan::Scene scene;
+
+		scene.addObject(1, nullptr);
+		EXPECT_TRUE(scene.getMeshes().empty());
+
+		EXPECT_TRUE(scene.removeObject(1));
+		EXPECT_TRUE(scene.getMeshes().empty());
 	}
 }	 // namespace xider::tests

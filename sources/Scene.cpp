@@ -42,6 +42,7 @@ size_t evan::Scene::addObject(uint32_t objectID,
 	this->getLogger().info()
 		<< "Adding renderable object with ID " << objectID << " to Scene...";
 	_objects[objectID] = renderObject;
+	_meshesCacheDirty = true;
 	return objectID;
 }
 
@@ -49,7 +50,11 @@ bool evan::Scene::removeObject(uint32_t objectID)
 {
 	this->getLogger().info() << "Removing renderable object with ID "
 							 << objectID << " from Scene...";
-	return _objects.erase(objectID) > 0;
+	bool removed = _objects.erase(objectID) > 0;
+	if (removed) {
+		_meshesCacheDirty = true;
+	}
+	return removed;
 }
 
 std::shared_ptr<evan::RenderObject>
@@ -66,17 +71,31 @@ std::shared_ptr<evan::RenderObject>
 // Getters //
 /////////////
 
-std::vector<std::shared_ptr<evan::GPUMesh>> evan::Scene::getMeshes() const
+const std::vector<std::shared_ptr<evan::GPUMesh>> &
+	evan::Scene::getMeshes() const
 {
-	std::vector<std::shared_ptr<GPUMesh>> meshes;
+	if (_meshesCacheDirty) {
+		_meshesCache.clear();
 
-	for (const auto &[_, object]: _objects) {
-		const std::vector<std::shared_ptr<GPUMesh>> &objectMeshes =
-			object->getMeshes();
-		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
+		size_t meshCount = 0;
+		for (const auto &[_, object]: _objects) {
+			if (object) {
+				meshCount += object->getMeshes().size();
+			}
+		}
+		_meshesCache.reserve(meshCount);
+
+		for (const auto &[_, object]: _objects) {
+			if (object) {
+				const std::vector<std::shared_ptr<GPUMesh>> &objectMeshes =
+					object->getMeshes();
+				_meshesCache.insert(_meshesCache.end(), objectMeshes.begin(),
+									objectMeshes.end());
+			}
+		}
+		_meshesCacheDirty = false;
 	}
-
-	return meshes;
+	return _meshesCache;
 }
 
 const std::map<uint32_t, std::shared_ptr<evan::GPUMaterial>> &

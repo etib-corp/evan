@@ -20,6 +20,7 @@
 #include "RenderObject.hpp"
 
 #include <map>
+#include <vector>
 
 namespace evan
 {
@@ -138,22 +139,24 @@ namespace evan
 		/**
 		 * @brief Retrieves the meshes contained in the Scene.
 		 *
-		 * This method returns a vector of GPUMesh objects representing the
-		 * meshes contained in the Scene. Each GPUMesh object contains
-		 * information about the vertex and index buffers, as well as the
-		 * material ID associated with that mesh. The returned vector allows
-		 * access to the meshes for rendering or other operations while
-		 * ensuring that the internal state of the Scene is not modified.
+		 * This method returns a constant reference to a vector of GPUMesh
+		 * objects representing the meshes contained in the Scene. Each GPUMesh
+		 * object contains information about the vertex and index buffers, as
+		 * well as the material ID associated with that mesh. The vector is
+		 * cached and rebuilt lazily whenever objects are added to or removed
+		 * from the Scene, so repeated calls do not allocate.
 		 *
-		 * @return A vector of GPUMesh objects representing the meshes
-		 * contained in the Scene.
+		 * @return A constant reference to a vector of GPUMesh objects
+		 * representing the meshes contained in the Scene.
 		 *
 		 * @note The method assumes that the meshes have been properly
 		 * initialized and are ready for use in rendering or other operations.
-		 * The returned vector is built from the current scene contents and is
-		 * safe to use independently of the Scene.
+		 * The returned reference is valid until the next call to addObject()
+		 * or removeObject(). It must not be modified by the caller, and it is
+		 * not safe to call concurrently with Scene mutation.
 		 */
-		[[nodiscard]] std::vector<std::shared_ptr<GPUMesh>> getMeshes() const;
+		[[nodiscard]] const std::vector<std::shared_ptr<GPUMesh>> &
+			getMeshes() const;
 
 		/**
 		 * @brief Retrieves the materials contained in the Scene.
@@ -205,5 +208,19 @@ namespace evan
 		 * up when the Scene is destroyed.
 		 */
 		std::map<uint32_t, std::shared_ptr<GPUMaterial>> _materials;
+
+		/**
+		 * @brief Cached flattened view of all meshes in the Scene, in object
+		 * ID order. Rebuilt lazily from _objects when _meshesCacheDirty is
+		 * true. Kept mutable so getMeshes() can rebuild it while remaining
+		 * const.
+		 */
+		mutable std::vector<std::shared_ptr<GPUMesh>> _meshesCache;
+
+		/**
+		 * @brief Whether _meshesCache is stale and must be rebuilt before it
+		 * is returned by getMeshes().
+		 */
+		mutable bool _meshesCacheDirty = true;
 	};
 }	 // namespace evan
