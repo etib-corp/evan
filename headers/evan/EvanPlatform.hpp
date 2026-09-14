@@ -70,6 +70,24 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
  */
 const int MAX_SWAPCHAINS = 8;
 
+/*
+ * @brief Maximum number of per-instance transforms per view slot.
+ *
+ * Bounds the instancing vertex buffer: each frame keeps one slot per view,
+ * each slot holding up to this many 4x4 model matrices fed to the vertex
+ * shader as per-instance attributes.
+ */
+const int MAX_INSTANCES_PER_VIEW = 1024;
+
+/*
+ * @brief Maximum number of indirect draw commands per view slot.
+ *
+ * Bounds the indirect draw buffer: each frame keeps one slot per view, each
+ * slot holding up to this many VkDrawIndexedIndirectCommand entries used to
+ * batch the sorted, surviving draws.
+ */
+const int MAX_INDIRECT_COMMANDS_PER_VIEW = 4096;
+
 // Vulkan headers - needed for both GLFW and OpenXR
 #if defined(__GLFW__) || defined(__OPENXR__)
 	#include <vulkan/vulkan.h>

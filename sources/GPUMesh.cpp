@@ -237,6 +237,16 @@ const utility::math::AabbF &evan::GPUMesh::getBounds() const
 	return _bounds;
 }
 
+void evan::GPUMesh::setTransform(const glm::mat4 &transform)
+{
+	_transform = transform;
+}
+
+const glm::mat4 &evan::GPUMesh::getTransform() const
+{
+	return _transform;
+}
+
 ///////////////////////
 // Protected methods //
 ///////////////////////

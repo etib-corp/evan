@@ -260,6 +260,59 @@ namespace evan
 			return _maxDrawDistance;
 		}
 
+		/**
+		 * @brief Enables or disables instanced rendering.
+		 *
+		 * When enabled, consecutive meshes sharing the same geometry
+		 * (pipeline, material, vertex and index buffers) are merged into a
+		 * single vkCmdDrawIndexed with instanceCount > 1, and each mesh's
+		 * transform is fed to the vertex shader from the per-frame instance
+		 * buffer. The application must use per-instance transforms and a
+		 * vertex shader that consumes the instance matrix for this to render
+		 * correctly. Disabled by default.
+		 *
+		 * @param enabled True to batch identical meshes into instanced draws.
+		 */
+		void setInstancingEnabled(bool enabled)
+		{
+			_instancingEnabled = enabled;
+		}
+
+		/**
+		 * @brief Checks whether instanced rendering is enabled.
+		 *
+		 * @return True when instancing is enabled.
+		 */
+		[[nodiscard]] bool isInstancingEnabled() const
+		{
+			return _instancingEnabled;
+		}
+
+		/**
+		 * @brief Enables or disables indirect drawing.
+		 *
+		 * When enabled, the sorted draws are written into the per-frame
+		 * indirect buffer and submitted with vkCmdDrawIndexedIndirect, one
+		 * call per consecutive group sharing the same pipeline/descriptor/
+		 * vertex state. Disabled by default.
+		 *
+		 * @param enabled True to batch draws through the indirect buffer.
+		 */
+		void setIndirectDrawingEnabled(bool enabled)
+		{
+			_indirectDrawingEnabled = enabled;
+		}
+
+		/**
+		 * @brief Checks whether indirect drawing is enabled.
+		 *
+		 * @return True when indirect drawing is enabled.
+		 */
+		[[nodiscard]] bool isIndirectDrawingEnabled() const
+		{
+			return _indirectDrawingEnabled;
+		}
+
 		protected:
 		std::map<uint32_t, VkPipeline>
 			_pipelines;	   ///< A map of pipeline layer identifiers to Vulkan
@@ -461,5 +514,15 @@ namespace evan
 		 * @brief Maximum draw distance for distance culling (0 disables it).
 		 */
 		float _maxDrawDistance = 0.0f;
+
+		/**
+		 * @brief Whether identical meshes are merged into instanced draws.
+		 */
+		bool _instancingEnabled = false;
+
+		/**
+		 * @brief Whether draws are batched through an indirect draw buffer.
+		 */
+		bool _indirectDrawingEnabled = false;
 	};
 }	 // namespace evan

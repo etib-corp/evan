@@ -249,6 +249,52 @@ bool evan::Engine::removeObject(size_t objectID)
 		static_cast<uint32_t>(objectID));
 }
 
+bool evan::Engine::setObjectTransform(size_t objectID,
+									  const glm::mat4 &transform)
+{
+	auto currentSceneIt = _scenes.find(_currentScene);
+	if (currentSceneIt == _scenes.end()) {
+		return false;
+	}
+	auto object =
+		currentSceneIt->second->getObject(static_cast<uint32_t>(objectID));
+	if (!object) {
+		return false;
+	}
+	object->setTransform(transform);
+	return true;
+}
+
+void evan::Engine::setInstancingEnabled(bool enabled)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot enable instancing: renderer not initialized.";
+		return;
+	}
+	_renderer->setInstancingEnabled(enabled);
+}
+
+bool evan::Engine::isInstancingEnabled() const
+{
+	return _renderer && _renderer->isInstancingEnabled();
+}
+
+void evan::Engine::setIndirectDrawingEnabled(bool enabled)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot enable indirect drawing: renderer not initialized.";
+		return;
+	}
+	_renderer->setIndirectDrawingEnabled(enabled);
+}
+
+bool evan::Engine::isIndirectDrawingEnabled() const
+{
+	return _renderer && _renderer->isIndirectDrawingEnabled();
+}
+
 utility::graphic::ViewF evan::Engine::getView(void) const
 {
 	const std::size_t viewCount = _swapchainContext->getViewCount();
