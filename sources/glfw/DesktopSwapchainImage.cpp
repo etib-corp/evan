@@ -259,10 +259,13 @@ VkPresentModeKHR evan::DesktopSwapchainImage::chooseSwapPresentMode(
 {
 	this->getLogger().info()
 		<< "Choosing swap present mode for DesktopSwapchainImage...";
+	// Prefer FIFO (vsync) so the loop is paced by presentation and does not
+	// spin at unbounded frame rates now that the engine no longer sleeps to
+	// cap the frame rate by default.
 	for (const auto &availablePresentMode: availablePresentModes) {
-		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+		if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
 			this->getLogger().info() << "Selected preferred swap present mode: "
-										"VK_PRESENT_MODE_MAILBOX_KHR";
+										"VK_PRESENT_MODE_FIFO_KHR";
 			return availablePresentMode;
 		}
 	}
