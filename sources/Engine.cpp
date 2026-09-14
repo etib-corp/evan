@@ -449,6 +449,22 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 			handMotionEvent->setGrip(
 				applyViewOffset(handMotionEvent->getGrip(), viewOffset));
 		}
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			thumbStickEvent->setAim(
+				applyViewOffset(thumbStickEvent->getAim(), viewOffset));
+			thumbStickEvent->setGrip(
+				applyViewOffset(thumbStickEvent->getGrip(), viewOffset));
+		}
+		if (auto handButtonEvent =
+				std::dynamic_pointer_cast<utility::event::HandButtonEvent>(
+					event)) {
+			handButtonEvent->setAim(
+				applyViewOffset(handButtonEvent->getAim(), viewOffset));
+			handButtonEvent->setGrip(
+				applyViewOffset(handButtonEvent->getGrip(), viewOffset));
+		}
 	}
 
 	if (_platform->shouldClose())
