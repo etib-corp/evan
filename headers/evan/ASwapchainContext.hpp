@@ -1,4 +1,4 @@
-w/*
+/*
 ** ETIB PROJECT, 2026
 ** evan
 ** File description:
