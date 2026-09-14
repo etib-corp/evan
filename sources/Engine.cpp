@@ -20,6 +20,43 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
+namespace
+{
+	/**
+	 * @brief Applies a world-space view offset to a tracked pose.
+	 *
+	 * Matches how XrSwapchainContext applies the offset to the tracked eye
+	 * poses: the offset position is added and the offset orientation is
+	 * pre-multiplied onto the tracked orientation.
+	 *
+	 * @param pose The tracked pose to offset.
+	 * @param offset The world-space offset to apply.
+	 * @return The offset pose.
+	 */
+	utility::graphic::PoseF
+		applyViewOffset(const utility::graphic::PoseF &pose,
+						const utility::graphic::PoseF &offset)
+	{
+		const auto &position	 = pose.getPosition();
+		const auto &orientation	 = pose.getOrientation();
+		const auto &offsetPos	 = offset.getPosition();
+		const auto &offsetOrient = offset.getOrientation();
+
+		glm::quat baseQ(orientation.w, orientation.x, orientation.y,
+						orientation.z);
+		glm::quat offsetQ(offsetOrient.w, offsetOrient.x, offsetOrient.y,
+						  offsetOrient.z);
+		glm::quat finalQ = glm::normalize(offsetQ * baseQ);
+
+		return utility::graphic::PoseF(
+			utility::graphic::PositionF(position.getX() + offsetPos.getX(),
+										position.getY() + offsetPos.getY(),
+										position.getZ() + offsetPos.getZ()),
+			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
+										   finalQ.w));
+	}
+}	 // namespace
+
 evan::Engine::Engine(
 	std::shared_ptr<utility::RessourceProvider> ressourceProvider,
 	std::shared_ptr<IPlatform> platform)
@@ -352,6 +389,21 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 
 	utility::event::QuitEvent::Factory quitEventFactory;
 	auto events = _platform->pollEvents(*_deviceContext->getDeviceBackend());
+
+	// The view offset moves the viewer without moving the raw tracking space,
+	// so tracked hands must be offset by the same amount to stay attached to
+	// the virtual body (and keep the debug ray aligned with the hand).
+	const auto &viewOffset = _swapchainContext->getViewOffset();
+	for (auto &event: events) {
+		if (auto handMotionEvent =
+				std::dynamic_pointer_cast<utility::event::HandMotionEvent>(
+					event)) {
+			handMotionEvent->setAim(
+				applyViewOffset(handMotionEvent->getAim(), viewOffset));
+			handMotionEvent->setGrip(
+				applyViewOffset(handMotionEvent->getGrip(), viewOffset));
+		}
+	}
 
 	if (_platform->shouldClose())
 		events.emplace_back(quitEventFactory.create());

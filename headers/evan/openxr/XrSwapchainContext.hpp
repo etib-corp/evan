@@ -318,18 +318,6 @@ namespace evan
 		float _farPlane;
 
 		/**
-		 * @brief Persistent world-space offset applied on top of the tracked
-		 * eye poses.
-		 *
-		 * The OpenXR runtime overwrites the eye poses from xrLocateViews every
-		 * frame, so locomotion (keyboard/mouse/thumb stick) cannot be baked
-		 * into the stored views. Instead the requested view is reduced to this
-		 * offset relative to the tracked head center, and syncViewSet
-		 * re-applies it to the fresh eye poses each frame.
-		 */
-		utility::graphic::PoseF _viewOffset {};
-
-		/**
 		 * @brief Head center pose derived from the raw tracked eye poses.
 		 *
 		 * Updated by syncViewSet before the offset is applied. It is the
