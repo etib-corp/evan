@@ -483,8 +483,8 @@ void evan::Engine::handleViewportInput(
 		if (auto thumbStickEvent =
 				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
 					event)) {
-			handleThumbStickEvent(thumbStickEvent, position, orientation,
-								  100.0f, 0.1f, _deltaTime);
+			handleThumbStickEvent(thumbStickEvent, position, orientation, 10.0f,
+								  0.1f, _deltaTime);
 			continue;
 		}
 	}
