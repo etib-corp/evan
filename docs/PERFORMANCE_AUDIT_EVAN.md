@@ -97,7 +97,7 @@ Desktop path is the same minus the OpenXR calls, with
 | 6 | `RessourceManager::sync()` per frame + per object-add (map copies + prefix scans) | CONFIRMED | `RessourceManager.cpp:77-174`; `Engine.cpp:139,166,190,222,238` |
 | 7 | `vkQueueWaitIdle` on every mesh upload / vertex update | CONFIRMED | `ADeviceBackend.cpp:214-241`; `GPUMesh.cpp:80,161` |
 | 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | LIKELY (GPU) | `DeviceContext.cpp:178-181`; `Renderer.cpp:442-461` |
-| 9 | `GPUMaterial::getDescriptorSets()` returns vector by value | CONFIRMED | `GPUMaterial.cpp:158-161`; used `Renderer.cpp` |
+| 9 | `GPUMaterial::getDescriptorSets()` returns vector by value | RESOLVED | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` |
 | 10 | No `VkPipelineCache` (pipelines created with `VK_NULL_HANDLE`) | CONFIRMED | `Renderer.cpp:538` |
 
 ---
@@ -143,9 +143,9 @@ Renderer scaling:
 - **Logging in hot loops (CONFIRMED, highest impact).** ~5 formatted+flushed
   log lines per mesh per eye. Call sites: `Renderer.cpp:676,696,705,713,744`.
   (The logger itself is `utility` — see the utility audit.)
-- **Per-frame allocation in `Scene::getMeshes()`** (`Scene.cpp:69`) and
-  `GPUMaterial::getDescriptorSets()` (`GPUMaterial.cpp:158`) — the latter
-  returns a `std::vector` by value.
+- **Per-frame allocation in `Scene::getMeshes()`** (`Scene.cpp:69`).
+  `GPUMaterial::getDescriptorSets()` previously returned a `std::vector` by
+  value; it now returns a const reference (`GPUMaterial.hpp:150`).
 - **`RessourceManager::sync()` map copies + `getShaderID` prefix scan**
   (`RessourceManager.cpp:89-95,121`) every frame and on every object add.
 - **`std::map`/`unordered_map` lookups per mesh** for material and pipeline
@@ -290,7 +290,7 @@ frame in flight during stereo.
 | P1.1 | No culling; all meshes drawn | `Renderer.cpp:675` | GPU + CPU linear in N | Medium | 3–5 days |
 | P1.2 | `Scene::getMeshes()` allocates per frame | `Scene.cpp:69` | O(N) allocation/copies per view | Easy | 1 day |
 | P1.3 | No batching/instancing; redundant state binds | `Renderer.cpp:675-748` | Draw-call + CPU overhead | Medium–Hard | 1–2 weeks |
-| P1.4 | `getDescriptorSets()` by value | `GPUMaterial.cpp:158` | Allocation per material bind | Easy | 0.5 day |
+| P1.4 | Done: `getDescriptorSets()` returns const reference | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` | Allocation per material bind (removed) | Done | Done |
 | P1.5 | `vkQueueWaitIdle` per upload | `ADeviceBackend.cpp:233` | Queue drain on every upload | Medium | 3–5 days |
 | P1.6 | Add `VkPipelineCache` | `Renderer.cpp:538` | Startup + runtime compile | Easy | 1 day |
 | P1.7 | Reduce MSAA / disable blend for opaque | `DeviceContext.cpp:178`; `Renderer.cpp:453` | Bandwidth/ROP | Easy | 1–2 days |
@@ -313,8 +313,8 @@ frame in flight during stereo.
 - `getPipelineLayer()` by value, `getUniformBuffers()` by value.
 - Multithreaded command recording.
 - Timeline semaphores, bindless/descriptor indexing.
-- Fix the `materialBound` correctness bug (`Renderer.cpp:727`) — not perf, but
-  should be fixed alongside P1.4.
+- Fix the `materialBound` correctness bug (`Renderer.cpp`) — done; the bind
+  site now resolves the descriptor set once per command buffer.
 
 ---
 
