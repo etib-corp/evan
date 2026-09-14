@@ -45,8 +45,8 @@ an unconditional 60 FPS sleep and a per-eye GPU stall on the OpenXR path**.
 3. **The CPU waits for the GPU between the two eyes and again before
    composition** (`Renderer::drawFrame`), fully serializing CPU recording and
    GPU execution in VR.
-4. **`Engine::updateDeltaTime()` sleeps to cap the loop at 60 FPS**, which is
-   wrong for OpenXR (72/90/120 Hz) and adds up to 16 ms of latency.
+4. **`Engine::updateDeltaTime()` no longer sleeps to cap the loop at 60 FPS**
+   (resolved by P0.2); the loop is paced by the presentation mechanism.
 5. **`vkQueueWaitIdle` on every mesh upload / vertex update** drains the
    graphics queue for each new object.
 
@@ -61,7 +61,8 @@ pacing is structurally unstable.
 
 - `evan::Engine::pollEvents` (`Engine.cpp`) → platform.
 - `evan::Engine::update` (`Engine.cpp`):
-  - `updateDeltaTime()` — **sleeps to cap at 60 FPS** (`Engine.cpp:607`).
+  - `updateDeltaTime()` — measures delta; applies an opt-in limiter only when
+    `setTargetFps()` is configured (`Engine.cpp`).
   - `handleViewportInput()`.
 - `evan::Engine::render` → `Renderer::drawFrame` (`Renderer.cpp`).
 
@@ -90,7 +91,7 @@ Desktop path is the same minus the OpenXR calls, with
 | ---- | ---------- | ---------- | ----- |
 | 1 | Per-mesh logging in the draw loop | CONFIRMED | `Renderer.cpp:675-748` |
 | 2 | Per-eye + pre-composition GPU fence waits (no pipelining) | CONFIRMED | `Renderer.cpp:219-245` |
-| 3 | 60 FPS sleep in the frame loop | CONFIRMED | `Engine.cpp:607-623` |
+| 3 | 60 FPS sleep in the frame loop | RESOLVED | `Engine.cpp`; `DesktopSwapchainImage.cpp` |
 | 4 | One draw call + full state re-bind per mesh; no culling/batching/instancing | CONFIRMED | `Renderer.cpp:675-748` |
 | 5 | `Scene::getMeshes()` reallocates per frame | CONFIRMED | `Scene.cpp:69-80` |
 | 6 | `RessourceManager::sync()` per frame + per object-add (map copies + prefix scans) | CONFIRMED | `RessourceManager.cpp:77-174`; `Engine.cpp:139,166,190,222,238` |
@@ -150,8 +151,9 @@ Renderer scaling:
 - **`std::map`/`unordered_map` lookups per mesh** for material and pipeline
   (`Renderer.cpp:679,689,700`). `_pipelines` is `std::map` (tree), so each
   lookup is O(log P).
-- **`Engine::updateDeltaTime()` sleeps** (`Engine.cpp:615-616`) — artificial;
-  on desktop it destroys frame-pacing headroom.
+- **`Engine::updateDeltaTime()` no longer sleeps by default** — the loop is
+  paced by vsync (desktop FIFO) or `xrWaitFrame` (OpenXR); an opt-in
+  `setTargetFps()` limiter is available.
 
 Not significant: `getPipelineLayer()` returning `std::string` by value
 (`RenderObject.hpp:107`) is not on a hot path.
@@ -277,7 +279,7 @@ frame in flight during stereo.
 | # | Problem | Evidence | Why it hurts | Impact | CPU/GPU | Difficulty | Risk | Effort | Benchmark |
 | - | ------- | -------- | ------------ | ------ | ------- | ---------- | ---- | ------ | --------- |
 | P0.1 | Per-mesh logging in draw loop | `Renderer.cpp:676-745` | ~5 formatted+flushed log lines per mesh per eye | Very high, linear in N | CPU | Easy | Low | 0.5–1 day | Frame time with/without logs at N=100/1000 |
-| P0.2 | Remove 60 FPS sleep | `Engine.cpp:607-623` | Caps loop; VR can't hit 72/90 Hz; +16 ms latency | High | CPU | Easy | Low (desktop may spin) | 0.5 day | Frame-time histogram; compositor reprojection |
+| P0.2 | Remove 60 FPS sleep | Done: `Engine.cpp` (opt-in limiter), `DesktopSwapchainImage.cpp` (FIFO default) | Caps loop; VR can't hit 72/90 Hz; +16 ms latency | High | CPU | Done | Low | 0.5 day | Frame-time histogram; compositor reprojection |
 | P0.3 | Per-eye + pre-present fence waits | `Renderer.cpp:219-245` | Serializes CPU/GPU; unstable pacing | High | Both/sync | Medium | Medium | 2–4 days | GPU idle gaps; CPU vs GPU frame time |
 | P0.4 | `RessourceManager::sync()` per frame & per add | `RessourceManager.cpp:77-174`; `Engine.cpp:139,166,190,222,238` | Map copies + O(M·E) scans every frame | High | CPU | Easy | Low | 1–2 days | `sync()` call count + time |
 
@@ -338,7 +340,7 @@ frame in flight during stereo.
 
 - **P0.1 (logging):** likely the largest single win; at N=1000 meshes could be
   tens of milliseconds/frame.
-- **P0.2 (sleep):** removes the 60 FPS ceiling; VR gains ~16 ms of headroom.
+- **P0.2 (sleep):** removed the 60 FPS ceiling; VR gains ~16 ms of headroom.
 - **P0.3 (fence waits):** converts serialized `CPU+GPU` frame time to roughly
   `max(CPU, GPU)`, stabilizes pacing. Especially large on OpenXR.
 - **P0.4 (`sync`):** removes per-frame `O(M·E)` work and map allocations.

@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced `file(GLOB)` with explicit source lists for reproducible builds.
 - `GPUMaterial`/`GPUTexture` now use the public `Texture::type()`/`pixels()`
   accessors instead of accessing protected members.
+- Removed the hardcoded 60 FPS sleep in `Engine::updateDeltaTime()`; the loop
+  is now paced by the presentation mechanism (vsync on desktop, `xrWaitFrame`
+  on OpenXR), with an opt-in `Engine::setTargetFps()` limiter.
+- Desktop swapchains now prefer `VK_PRESENT_MODE_FIFO_KHR` (vsync) over
+  `VK_PRESENT_MODE_MAILBOX_KHR` so the loop is paced by default.
 
 ## [1.0.0] - 2025-08-21
 
