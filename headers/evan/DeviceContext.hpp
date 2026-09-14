@@ -9,6 +9,7 @@
 
 #include "evan/EvanPlatform.hpp"
 #include "evan/ADeviceBackend.hpp"
+#include "evan/TransferManager.hpp"
 
 #include "evan/IPlatform.hpp"
 
@@ -125,6 +126,15 @@ namespace evan
 		 */
 		VkQueue getGraphicsQueue() const;
 
+		/**
+		 * @brief Retrieves the transfer manager used to upload resources
+		 * asynchronously without draining the graphics queue.
+		 *
+		 * @return TransferManager& The transfer manager owned by this device
+		 * context.
+		 */
+		TransferManager &getTransferManager();
+
 		protected:
 		/**
 		 * The graphics queue, which is used to
@@ -138,6 +148,11 @@ namespace evan
 		 * recording rendering commands.
 		 */
 		VkCommandPool _commandPool;
+
+		/**
+		 * Owns staging memory and command buffers for asynchronous uploads.
+		 */
+		TransferManager _transferManager;
 
 		/**
 		 * The number of samples used for multisampling

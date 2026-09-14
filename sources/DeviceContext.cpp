@@ -97,11 +97,17 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	}
 	this->createGraphicsQueue();
 	this->createCommandPool();
+
+	QueueFamilyIndices indices = _deviceBackend->findQueueFamilies();
+	_transferManager.init(_deviceBackend->getDevice(),
+						  _deviceBackend->getPhysicalDevice(), _graphicsQueue,
+						  indices.graphicsFamily.value());
 }
 
 evan::DeviceContext::~DeviceContext()
 {
 	this->getLogger().info() << "Cleaning up device context...";
+	_transferManager.destroy();
 	vkDestroyCommandPool(_deviceBackend->getDevice(), _commandPool, nullptr);
 	if (enableValidationLayers && _debugMessenger != VK_NULL_HANDLE) {
 		this->destroyDebugUtilsMessengerEXT(_deviceBackend->getInstance(),
@@ -156,6 +162,11 @@ VkCommandPool evan::DeviceContext::getCommandPool() const
 VkQueue evan::DeviceContext::getGraphicsQueue() const
 {
 	return _graphicsQueue;
+}
+
+evan::TransferManager &evan::DeviceContext::getTransferManager()
+{
+	return _transferManager;
 }
 
 void evan::DeviceContext::getMaxUsableSampleCount()
