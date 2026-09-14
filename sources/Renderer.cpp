@@ -9,6 +9,40 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <cstddef>
+#include <cstdlib>
+
+namespace
+{
+	/**
+	 * @brief Per-frame draw statistics, emitted once per command buffer
+	 * instead of per mesh.
+	 */
+	struct DrawStats {
+		std::size_t visibleMeshes = 0;
+		std::size_t drawCalls = 0;
+		std::size_t pipelineBinds = 0;
+		std::size_t descriptorBinds = 0;
+		std::size_t skippedMeshes = 0;
+	};
+
+	/**
+	 * @brief Whether verbose per-mesh draw logging is enabled.
+	 *
+	 * Controlled by the EVAN_DEBUG_DRAW_LOG environment variable. Off by
+	 * default; set to any non-empty, non-"0" value to re-enable per-mesh
+	 * trace output and the aggregate draw statistics.
+	 */
+	bool isDrawLogEnabled()
+	{
+		static const bool enabled = [] {
+			const char *value = std::getenv("EVAN_DEBUG_DRAW_LOG");
+			return value != nullptr && value[0] != '\0' && value[0] != '0';
+		}();
+		return enabled;
+	}
+}	 // namespace
+
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
@@ -608,9 +642,11 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkExtent2D swapChainExtent,
 										 const Scene &scene)
 {
-	this->getLogger().info()
-		<< "Recording command buffer for current frame index: "
-		<< _currentFrameIndex;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Recording command buffer for current frame index: "
+			<< _currentFrameIndex;
+	}
 
 	_ressourceManager->sync();
 
@@ -641,7 +677,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues	   = clearValues.data();
 
-	this->getLogger().info() << "Beginning render pass...";
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug() << "Beginning render pass...";
+	}
 	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,
 						 VK_SUBPASS_CONTENTS_INLINE);
 
@@ -654,71 +692,100 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-	this->getLogger().info()
-		<< "Viewport set to cover entire swapchain extent: "
-		<< swapChainExtent.width << "x" << swapChainExtent.height;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Viewport set to cover entire swapchain extent: "
+			<< swapChainExtent.width << "x" << swapChainExtent.height;
+	}
 
 	VkRect2D scissor {};
 	scissor.offset = { 0, 0 };
 	scissor.extent = swapChainExtent;
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-	this->getLogger().info()
-		<< "Scissor set to cover entire swapchain extent: "
-		<< swapChainExtent.width << "x" << swapChainExtent.height;
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Scissor set to cover entire swapchain extent: "
+			<< swapChainExtent.width << "x" << swapChainExtent.height;
+	}
 
 	VkDescriptorSet  lastBoundDescriptorSet  = VK_NULL_HANDLE;
 	VkPipelineLayout lastBoundPipelineLayout = VK_NULL_HANDLE;
 
-	this->getLogger().info()
-		<< "Iterating over meshes in the scene to record draw commands...";
+	const auto &meshes = scene.getMeshes();
 
-	for (const auto &mesh: scene.getMeshes()) {
-		this->getLogger().info()
-			<< "Processing mesh with material ID: " << mesh->getMaterialID();
+	DrawStats stats {};
+	stats.visibleMeshes = meshes.size();
+
+	for (const auto &mesh: meshes) {
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Processing mesh with material ID: "
+				<< mesh->getMaterialID();
+		}
 		auto materialID = mesh->getMaterialID();
 		auto material	= _ressourceManager->getMaterial(materialID);
 
 		if (!material) {
-			this->getLogger().warning() << "Material with ID " << materialID
-										<< " not found! Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Material with ID " << materialID
+					<< " not found! Skipping mesh.";
+			}
 			continue;
 		}
 
 		auto correspondingPipelineID = material->getShaderID();
 
 		if (_pipelines.find(correspondingPipelineID) == _pipelines.end()) {
-			this->getLogger().warning()
-				<< "No pipeline found for shader ID: "
-				<< correspondingPipelineID << ". Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "No pipeline found for shader ID: "
+					<< correspondingPipelineID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
-		this->getLogger().info()
-			<< "Binding pipeline for shader ID: " << correspondingPipelineID;
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Binding pipeline for shader ID: "
+				<< correspondingPipelineID;
+		}
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 						  _pipelines[correspondingPipelineID]);
+		++stats.pipelineBinds;
 
 		VkDeviceSize offsets[] = { 0 };
 		VkBuffer vertexBuffer  = mesh->getVertexBuffer();
 
-		this->getLogger().info() << "Binding vertex buffer for ->..";
-
 		if (vertexBuffer == VK_NULL_HANDLE) {
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Vertex buffer is null for mesh with material ID: "
+					<< materialID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
 
-		this->getLogger().info() << "Binding index buffer for mesh...";
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug() << "Binding vertex buffer for ->..";
+		}
 
 		auto indexBuffer = mesh->getIndexBuffer();
 
 		if (indexBuffer == VK_NULL_HANDLE) {
-			this->getLogger().warning()
-				<< "Index buffer is null for mesh with material ID: "
-				<< mesh->getMaterialID() << ". Skipping mesh.";
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Index buffer is null for mesh with material ID: "
+					<< materialID << ". Skipping mesh.";
+			}
 			continue;
 		}
 
@@ -732,14 +799,17 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 
 		if (descriptorSet != lastBoundDescriptorSet ||
 			pipelineLayout != lastBoundPipelineLayout) {
-			this->getLogger().info()
-				<< "Binding descriptor set for material ID: "
-				<< mesh->getMaterialID();
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Binding descriptor set for material ID: "
+					<< materialID;
+			}
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 			lastBoundDescriptorSet  = descriptorSet;
 			lastBoundPipelineLayout = pipelineLayout;
+      ++stats.descriptorBinds;
 		}
 
 		glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
@@ -748,18 +818,28 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			commandBuffer, _pipelineLayouts[correspondingPipelineID],
 			VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
 
-		this->getLogger().info() << "Drawing indexed mesh with index count: "
-								 << mesh->getIndexCount();
+		if (isDrawLogEnabled()) {
+			this->getLogger().debug()
+				<< "Drawing indexed mesh with index count: "
+				<< mesh->getIndexCount();
+		}
 
 		vkCmdDrawIndexed(commandBuffer, mesh->getIndexCount(), 1, 0, 0, 0);
+		++stats.drawCalls;
 	}
 
-	this->getLogger().info() << "All meshes processed. Ending render pass...";
+	if (isDrawLogEnabled()) {
+		this->getLogger().debug()
+			<< "Draw stats: visibleMeshes=" << stats.visibleMeshes
+			<< " drawCalls=" << stats.drawCalls
+			<< " pipelineBinds=" << stats.pipelineBinds
+			<< " descriptorBinds=" << stats.descriptorBinds
+			<< " skippedMeshes=" << stats.skippedMeshes;
+		this->getLogger().debug() << "All meshes processed. Ending render "
+									 "pass...";
+	}
 
 	vkCmdEndRenderPass(commandBuffer);
-
-	this->getLogger().info()
-		<< "Render pass ended. Ending command buffer recording...";
 
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to record command buffer!";
