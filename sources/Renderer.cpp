@@ -31,6 +31,24 @@ namespace
 	};
 
 	/**
+	 * @brief A mesh resolved for command buffer recording.
+	 *
+	 * Built once per command buffer, sorted so consecutive draws share
+	 * pipeline and descriptor state, then recorded with bind commands issued
+	 * only when the bound state changes.
+	 */
+	struct DrawItem {
+		uint32_t pipelineKey = 0;
+		uint32_t materialID = 0;
+		VkPipeline pipeline = VK_NULL_HANDLE;
+		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		VkBuffer vertexBuffer = VK_NULL_HANDLE;
+		VkBuffer indexBuffer = VK_NULL_HANDLE;
+		uint32_t indexCount = 0;
+	};
+
+	/**
 	 * @brief Whether verbose per-mesh draw logging is enabled.
 	 *
 	 * Controlled by the EVAN_DEBUG_DRAW_LOG environment variable. Off by
@@ -732,9 +750,6 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			<< swapChainExtent.width << "x" << swapChainExtent.height;
 	}
 
-	VkDescriptorSet  lastBoundDescriptorSet  = VK_NULL_HANDLE;
-	VkPipelineLayout lastBoundPipelineLayout = VK_NULL_HANDLE;
-
 	const auto &meshes = scene.getMeshes();
 
 	DrawStats stats {};
@@ -748,6 +763,14 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	const auto cameraPosition = view.getPose().getPosition();
 	const glm::vec3 cameraPos(cameraPosition.x, cameraPosition.y,
 							  cameraPosition.z);
+
+	const uint32_t dynamicOffset = static_cast<uint32_t>(
+		viewSlot * frame.getUniformBufferAlignedSize());
+
+	// Build the draw list: cull, resolve each mesh's pipeline, material and
+	// descriptor state once, then sort so consecutive draws share GPU state.
+	std::vector<DrawItem> drawList;
+	drawList.reserve(meshes.size());
 
 	for (const auto &mesh: meshes) {
 		if (_cullingEnabled) {
@@ -777,8 +800,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 				<< "Processing mesh with material ID: "
 				<< mesh->getMaterialID();
 		}
-		auto materialID = mesh->getMaterialID();
-		auto material	= _ressourceManager->getMaterial(materialID);
+		const auto materialID = mesh->getMaterialID();
+		const auto material = _ressourceManager->getMaterial(materialID);
 
 		if (!material) {
 			++stats.skippedMeshes;
@@ -790,31 +813,29 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			continue;
 		}
 
-		auto correspondingPipelineID = material->getShaderID();
-
-		if (_pipelines.find(correspondingPipelineID) == _pipelines.end()) {
+		const auto pipelineKey = material->getShaderID();
+		const auto pipelineIt = _pipelines.find(pipelineKey);
+		if (pipelineIt == _pipelines.end()) {
 			++stats.skippedMeshes;
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
 					<< "No pipeline found for shader ID: "
-					<< correspondingPipelineID << ". Skipping mesh.";
+					<< pipelineKey << ". Skipping mesh.";
+			}
+			continue;
+		}
+		const auto layoutIt = _pipelineLayouts.find(pipelineKey);
+		if (layoutIt == _pipelineLayouts.end()) {
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "No pipeline layout found for shader ID: "
+					<< pipelineKey << ". Skipping mesh.";
 			}
 			continue;
 		}
 
-		if (isDrawLogEnabled()) {
-			this->getLogger().debug()
-				<< "Binding pipeline for shader ID: "
-				<< correspondingPipelineID;
-		}
-
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-						  _pipelines[correspondingPipelineID]);
-		++stats.pipelineBinds;
-
-		VkDeviceSize offsets[] = { 0 };
-		VkBuffer vertexBuffer  = mesh->getVertexBuffer();
-
+		const auto vertexBuffer = mesh->getVertexBuffer();
 		if (vertexBuffer == VK_NULL_HANDLE) {
 			++stats.skippedMeshes;
 			if (isDrawLogEnabled()) {
@@ -825,14 +846,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			continue;
 		}
 
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
-
-		if (isDrawLogEnabled()) {
-			this->getLogger().debug() << "Binding vertex buffer for ->..";
-		}
-
-		auto indexBuffer = mesh->getIndexBuffer();
-
+		const auto indexBuffer = mesh->getIndexBuffer();
 		if (indexBuffer == VK_NULL_HANDLE) {
 			++stats.skippedMeshes;
 			if (isDrawLogEnabled()) {
@@ -843,46 +857,103 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			continue;
 		}
 
-		vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
-							 VK_INDEX_TYPE_UINT32);
+		const auto &descriptorSets = material->getDescriptorSets();
+		if (_currentFrameIndex >= descriptorSets.size()) {
+			++stats.skippedMeshes;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "No descriptor set for material ID " << materialID
+					<< " at frame index " << _currentFrameIndex
+					<< ". Skipping mesh.";
+			}
+			continue;
+		}
 
-		VkDescriptorSet  descriptorSet  =
-			material->getDescriptorSets()[_currentFrameIndex];
-		VkPipelineLayout pipelineLayout =
-			_pipelineLayouts[correspondingPipelineID];
+		drawList.push_back(
+			{ pipelineKey, materialID, pipelineIt->second, layoutIt->second,
+			  descriptorSets[_currentFrameIndex], vertexBuffer, indexBuffer,
+			  mesh->getIndexCount() });
+	}
 
-		uint32_t dynamicOffset = static_cast<uint32_t>(
-			viewSlot * frame.getUniformBufferAlignedSize());
+	std::sort(drawList.begin(), drawList.end(),
+			  [](const DrawItem &lhs, const DrawItem &rhs) {
+				  if (lhs.pipelineKey != rhs.pipelineKey) {
+					  return lhs.pipelineKey < rhs.pipelineKey;
+				  }
+				  return lhs.materialID < rhs.materialID;
+			  });
 
-		if (descriptorSet != lastBoundDescriptorSet ||
-			pipelineLayout != lastBoundPipelineLayout) {
+	// Record the sorted draw list, re-binding state only when it changes.
+	VkPipeline boundPipeline = VK_NULL_HANDLE;
+	VkPipelineLayout boundPipelineLayout = VK_NULL_HANDLE;
+	VkDescriptorSet boundDescriptorSet = VK_NULL_HANDLE;
+	VkBuffer boundVertexBuffer = VK_NULL_HANDLE;
+	VkBuffer boundIndexBuffer = VK_NULL_HANDLE;
+	uint32_t boundDynamicOffset = 0;
+	bool hasBoundState = false;
+
+	for (const auto &item: drawList) {
+		if (!hasBoundState || boundPipeline != item.pipeline) {
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Binding pipeline for shader ID: "
+					<< item.pipelineKey;
+			}
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+							  item.pipeline);
+			boundPipeline = item.pipeline;
+			++stats.pipelineBinds;
+
+			glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
+			vkCmdPushConstants(
+				commandBuffer, item.pipelineLayout,
+				VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
+		}
+
+		if (!hasBoundState || boundVertexBuffer != item.vertexBuffer) {
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1,
+								   &item.vertexBuffer, offsets);
+			boundVertexBuffer = item.vertexBuffer;
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug() << "Binding vertex buffer for ->..";
+			}
+		}
+
+		if (!hasBoundState || boundIndexBuffer != item.indexBuffer) {
+			vkCmdBindIndexBuffer(commandBuffer, item.indexBuffer, 0,
+								 VK_INDEX_TYPE_UINT32);
+			boundIndexBuffer = item.indexBuffer;
+		}
+
+		if (!hasBoundState || boundDescriptorSet != item.descriptorSet
+			|| boundPipelineLayout != item.pipelineLayout
+			|| boundDynamicOffset != dynamicOffset) {
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
 					<< "Binding descriptor set for material ID: "
-					<< materialID;
+					<< item.materialID;
 			}
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
-			lastBoundDescriptorSet  = descriptorSet;
-			lastBoundPipelineLayout = pipelineLayout;
-      ++stats.descriptorBinds;
+				item.pipelineLayout, 0, 1, &item.descriptorSet, 1,
+				&dynamicOffset);
+			boundDescriptorSet = item.descriptorSet;
+			boundPipelineLayout = item.pipelineLayout;
+			boundDynamicOffset = dynamicOffset;
+			++stats.descriptorBinds;
 		}
-
-		glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
-
-		vkCmdPushConstants(
-			commandBuffer, _pipelineLayouts[correspondingPipelineID],
-			VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
 
 		if (isDrawLogEnabled()) {
 			this->getLogger().debug()
 				<< "Drawing indexed mesh with index count: "
-				<< mesh->getIndexCount();
+				<< item.indexCount;
 		}
 
-		vkCmdDrawIndexed(commandBuffer, mesh->getIndexCount(), 1, 0, 0, 0);
+		vkCmdDrawIndexed(commandBuffer, item.indexCount, 1, 0, 0, 0);
 		++stats.drawCalls;
+
+		hasBoundState = true;
 	}
 
 	if (isDrawLogEnabled()) {
