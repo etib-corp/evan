@@ -925,6 +925,46 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			: nullptr;
 	uint32_t instanceCursor = 0;
 
+	const VkDeviceSize indirectBufferOffset =
+		viewSlot * frame.getIndirectBufferAlignedSize();
+	VkDrawIndexedIndirectCommand *indirectData =
+		_indirectDrawingEnabled
+			? static_cast<VkDrawIndexedIndirectCommand *>(
+				  frame.getIndirectBufferMapped(viewSlot))
+			: nullptr;
+	uint32_t indirectCursor = 0;
+	uint32_t indirectPendingBase = 0;
+
+	const auto flushIndirect = [&]() {
+		if (!_indirectDrawingEnabled
+			|| indirectCursor == indirectPendingBase) {
+			return;
+		}
+		vkCmdDrawIndexedIndirect(
+			commandBuffer, frame.getIndirectBuffer(),
+			indirectBufferOffset
+				+ indirectPendingBase
+					* sizeof(VkDrawIndexedIndirectCommand),
+			indirectCursor - indirectPendingBase,
+			static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand)));
+		indirectPendingBase = indirectCursor;
+	};
+
+	const auto emitDraw = [&](uint32_t indexCount, uint32_t instanceCount,
+							  uint32_t firstInstance) {
+		if (_indirectDrawingEnabled
+			&& indirectCursor
+				< static_cast<uint32_t>(MAX_INDIRECT_COMMANDS_PER_VIEW)) {
+			indirectData[indirectCursor++] = {
+				indexCount, instanceCount, 0, 0, firstInstance
+			};
+		} else {
+			vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, 0, 0,
+							 firstInstance);
+		}
+		++stats.drawCalls;
+	};
+
 	for (std::size_t i = 0; i < drawList.size();) {
 		// Merge consecutive items sharing pipeline, material and geometry.
 		std::size_t runEnd = i + 1;
@@ -937,6 +977,19 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		}
 		const std::size_t runSize = runEnd - i;
 		const DrawItem &item = drawList[i];
+
+		const bool stateChanged =
+			!hasBoundState || boundPipeline != item.pipeline
+			|| boundVertexBuffer != item.vertexBuffer
+			|| boundIndexBuffer != item.indexBuffer
+			|| boundDescriptorSet != item.descriptorSet
+			|| boundPipelineLayout != item.pipelineLayout
+			|| boundDynamicOffset != dynamicOffset
+			|| (_instancingEnabled && !hasBoundInstanceBuffer);
+
+		if (stateChanged) {
+			flushIndirect();
+		}
 
 		if (!hasBoundState || boundPipeline != item.pipeline) {
 			if (isDrawLogEnabled()) {
@@ -989,6 +1042,17 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			++stats.descriptorBinds;
 		}
 
+		if (_instancingEnabled
+			&& (!hasBoundInstanceBuffer
+				|| boundInstanceBuffer != frame.getInstanceBuffer())) {
+			VkBuffer instanceBuffer = frame.getInstanceBuffer();
+			VkDeviceSize instanceOffsets[] = { instanceBufferOffset };
+			vkCmdBindVertexBuffers(commandBuffer, 1, 1,
+								   &instanceBuffer, instanceOffsets);
+			boundInstanceBuffer = instanceBuffer;
+			hasBoundInstanceBuffer = true;
+		}
+
 		if (_instancingEnabled) {
 			if (instanceCursor + runSize
 				> static_cast<std::size_t>(MAX_INSTANCES_PER_VIEW)) {
@@ -998,20 +1062,12 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 					<< runSize << " meshes.";
 				stats.skippedMeshes += runSize;
 				i = runEnd;
+				hasBoundState = true;
 				continue;
 			}
 			for (std::size_t j = 0; j < runSize; ++j) {
 				instanceData[instanceCursor + j].model =
 					drawList[i + j].transform;
-			}
-			if (!hasBoundInstanceBuffer
-				|| boundInstanceBuffer != frame.getInstanceBuffer()) {
-				VkBuffer instanceBuffer = frame.getInstanceBuffer();
-				VkDeviceSize instanceOffsets[] = { instanceBufferOffset };
-				vkCmdBindVertexBuffers(commandBuffer, 1, 1,
-									   &instanceBuffer, instanceOffsets);
-				boundInstanceBuffer = instanceBuffer;
-				hasBoundInstanceBuffer = true;
 			}
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
@@ -1019,10 +1075,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 					<< item.indexCount << " and instance count: "
 					<< runSize;
 			}
-			vkCmdDrawIndexed(commandBuffer, item.indexCount,
-							 static_cast<uint32_t>(runSize), 0, 0,
-							 instanceCursor);
-			++stats.drawCalls;
+			emitDraw(item.indexCount, static_cast<uint32_t>(runSize),
+					 instanceCursor);
 			if (runSize > 1) {
 				++stats.instancedDraws;
 			}
@@ -1034,15 +1088,15 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 						<< "Drawing indexed mesh with index count: "
 						<< drawList[j].indexCount;
 				}
-				vkCmdDrawIndexed(commandBuffer, drawList[j].indexCount, 1, 0,
-								 0, 0);
-				++stats.drawCalls;
+				emitDraw(drawList[j].indexCount, 1, 0);
 			}
 		}
 
 		i = runEnd;
 		hasBoundState = true;
 	}
+
+	flushIndirect();
 
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
