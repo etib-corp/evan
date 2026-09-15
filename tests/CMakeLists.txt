@@ -12,6 +12,7 @@ set(TEST_SOURCES
     sources/test_swapchain_view.cpp
     sources/test_swapchain_format.cpp
     sources/test_gputexture.cpp
+    sources/test_gpumaterial.cpp
     sources/test_error.cpp
     sources/test_frustum.cpp
     sources/test_memory_type.cpp
