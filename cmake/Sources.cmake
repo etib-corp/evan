@@ -22,6 +22,7 @@ set(EVAN_SOURCES_COMMON
     sources/Renderer.cpp
     sources/RessourceManager.cpp
     sources/Scene.cpp
+    sources/TransferManager.cpp
     sources/Version.cpp
     sources/ViewSet.cpp
 )

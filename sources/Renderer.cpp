@@ -156,6 +156,10 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 	auto device = deviceContext.getDeviceBackend()->getDevice();
 
+	// Submit any pending uploads so the draw command buffers recorded below are
+	// ordered after them on the graphics queue.
+	_deviceContext->getTransferManager().flush();
+
 	Error preprocessError =
 		deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
 	if (preprocessError != Error::Ok) {
