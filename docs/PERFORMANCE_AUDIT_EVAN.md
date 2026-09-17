@@ -98,7 +98,7 @@ Desktop path is the same minus the OpenXR calls, with
 | 7 | `vkQueueWaitIdle` on every mesh upload / vertex update | CONFIRMED | `ADeviceBackend.cpp:214-241`; `GPUMesh.cpp:80,161` |
 | 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | LIKELY (GPU) | `DeviceContext.cpp:178-181`; `Renderer.cpp:442-461` |
 | 9 | `GPUMaterial::getDescriptorSets()` returns vector by value | RESOLVED | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` |
-| 10 | No `VkPipelineCache` (pipelines created with `VK_NULL_HANDLE`) | CONFIRMED | `Renderer.cpp:538` |
+| 10 | No `VkPipelineCache` (pipelines created with `VK_NULL_HANDLE`) | RESOLVED | `DeviceContext.cpp`; `Renderer.cpp` |
 
 ---
 
@@ -199,9 +199,12 @@ CPU/queue-idle path saturates first.
   guard (`Renderer.cpp:727`) is a **correctness bug** (descriptors are bound
   only once per material per frame; if materials interleave, the wrong set
   stays bound). No descriptor indexing/bindless.
-- **Pipelines:** created once at init, one per shader (`Renderer.cpp`). **No
-  `VkPipelineCache`** (`vkCreateGraphicsPipelines(..., VK_NULL_HANDLE, ...)`,
-  `Renderer.cpp:538`). Dynamic state used for viewport/scissor/cull (good).
+- **Pipelines:** created once at init, one per shader (`Renderer.cpp`). A
+  device-level `VkPipelineCache` is created with the device, passed to every
+  `vkCreateGraphicsPipelines` call, and persisted across runs next to the
+  platform cache directory (`PipelineCache.hpp`, `DeviceContext.cpp`); a blob
+  from another device, driver version or vendor is detected from its header and
+  discarded. Dynamic state used for viewport/scissor/cull (good).
   `vkCmdBindPipeline` redundantly re-issued per mesh even when unchanged.
 - **Buffers:** vertex/index buffers are device-local via staging (correct), but
   every mesh does its own staging buffer + `vkQueueWaitIdle`
@@ -292,7 +295,7 @@ frame in flight during stereo.
 | P1.3 | No batching/instancing; redundant state binds | `Renderer.cpp:675-748` | Draw-call + CPU overhead | Medium–Hard | 1–2 weeks |
 | P1.4 | Done: `getDescriptorSets()` returns const reference | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` | Allocation per material bind (removed) | Done | Done |
 | P1.5 | `vkQueueWaitIdle` per upload | `ADeviceBackend.cpp:233` | Queue drain on every upload | Medium | 3–5 days |
-| P1.6 | Add `VkPipelineCache` | `Renderer.cpp:538` | Startup + runtime compile | Easy | 1 day |
+| P1.6 | Done: `VkPipelineCache` created on the device, used by every pipeline and persisted across runs | `PipelineCache.hpp`; `DeviceContext.cpp`; `Renderer.cpp` | Startup + runtime compile | Done | Done |
 | P1.7 | Reduce MSAA / disable blend for opaque | `DeviceContext.cpp:178`; `Renderer.cpp:453` | Bandwidth/ROP | Easy | 1–2 days |
 
 ### P2 — Medium impact
