@@ -102,6 +102,11 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	_transferManager.init(_deviceBackend->getDevice(),
 						  _deviceBackend->getPhysicalDevice(), _graphicsQueue,
 						  indices.graphicsFamily.value());
+
+	this->getLogger().info() << "Creating pipeline cache...";
+	_pipelineCache.init(_deviceBackend->getDevice(),
+						_deviceBackend->getPhysicalDevice(),
+						platform.getPipelineCachePath());
 }
 
 evan::DeviceContext::~DeviceContext()
@@ -113,6 +118,12 @@ evan::DeviceContext::~DeviceContext()
 		this->destroyDebugUtilsMessengerEXT(_deviceBackend->getInstance(),
 											_debugMessenger);
 	}
+	// The pipelines created with the cache are already destroyed by the
+	// renderer at this point, so the blob can be flushed to disk before the
+	// cache and the device go away.
+	this->getLogger().info() << "Persisting pipeline cache...";
+	_pipelineCache.persist();
+	_pipelineCache.destroy(_deviceBackend->getDevice());
 	_deviceBackend.reset();
 }
 
@@ -167,6 +178,11 @@ VkQueue evan::DeviceContext::getGraphicsQueue() const
 evan::TransferManager &evan::DeviceContext::getTransferManager()
 {
 	return _transferManager;
+}
+
+const evan::PipelineCache &evan::DeviceContext::getPipelineCache() const
+{
+	return _pipelineCache;
 }
 
 void evan::DeviceContext::getMaxUsableSampleCount()

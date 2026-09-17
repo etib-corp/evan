@@ -7,6 +7,7 @@
 
 #include "evan/glfw/platform/MacOsDesktopPlatform.hpp"
 
+#include <cstdlib>
 #include <stdexcept>
 
 evan::MacOsDesktopPlatform::MacOsDesktopPlatform(const std::string &name,
@@ -73,4 +74,18 @@ VkSurfaceKHR
 	}
 	this->getLogger().info() << "Vulkan surface created successfully";
 	return surface;
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+std::filesystem::path
+	evan::MacOsDesktopPlatform::getDefaultCacheRoot() const
+{
+	const char *home = std::getenv("HOME");
+	if (home == nullptr || home[0] == '\0') {
+		return {};
+	}
+	return std::filesystem::path(home) / "Library" / "Caches";
 }

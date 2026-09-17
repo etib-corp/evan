@@ -624,8 +624,14 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		pipelineInfo.basePipelineHandle	 = VK_NULL_HANDLE;
 		pipelineInfo.pDepthStencilState	 = &depthStencil;
 
-		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-									  nullptr, &_pipelines[id])
+		// The device cache lets the driver reuse the pipelines it already
+		// compiled, either for a previous pipeline of this run or for the
+		// pipelines persisted by an earlier one. VK_NULL_HANDLE is a valid
+		// value here, so pipeline creation still works when the cache could
+		// not be created.
+		if (vkCreateGraphicsPipelines(
+				device, _deviceContext->getPipelineCache().getHandle(), 1,
+				&pipelineInfo, nullptr, &_pipelines[id])
 			!= VK_SUCCESS) {
 			this->getLogger().error() << "Failed to create graphics pipeline !";
 			return;

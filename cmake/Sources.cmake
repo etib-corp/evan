@@ -17,7 +17,9 @@ set(EVAN_SOURCES_COMMON
     sources/GPUMesh.cpp
     sources/GPUShader.cpp
     sources/GPUTexture.cpp
+    sources/IPlatform.cpp
     sources/MemoryType.cpp
+    sources/PipelineCache.cpp
     sources/RenderObject.cpp
     sources/Renderer.cpp
     sources/RessourceManager.cpp

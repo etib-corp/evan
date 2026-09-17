@@ -27,6 +27,7 @@
 #include <evan/IPlatform.hpp>
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -186,6 +187,12 @@ namespace xider::tests
 			createSwapchainContext(const evan::DeviceContext &) const override
 		{
 			return nullptr;
+		}
+
+		protected:
+		std::filesystem::path getDefaultCacheRoot() const override
+		{
+			return {};
 		}
 	};
 
