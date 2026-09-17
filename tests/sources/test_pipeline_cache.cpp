@@ -458,7 +458,7 @@ namespace xider::tests
 	{
 		ScopedEnvironmentVariable clearedOverride(kCacheDirVariable, "");
 		ScopedEnvironmentVariable clearedSwitch(kDisableVariable, "");
-		const TestablePlatform platform(std::filesystem::path());
+		const TestablePlatform platform{std::filesystem::path{}};
 
 		EXPECT_TRUE(platform.getPipelineCachePath().empty());
 	}
