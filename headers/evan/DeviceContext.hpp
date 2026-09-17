@@ -9,6 +9,7 @@
 
 #include "evan/EvanPlatform.hpp"
 #include "evan/ADeviceBackend.hpp"
+#include "evan/PipelineCache.hpp"
 #include "evan/TransferManager.hpp"
 
 #include "evan/IPlatform.hpp"
@@ -135,6 +136,18 @@ namespace evan
 		 */
 		TransferManager &getTransferManager();
 
+		/**
+		 * @brief Retrieves the pipeline cache used when creating pipelines.
+		 *
+		 * The returned cache is passed to `vkCreateGraphicsPipelines` so the
+		 * driver can reuse pipelines it already compiled, either earlier in this
+		 * run or during a previous one when the blob was reloaded from disk.
+		 *
+		 * @return A reference to the pipeline cache owned by this device
+		 * context.
+		 */
+		const PipelineCache &getPipelineCache() const;
+
 		protected:
 		/**
 		 * The graphics queue, which is used to
@@ -153,6 +166,14 @@ namespace evan
 		 * Owns staging memory and command buffers for asynchronous uploads.
 		 */
 		TransferManager _transferManager;
+
+		/**
+		 * Pipeline cache shared by every pipeline created for this device.
+		 *
+		 * It is created with the device and persisted on destruction, so the
+		 * pipelines compiled by a run are available to the next one.
+		 */
+		PipelineCache _pipelineCache;
 
 		/**
 		 * The number of samples used for multisampling
