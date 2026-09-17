@@ -9,6 +9,8 @@
 
 #include "evan/glfw/IDesktopPlatform.hpp"
 
+#include <filesystem>
+
 namespace evan
 {
 	/**
@@ -91,5 +93,13 @@ namespace evan
 		 * to create a window surface that can be used with Vulkan on MacOS.
 		 */
 		VkSurfaceKHR createSurface(VkInstance instance) const override;
+
+		protected:
+		/**
+		 * @brief Get the macOS cache root directory.
+		 *
+		 * @return `~/Library/Caches`, or an empty path when `HOME` is not set.
+		 */
+		std::filesystem::path getDefaultCacheRoot() const override;
 	};
 }	 // namespace evan

@@ -9,6 +9,8 @@
 
 #include "evan/glfw/IDesktopPlatform.hpp"
 
+#include <filesystem>
+
 namespace evan
 {
 	/**
@@ -71,5 +73,13 @@ namespace evan
 		 * could not be created.
 		 */
 		VkSurfaceKHR createSurface(VkInstance instance) const override;
+
+		protected:
+		/**
+		 * @brief Get the Windows cache root directory.
+		 *
+		 * @return `%LOCALAPPDATA%`, or an empty path when it is not set.
+		 */
+		std::filesystem::path getDefaultCacheRoot() const override;
 	};
 }	 // namespace evan
