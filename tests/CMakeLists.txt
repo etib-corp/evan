@@ -17,7 +17,7 @@ set(TEST_SOURCES
     sources/test_frustum.cpp
     sources/test_memory_type.cpp
     sources/test_scene.cpp
-    sources/test_desktop_platform.cpp
+    sources/test_viewset.cpp
 )
 
 # Fetch GoogleTest

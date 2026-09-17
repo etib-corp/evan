@@ -15,6 +15,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable CTest at the top level so tests are registered in the root
+# CTestTestfile.cmake (enable_testing() in a subdirectory is not enough).
+include(CTest)
+
 # 01. Policy & standard setup
 
 # 02. Options & configuration
