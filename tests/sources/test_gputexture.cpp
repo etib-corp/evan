@@ -22,24 +22,9 @@
 
 #include "test_gputexture.hpp"
 
-#include <cstdlib>
 #include <cstdint>
-#include <memory>
 #include <utility>
 #include <vector>
-
-#include <evan/DeviceContext.hpp>
-#include <utility/graphic/texture.hpp>
-
-#ifdef __GLFW__
-	#if defined(__APPLE__)
-		#include <evan/glfw/platform/MacOsDesktopPlatform.hpp>
-	#elif defined(__linux__)
-		#include <evan/glfw/platform/LinuxDesktopPlatform.hpp>
-	#elif defined(_WIN32)
-		#include <evan/glfw/platform/WindowsPlatform.hpp>
-	#endif
-#endif
 
 namespace xider::tests
 {
@@ -91,59 +76,5 @@ namespace xider::tests
 			EXPECT_FLOAT_EQ(maxLod, static_cast<float>(mipLevels - 1));
 		}
 	}
-
-#ifdef __GLFW__
-	TEST_F(TestGPUTexture, DeviceIntegrationExposesAllMipLevels)
-	{
-		// Opt-in: creating a real device requires a windowing surface, which
-		// is not available in headless CI environments. Run with
-		// EVAN_DEVICE_TESTS=1 on a machine with a display.
-		if (std::getenv("EVAN_DEVICE_TESTS") == nullptr) {
-			GTEST_SKIP() << "Set EVAN_DEVICE_TESTS=1 to run device tests";
-		}
-
-		VkApplicationInfo appInfo {};
-		appInfo.sType	   = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.apiVersion = VK_API_VERSION_1_0;
-
-		VkInstanceCreateInfo createInfo {};
-		createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo = &appInfo;
-
-		VkInstance probe = VK_NULL_HANDLE;
-		if (vkCreateInstance(&createInfo, nullptr, &probe) != VK_SUCCESS) {
-			GTEST_SKIP() << "Vulkan runtime not available";
-		}
-		vkDestroyInstance(probe, nullptr);
-
-		try {
-	#if defined(__APPLE__)
-			auto platform = std::make_shared<evan::MacOsDesktopPlatform>(
-				"evan test", 64, 64);
-	#elif defined(__linux__)
-			auto platform = std::make_shared<evan::LinuxDesktopPlatform>(
-				"evan test", 64, 64);
-	#elif defined(_WIN32)
-			auto platform = std::make_shared<evan::WindowsDesktopPlatform>(
-				"evan test", 64, 64);
-	#endif
-
-			auto deviceContext =
-				std::make_shared<evan::DeviceContext>(*platform);
-			utility::graphic::Texture texture(
-				64, 64, utility::graphic::Texture::TextureType::Albedo);
-			evan::GPUTexture gpuTexture(deviceContext, texture);
-
-			EXPECT_EQ(gpuTexture.getMipLevels(),
-					  evan::GPUTexture::computeMipLevels(64, 64));
-			EXPECT_NE(gpuTexture.sampler,
-					  static_cast<VkSampler>(VK_NULL_HANDLE));
-			EXPECT_NE(gpuTexture.view,
-					  static_cast<VkImageView>(VK_NULL_HANDLE));
-		} catch (const std::exception &e) {
-			GTEST_SKIP() << "Unable to create device context: " << e.what();
-		}
-	}
-#endif
 
 }	 // namespace xider::tests

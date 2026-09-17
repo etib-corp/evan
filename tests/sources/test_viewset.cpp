@@ -102,6 +102,7 @@ namespace xider::tests
 		evan::ViewSet views;
 		utility::graphic::ViewF view;
 		view.setClippingPlanes(1.0f, 100.0f);
+		view.setPerspective(1.0f, 16.0f / 9.0f);
 		views.addView(view, 0);
 
 		EXPECT_TRUE(views.getProjection(0)
@@ -142,8 +143,10 @@ namespace xider::tests
 	TEST(MockSwapchainContextTest, MultiViewMappingThroughContext)
 	{
 		MockSwapchainContext context;
-		context._viewSet.addView(utility::graphic::ViewF {}, 0);
-		context._viewSet.addView(utility::graphic::ViewF {}, 1);
+		utility::graphic::ViewF view;
+		view.setPerspective(1.0f, 16.0f / 9.0f);
+		context._viewSet.addView(view, 0);
+		context._viewSet.addView(view, 1);
 
 		EXPECT_EQ(context.getViewCount(), 2u);
 		EXPECT_EQ(context.getViewSet().at(1).swapchainIndex, 1u);
