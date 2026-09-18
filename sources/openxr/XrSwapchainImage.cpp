@@ -46,7 +46,8 @@ evan::XrSwapchainImage::XrSwapchainImage(
 				.value;
 	}
 
-	if (properties.resolveToSwapchain) {
+	if (properties.colorAttachmentMode
+		== ColorAttachmentMode::ResolveToSwapchain) {
 		this->createColorResources(*properties.deviceContext.getDeviceBackend(),
 								   properties.msaaSamples);
 	}
@@ -54,7 +55,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 							   properties.msaaSamples);
 	this->createFramebuffers(
 		properties.deviceContext.getDeviceBackend()->getDevice(),
-		properties.renderPass, properties.resolveToSwapchain);
+		properties.renderPass, properties.colorAttachmentMode);
 }
 
 ////////////////////
