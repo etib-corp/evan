@@ -22,13 +22,34 @@ platform.
 
 ## 3. Create an engine
 
-The `evan::Engine` receives the platform and prepares Vulkan resources:
+The `evan::Engine` receives the platform and prepares Vulkan resources. It also
+accepts optional `evan::RenderSettings`: multisampling is disabled by default,
+and the sample count is baked into the swapchain render pass, so it can only be
+chosen at construction time.
 
 ```cpp
 #include <evan/Engine.hpp>
 
 // Construct the engine with a platform implementation.
+evan::RenderSettings settings;
+
+// Opt back into multisampling when the extra edge quality is worth the
+// bandwidth; the default renders at a single sample and resolves nothing.
+settings.msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+
+evan::Engine engine(ressourceProvider, platform, settings);
 ```
+
+`settings.opaqueSort` controls how opaque draws are ordered:
+
+- `OpaqueSortMode::FrontToBack` (default) buckets them by depth so nearer
+  geometry is shaded first and occluded fragments are rejected early.
+- `OpaqueSortMode::StateFirst` groups them by pipeline and material instead,
+  which batches more but pays more overdraw.
+
+The ordering can also be changed at runtime with
+`Renderer::setOpaqueSortMode()`. `EVAN_MSAA=1|2|4` overrides the sample count
+without a rebuild, which is how the cost of multisampling is measured.
 
 ## 4. Populate a scene
 
