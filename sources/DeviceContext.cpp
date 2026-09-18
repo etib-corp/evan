@@ -7,17 +7,61 @@
 
 #include "evan/DeviceContext.hpp"
 
+#include <cstdlib>
+#include <optional>
+
 namespace
 {
 	/**
-	 * @brief Maximum sample count selected automatically for MSAA.
+	 * @brief Sample counts the engine is willing to use.
 	 *
-	 * Capping at 4x avoids automatically selecting excessive sample counts
-	 * (8x/16x/32x/64x) that would kill performance. Applications can still
-	 * opt into higher counts through DeviceContext::setMsaaSamples().
+	 * Capped at 4x: 8x and above cost far more bandwidth than the edge quality
+	 * they add on the scenes the engine targets. Raise this mask to allow
+	 * them.
 	 */
-	constexpr VkSampleCountFlags kMaxUsableSampleCountMask =
+	constexpr VkSampleCountFlags kSupportedSampleCountMask =
 		VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT;
+
+	/**
+	 * @brief Sample count used when nothing asks for multisampling.
+	 *
+	 * A single sample means no MSAA at all: no multisampled color image, no
+	 * resolve pass, and no multiplied color or depth bandwidth.
+	 */
+	constexpr VkSampleCountFlagBits kDefaultMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	/**
+	 * @brief Environment variable overriding the MSAA sample count.
+	 *
+	 * Set it to 1, 2 or 4 to force a sample count, which makes the cost of
+	 * multisampling measurable without rebuilding the engine.
+	 */
+	constexpr const char *kMsaaSamplesVariable = "EVAN_MSAA";
+
+	/**
+	 * @brief Reads the MSAA sample count override from the environment.
+	 *
+	 * @return The requested sample count, or std::nullopt when the variable is
+	 * unset, empty, or holds a value the engine does not support.
+	 */
+	std::optional<VkSampleCountFlagBits> msaaSamplesFromEnvironment()
+	{
+		const char *value = std::getenv(kMsaaSamplesVariable);
+		if (value == nullptr || value[0] == '\0') {
+			return std::nullopt;
+		}
+
+		switch (std::atoi(value)) {
+			case 1:
+				return VK_SAMPLE_COUNT_1_BIT;
+			case 2:
+				return VK_SAMPLE_COUNT_2_BIT;
+			case 4:
+				return VK_SAMPLE_COUNT_4_BIT;
+			default:
+				return std::nullopt;
+		}
+	}
 }	 // namespace
 
 /**
@@ -91,7 +135,9 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 
 	_deviceBackend = platform.createDeviceBackend();
 
-	this->getMaxUsableSampleCount();
+	// Multisampling is off by default: an application, or the EVAN_MSAA
+	// environment variable, has to ask for it.
+	this->setMsaaSamples(kDefaultMsaaSamples);
 	if (enableValidationLayers) {
 		this->setupDebugMessenger();
 	}
@@ -136,27 +182,52 @@ VkSampleCountFlagBits evan::DeviceContext::getMsaaSamples() const
 	return _msaaSamples;
 }
 
+VkSampleCountFlagBits evan::DeviceContext::getMaxSupportedMsaaSamples() const
+{
+	const VkSampleCountFlags counts =
+		this->getFramebufferSampleCounts() & kSupportedSampleCountMask;
+
+	if (counts & VK_SAMPLE_COUNT_4_BIT) {
+		return VK_SAMPLE_COUNT_4_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_2_BIT) {
+		return VK_SAMPLE_COUNT_2_BIT;
+	}
+	return VK_SAMPLE_COUNT_1_BIT;
+}
+
 void evan::DeviceContext::setMsaaSamples(VkSampleCountFlagBits samples)
 {
 	this->getLogger().info() << "Overriding MSAA sample count...";
 
-	VkPhysicalDeviceProperties physicalDeviceProperties;
-	vkGetPhysicalDeviceProperties(_deviceBackend->getPhysicalDevice(),
-								  &physicalDeviceProperties);
-	VkSampleCountFlags counts =
-		physicalDeviceProperties.limits.framebufferColorSampleCounts
-		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	VkSampleCountFlagBits requested = samples;
+	if (const auto fromEnvironment = msaaSamplesFromEnvironment()) {
+		this->getLogger().info()
+			<< "MSAA sample count forced to " << *fromEnvironment << " by "
+			<< kMsaaSamplesVariable << ".";
+		requested = *fromEnvironment;
+	}
 
-	if ((counts & samples) == 0) {
+	if ((requested & kSupportedSampleCountMask) == 0) {
 		this->getLogger().warning()
-			<< "Requested MSAA sample count " << samples
+			<< "Requested MSAA sample count " << requested
+			<< " is above the supported cap "
+			<< this->getMaxSupportedMsaaSamples() << ", keeping "
+			<< _msaaSamples;
+		return;
+	}
+
+	const VkSampleCountFlags counts = this->getFramebufferSampleCounts();
+	if ((counts & requested) == 0) {
+		this->getLogger().warning()
+			<< "Requested MSAA sample count " << requested
 			<< " is not supported by color and depth attachments, keeping "
 			<< _msaaSamples;
 		return;
 	}
 
-	_msaaSamples = samples;
-	this->getLogger().info() << "MSAA sample count set to " << samples;
+	_msaaSamples = requested;
+	this->getLogger().info() << "MSAA sample count set to " << requested;
 }
 
 std::shared_ptr<evan::ADeviceBackend>
@@ -185,35 +256,19 @@ const evan::PipelineCache &evan::DeviceContext::getPipelineCache() const
 	return _pipelineCache;
 }
 
-void evan::DeviceContext::getMaxUsableSampleCount()
+VkSampleCountFlags evan::DeviceContext::getFramebufferSampleCounts() const
 {
-	this->getLogger().info()
-		<< "Determining maximum usable sample count for MSAA...";
-
 	VkPhysicalDeviceProperties physicalDeviceProperties;
 	vkGetPhysicalDeviceProperties(_deviceBackend->getPhysicalDevice(),
 								  &physicalDeviceProperties);
-	VkSampleCountFlags counts =
+
+	const VkSampleCountFlags counts =
 		physicalDeviceProperties.limits.framebufferColorSampleCounts
 		& physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 
-	counts &= kMaxUsableSampleCountMask;
-
 	this->getLogger().info()
-		<< "Supported sample counts: " << counts << " bits";
-
-	if (counts & VK_SAMPLE_COUNT_4_BIT) {
-		this->getLogger().info() << "Using 4 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_4_BIT;
-		return;
-	}
-	if (counts & VK_SAMPLE_COUNT_2_BIT) {
-		this->getLogger().info() << "Using 2 samples for MSAA.";
-		_msaaSamples = VK_SAMPLE_COUNT_2_BIT;
-		return;
-	}
-	this->getLogger().info() << "Using 1 sample for MSAA (no multisampling).";
-	_msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+		<< "Sample counts supported for color and depth: " << counts;
+	return counts;
 }
 
 /////////////////////

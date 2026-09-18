@@ -74,6 +74,8 @@ namespace evan
 		 * @brief Retrieves the number of MSAA samples used by this device
 		 * context.
 		 *
+		 * Defaults to VK_SAMPLE_COUNT_1_BIT, that is no multisampling.
+		 *
 		 * @return VkSampleCountFlagBits The MSAA sample count flag bits
 		 * representing the number of samples per pixel for multisample
 		 * anti-aliasing operations.
@@ -83,14 +85,31 @@ namespace evan
 		/**
 		 * @brief Overrides the MSAA sample count used by this device context.
 		 *
-		 * The requested sample count is applied only when it is supported by
-		 * both the framebuffer color and depth attachments of the physical
-		 * device. Applications can use this to lower the automatically
-		 * selected sample count or raise it up to the hardware limit.
+		 * Multisampling is disabled by default: every draw pays the multiplied
+		 * color and depth bandwidth and the resolve pass, whether or not the
+		 * scene benefits from it. Applications raise the count to 2x or 4x when
+		 * the extra edge quality is worth that cost.
+		 *
+		 * The requested count is applied only when it is supported by both the
+		 * framebuffer color and depth attachments of the physical device and
+		 * stays within the supported cap (see getMaxSupportedMsaaSamples);
+		 * otherwise the current value is kept and a warning is logged. The
+		 * EVAN_MSAA environment variable takes precedence over @p samples, so
+		 * the cost of multisampling can be measured without a rebuild.
 		 *
 		 * @param samples The MSAA sample count flag bits to use.
 		 */
 		void setMsaaSamples(VkSampleCountFlagBits samples);
+
+		/**
+		 * @brief Retrieves the highest MSAA sample count this device accepts.
+		 *
+		 * Derived from the sample counts supported by both the framebuffer
+		 * color and depth attachments, capped at VK_SAMPLE_COUNT_4_BIT.
+		 *
+		 * @return The highest sample count an application may request.
+		 */
+		VkSampleCountFlagBits getMaxSupportedMsaaSamples() const;
 
 		/**
 		 * @brief Retrieves a shared pointer to the ADeviceBackend instance
@@ -180,8 +199,10 @@ namespace evan
 		 * anti-aliasing (MSAA), which is a technique used
 		 * to improve the visual quality of rendered
 		 * images by reducing aliasing artifacts.
+		 *
+		 * Defaults to a single sample, which disables MSAA.
 		 */
-		VkSampleCountFlagBits _msaaSamples;
+		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		/**
 		 * A shared pointer to the ADeviceBackend instance,
@@ -210,27 +231,14 @@ namespace evan
 
 		private:
 		/**
-		 * @brief Determines and sets the maximum usable sample count for
-		 * multi-sample anti-aliasing (MSAA).
+		 * @brief Queries the sample counts supported by the physical device.
 		 *
-		 * Queries the physical device properties to find the maximum sample
-		 * count supported by both the framebuffer color and depth attachments.
-		 * Sets _msaaSamples to the highest supported sample count, with a
-		 * fallback to VK_SAMPLE_COUNT_1_BIT if no higher counts are available.
+		 * Intersects the framebuffer color and depth sample counts, because a
+		 * render pass needs both attachments to use the same count.
 		 *
-		 * The automatic selection is capped at VK_SAMPLE_COUNT_4_BIT to avoid
-		 * selecting performance-killing sample counts. Supported sample counts
-		 * in descending order of preference:
-		 * - VK_SAMPLE_COUNT_4_BIT (cap)
-		 * - VK_SAMPLE_COUNT_2_BIT
-		 * - VK_SAMPLE_COUNT_1_BIT (default)
-		 *
-		 * @note This function should be called after the physical device has
-		 * been selected.
-		 * @note The _msaaSamples member variable is updated with the determined
-		 * sample count.
+		 * @return The mask of sample counts usable for color and depth.
 		 */
-		void getMaxUsableSampleCount();
+		VkSampleCountFlags getFramebufferSampleCounts() const;
 
 		/**
 		 * @brief Creates a Vulkan command pool for the device context.
