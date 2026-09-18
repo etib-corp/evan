@@ -14,6 +14,7 @@
 #include "evan/Version.hpp"
 
 #include "evan/DeviceContext.hpp"
+#include "evan/RenderSettings.hpp"
 #include "evan/Renderer.hpp"
 #include "evan/Scene.hpp"
 #include "evan/ASwapchainContext.hpp"
@@ -111,6 +112,12 @@ namespace evan
 		 * engine to be portable across different operating systems and
 		 * platforms.
 		 *
+		 * @param settings Construction-time rendering configuration.
+		 *
+		 * @note The sample count in @p settings is applied before the swapchain
+		 * and its render pass are created, because both bake the attachment
+		 * sample count. Changing it later requires recreating the engine.
+		 *
 		 * @note The Engine class is designed to be flexible and extensible,
 		 * allowing for future enhancements and additions to the engine's
 		 * capabilities. The current implementation focuses on establishing the
@@ -118,7 +125,8 @@ namespace evan
 		 * further improvements and optimizations in the future.
 		 */
 		Engine(std::shared_ptr<utility::RessourceProvider> ressourceProvider,
-			   std::shared_ptr<IPlatform> platform);
+			   std::shared_ptr<IPlatform> platform,
+			   RenderSettings settings = {});
 
 		~Engine();
 
