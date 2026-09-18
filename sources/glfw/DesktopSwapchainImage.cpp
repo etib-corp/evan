@@ -122,11 +122,18 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	_extent = extent;
 	_format = surfaceFormat.format;
 
+	const VkSampleCountFlagBits msaaSamples = deviceContext.getMsaaSamples();
+	const ColorAttachmentMode colorAttachmentMode =
+		desktopColorAttachmentMode(msaaSamples);
+
 	this->createImages(backend.getDevice(), _swapchain);
 	this->createImageViews(backend);
-	this->createColorResources(backend, deviceContext.getMsaaSamples());
-	this->createDepthResources(deviceContext, deviceContext.getMsaaSamples());
-	this->createFramebuffers(backend.getDevice(), renderpass, true);
+	if (colorAttachmentMode == ColorAttachmentMode::ResolveToSwapchain) {
+		this->createColorResources(backend, msaaSamples);
+	}
+	this->createDepthResources(deviceContext, msaaSamples);
+	this->createFramebuffers(backend.getDevice(), renderpass,
+							 colorAttachmentMode);
 }
 
 evan::DesktopSwapchainImage::~DesktopSwapchainImage()
