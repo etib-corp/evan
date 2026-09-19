@@ -43,7 +43,7 @@ namespace
 	struct DrawItem {
 		uint32_t pipelineKey			= 0;
 		uint32_t materialID				= 0;
-		BlendMode blendMode				= BlendMode::Opaque;
+		evan::BlendMode blendMode				= evan::BlendMode::Opaque;
 		VkPipeline pipeline				= VK_NULL_HANDLE;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkDescriptorSet descriptorSet	= VK_NULL_HANDLE;
