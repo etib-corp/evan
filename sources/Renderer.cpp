@@ -42,7 +42,6 @@ namespace
 		uint32_t pipelineKey = 0;
 		uint32_t materialID = 0;
 		VkPipeline pipeline = VK_NULL_HANDLE;
-		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 		VkBuffer vertexBuffer = VK_NULL_HANDLE;
 		VkBuffer indexBuffer = VK_NULL_HANDLE;
@@ -129,18 +128,26 @@ void evan::Renderer::destroy(VkDevice device)
 	this->getLogger().info() << "Destroying descriptor pool...";
 	vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
 
+	this->getLogger().info() << "Destroying graphics pipelines...";
+	for (std::size_t id = 0; id < _pipelines.size(); ++id) {
+		if (_pipelines[id] == VK_NULL_HANDLE) {
+			continue;
+		}
+		this->getLogger().info() << "Destroying pipeline: " << id;
+		vkDestroyPipeline(device, _pipelines[id], nullptr);
+	}
+	_pipelines.clear();
+
+	// The pipeline layout references the descriptor set layout, so it has to
+	// be destroyed before it.
+	if (_pipelineLayout != VK_NULL_HANDLE) {
+		this->getLogger().info() << "Destroying pipeline layout...";
+		vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
+		_pipelineLayout = VK_NULL_HANDLE;
+	}
+
 	this->getLogger().info() << "Destroying descriptor set layout...";
 	vkDestroyDescriptorSetLayout(device, _descriptorSetLayout, nullptr);
-
-	this->getLogger().info() << "Destroying graphics pipelines...";
-	for (const auto &[id, pipeline]: _pipelines) {
-		this->getLogger().info() << "Destroying pipeline: " << id;
-		vkDestroyPipeline(device, pipeline, nullptr);
-	}
-	for (const auto &[id, pipelineLayout]: _pipelineLayouts) {
-		this->getLogger().info() << "Destroying pipeline layout: " << id;
-		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	}
 
 	this->getLogger().info() << "Destroying frames...";
 	for (const auto &frame: _frames) {
@@ -449,8 +456,48 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 {
 	this->getLogger().info() << "Creating graphics pipelines...";
 
+	const auto &shaders = _ressourceManager->getShaders();
+
+	// The pipeline vector is indexed by shader ID. Shader IDs are drawn from a
+	// counter shared by every resource type, so size the vector to the largest
+	// ID present rather than to the shader count; the unused slots stay
+	// VK_NULL_HANDLE.
+	uint32_t maxShaderID = 0;
+	for (const auto &[id, shader]: shaders) {
+		maxShaderID = std::max(maxShaderID, id);
+	}
+	_pipelines.assign(static_cast<std::size_t>(maxShaderID) + 1,
+					  VK_NULL_HANDLE);
+
+	// Every pipeline shares the same descriptor set layout and the same
+	// push-constant range, so a single pipeline layout is created once and
+	// reused by all of them.
+	this->getLogger().info() << "Creating shared pipeline layout...";
+
+	VkPushConstantRange pushConstantRange {};
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushConstantRange.offset	 = 0;
+	pushConstantRange.size		 = sizeof(glm::vec4);
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
+	pipelineLayoutInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts	  = &_descriptorSetLayout;
+
+	pipelineLayoutInfo.pushConstantRangeCount = 1;
+	pipelineLayoutInfo.pPushConstantRanges	  = &pushConstantRange;
+
+	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+							   &_pipelineLayout)
+		!= VK_SUCCESS) {
+		this->getLogger().error() << "Failed to create pipeline layout !";
+		return;
+	}
+
 	this->getLogger().info() << "Iterating over shaders to create pipelines...";
-	for (const auto &[id, shader]: _ressourceManager->getShaders()) {
+	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Creating pipeline for shader: " << id;
 
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo {};
@@ -572,28 +619,6 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 			static_cast<uint32_t>(dynamicStates.size());
 		dynamicState.pDynamicStates = dynamicStates.data();
 
-		VkPushConstantRange pushConstantRange {};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		pushConstantRange.offset	 = 0;
-		pushConstantRange.size		 = sizeof(glm::vec4);
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
-		pipelineLayoutInfo.sType =
-			VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts	  = &_descriptorSetLayout;
-
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges	  = &pushConstantRange;
-
-		if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-								   &_pipelineLayouts[id])
-			!= VK_SUCCESS) {
-			this->getLogger().error() << "Failed to create pipeline layout !";
-			return;
-		}
-
 		VkPipelineDepthStencilStateCreateInfo depthStencil {};
 		depthStencil.sType =
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -618,7 +643,7 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		pipelineInfo.pMultisampleState	 = &multisampling;
 		pipelineInfo.pColorBlendState	 = &colorBlending;
 		pipelineInfo.pDynamicState		 = &dynamicState;
-		pipelineInfo.layout				 = _pipelineLayouts[id];
+		pipelineInfo.layout				 = _pipelineLayout;
 		pipelineInfo.renderPass			 = renderPass;
 		pipelineInfo.subpass			 = 0;
 		pipelineInfo.basePipelineHandle	 = VK_NULL_HANDLE;
@@ -633,6 +658,9 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 				device, _deviceContext->getPipelineCache().getHandle(), 1,
 				&pipelineInfo, nullptr, &_pipelines[id])
 			!= VK_SUCCESS) {
+			// The slot's contents are undefined when creation fails, so reset
+			// it to keep the null-handle contract of _pipelines.
+			_pipelines[id] = VK_NULL_HANDLE;
 			this->getLogger().error() << "Failed to create graphics pipeline !";
 			return;
 		}
@@ -840,23 +868,13 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		}
 
 		const auto pipelineKey = material->getShaderID();
-		const auto pipelineIt = _pipelines.find(pipelineKey);
-		if (pipelineIt == _pipelines.end()) {
+		const auto pipeline	   = pipelineFor(pipelineKey);
+		if (pipeline == VK_NULL_HANDLE) {
 			++stats.skippedMeshes;
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
-					<< "No pipeline found for shader ID: "
-					<< pipelineKey << ". Skipping mesh.";
-			}
-			continue;
-		}
-		const auto layoutIt = _pipelineLayouts.find(pipelineKey);
-		if (layoutIt == _pipelineLayouts.end()) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "No pipeline layout found for shader ID: "
-					<< pipelineKey << ". Skipping mesh.";
+					<< "No pipeline found for shader ID: " << pipelineKey
+					<< ". Skipping mesh.";
 			}
 			continue;
 		}
@@ -896,7 +914,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		}
 
 		drawList.push_back(
-			{ pipelineKey, materialID, pipelineIt->second, layoutIt->second,
+			{ pipelineKey, materialID, pipeline,
 			  descriptorSets[_currentFrameIndex], vertexBuffer, indexBuffer,
 			  mesh->getIndexCount(), mesh->getTransform() });
 	}
@@ -917,7 +935,6 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 
 	// Record the sorted draw list, re-binding state only when it changes.
 	VkPipeline boundPipeline = VK_NULL_HANDLE;
-	VkPipelineLayout boundPipelineLayout = VK_NULL_HANDLE;
 	VkDescriptorSet boundDescriptorSet = VK_NULL_HANDLE;
 	VkBuffer boundVertexBuffer = VK_NULL_HANDLE;
 	VkBuffer boundIndexBuffer = VK_NULL_HANDLE;
@@ -993,7 +1010,6 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			|| boundVertexBuffer != item.vertexBuffer
 			|| boundIndexBuffer != item.indexBuffer
 			|| boundDescriptorSet != item.descriptorSet
-			|| boundPipelineLayout != item.pipelineLayout
 			|| boundDynamicOffset != dynamicOffset
 			|| (_instancingEnabled && !hasBoundInstanceBuffer);
 
@@ -1013,9 +1029,9 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			++stats.pipelineBinds;
 
 			glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
-			vkCmdPushConstants(
-				commandBuffer, item.pipelineLayout,
-				VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
+			vkCmdPushConstants(commandBuffer, _pipelineLayout,
+							   VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+							   sizeof(glm::vec4), &color);
 		}
 
 		if (!hasBoundState || boundVertexBuffer != item.vertexBuffer) {
@@ -1035,7 +1051,6 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		}
 
 		if (!hasBoundState || boundDescriptorSet != item.descriptorSet
-			|| boundPipelineLayout != item.pipelineLayout
 			|| boundDynamicOffset != dynamicOffset) {
 			if (isDrawLogEnabled()) {
 				this->getLogger().debug()
@@ -1044,10 +1059,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			}
 			vkCmdBindDescriptorSets(
 				commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				item.pipelineLayout, 0, 1, &item.descriptorSet, 1,
-				&dynamicOffset);
+				_pipelineLayout, 0, 1, &item.descriptorSet, 1, &dynamicOffset);
 			boundDescriptorSet = item.descriptorSet;
-			boundPipelineLayout = item.pipelineLayout;
 			boundDynamicOffset = dynamicOffset;
 			++stats.descriptorBinds;
 		}
