@@ -13,6 +13,7 @@
 
 #include "evan/Frame.hpp"
 
+#include "evan/RenderSettings.hpp"
 #include "evan/RessourceManager.hpp"
 
 #include "evan/GPUShader.hpp"
@@ -228,14 +229,20 @@ namespace evan
 		 *
 		 * @param enabled True to cull, false to draw every mesh.
 		 */
-		void setCullingEnabled(bool enabled) { _cullingEnabled = enabled; }
+		void setCullingEnabled(bool enabled)
+		{
+			_cullingEnabled = enabled;
+		}
 
 		/**
 		 * @brief Checks whether culling is currently enabled.
 		 *
 		 * @return True when culling is enabled.
 		 */
-		[[nodiscard]] bool isCullingEnabled() const { return _cullingEnabled; }
+		[[nodiscard]] bool isCullingEnabled() const
+		{
+			return _cullingEnabled;
+		}
 
 		/**
 		 * @brief Sets the maximum draw distance for distance culling.
@@ -313,17 +320,89 @@ namespace evan
 			return _indirectDrawingEnabled;
 		}
 
+		/**
+		 * @brief Identifies one graphics pipeline variant.
+		 *
+		 * A variant is the pair of a shader and a blend mode: the opaque and
+		 * the alpha-blended pipelines of a shader share their shader modules,
+		 * layout and vertex input, and differ only in the fixed-function color
+		 * blend and depth write state.
+		 */
+		struct PipelineVariant {
+			uint32_t shaderID	= 0;
+			BlendMode blendMode = BlendMode::Opaque;
+
+			/**
+			 * @brief Orders variants so they can be stored in a std::map.
+			 *
+			 * @param other The variant to compare against.
+			 * @return True when this variant sorts before @p other.
+			 */
+			bool operator<(const PipelineVariant &other) const
+			{
+				if (shaderID != other.shaderID) {
+					return shaderID < other.shaderID;
+				}
+				return static_cast<int>(blendMode)
+					< static_cast<int>(other.blendMode);
+			}
+		};
+
+		/**
+		 * @brief Overrides the blend mode used for a shader.
+		 *
+		 * Materials decide their own blend mode (see
+		 * utility::graphic::Material::getAlphaMode and
+		 * GPUMaterial::getBlendMode), which covers assets that declare their
+		 * transparency. This setter is the escape hatch for shaders whose alpha
+		 * behaviour is not described by the material, for instance a shader
+		 * that derives its transparency from something other than the albedo
+		 * texture.
+		 *
+		 * The override applies to the next recorded frame; the pipelines of
+		 * both variants already exist.
+		 *
+		 * @param shaderID The shader whose draws are switched.
+		 * @param blendMode The blend mode used for every draw of that shader.
+		 */
+		void setShaderBlendMode(uint32_t shaderID, BlendMode blendMode);
+
+		/**
+		 * @brief Retrieves the blend mode used for a shader.
+		 *
+		 * @param shaderID The shader to look up.
+		 * @return The blend mode resulting from setShaderBlendMode(), or
+		 * BlendMode::Opaque when no override was registered.
+		 */
+		[[nodiscard]] BlendMode getShaderBlendMode(uint32_t shaderID) const;
+
+		/**
+		 * @brief Sets the ordering strategy used for opaque draws.
+		 *
+		 * @param mode The ordering strategy to use.
+		 */
+		void setOpaqueSortMode(OpaqueSortMode mode)
+		{
+			_opaqueSortMode = mode;
+		}
+
+		/**
+		 * @brief Retrieves the ordering strategy used for opaque draws.
+		 *
+		 * @return The current ordering strategy.
+		 */
+		[[nodiscard]] OpaqueSortMode getOpaqueSortMode() const
+		{
+			return _opaqueSortMode;
+		}
+
 		protected:
-		std::map<uint32_t, VkPipeline>
-			_pipelines;	   ///< A map of pipeline layer identifiers to Vulkan
-						   ///< pipeline objects. This map is used to manage
-						   ///< different graphics pipelines for rendering
-						   ///< operations based on the pipeline layer
-						   ///< associated with render objects. Each entry in
-						   ///< the map corresponds to a specific pipeline layer
-						   ///< and its associated Vulkan pipeline, which can be
-						   ///< used for rendering objects that belong to that
-						   ///< layer.
+		std::map<PipelineVariant, VkPipeline>
+			_pipelines;	   ///< Graphics pipeline per (shader, blend mode)
+						   ///< variant. Each shader has an opaque and an
+						   ///< alpha-blended pipeline so that blending and
+						   ///< depth writes are only enabled for the draws that
+						   ///< need them.
 
 		std::map<uint32_t, VkPipelineLayout>
 			_pipelineLayouts;	 ///< A map of pipeline layer identifiers to
@@ -441,10 +520,19 @@ namespace evan
 		 */
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
-								 VkExtent2D swapChainExtent,
-								 const Scene &scene,
+								 VkExtent2D swapChainExtent, const Scene &scene,
 								 std::size_t viewSlot,
 								 const utility::graphic::ViewF &view);
+
+		/**
+		 * @brief Finds the graphics pipeline of a (shader, blend mode) pair.
+		 *
+		 * @param shaderID The shader identifying the pipeline family.
+		 * @param blendMode The blend mode variant to select.
+		 * @return The matching pipeline, or VK_NULL_HANDLE when no pipeline was
+		 * created for that pair.
+		 */
+		VkPipeline pipelineFor(uint32_t shaderID, BlendMode blendMode) const;
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering
@@ -524,5 +612,18 @@ namespace evan
 		 * @brief Whether draws are batched through an indirect draw buffer.
 		 */
 		bool _indirectDrawingEnabled = false;
+
+		/**
+		 * @brief Per-shader blend mode overrides declared by the application.
+		 *
+		 * A shader missing from the map uses the blend mode derived from the
+		 * material of each mesh.
+		 */
+		std::map<uint32_t, BlendMode> _shaderBlendModes;
+
+		/**
+		 * @brief Ordering strategy applied to the opaque draws of a frame.
+		 */
+		OpaqueSortMode _opaqueSortMode = OpaqueSortMode::FrontToBack;
 	};
 }	 // namespace evan

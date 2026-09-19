@@ -83,11 +83,17 @@ namespace evan
 			 */
 			VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 			/**
-			 * @brief When true, a separate multisampled color image is created
-			 * and resolved into the swapchain image. When false, rendering is
-			 * performed directly into the swapchain image.
+			 * @brief How the render pass obtains its single-sampled color
+			 * attachment.
+			 *
+			 * The runtime owns the swapchain images, so either a multisampled
+			 * color image is created and resolved into the swapchain image
+			 * (ColorAttachmentMode::ResolveToSwapchain), or the swapchain image
+			 * is rendered into directly, whether or not it is multisampled
+			 * (ColorAttachmentMode::SwapchainImageAttachment).
 			 */
-			bool resolveToSwapchain = true;
+			ColorAttachmentMode colorAttachmentMode =
+				ColorAttachmentMode::SwapchainImageAttachment;
 		};
 
 		/**

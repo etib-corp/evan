@@ -12,9 +12,20 @@
 
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend,
-	VkSampleCountFlagBits msaaSamples, bool resolveToSwapchain)
+	VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode)
 {
 	this->getLogger().info() << "Creating render pass for swapchain context...";
+
+	// A resolve attachment is only valid when the color attachment is
+	// multisampled. Desktop contexts pick DirectToSwapchain in that case, so
+	// this only guards against a caller building an invalid render pass.
+	if (mode == ColorAttachmentMode::ResolveToSwapchain
+		&& msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
+		this->getLogger().warning()
+			<< "A resolve attachment was requested with a single sample. "
+			   "Rendering directly into the swapchain image instead.";
+		mode = ColorAttachmentMode::DirectToSwapchain;
+	}
 
 	auto swapchainFormatCount = deviceBackend->countSwapchainFormats();
 	auto swapchainFormats =
@@ -30,7 +41,13 @@ void evan::ASwapchainContext::createRenderPass(
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
 	colorAttachment.samples		   = msaaSamples;
-	colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// When the swapchain image is the color attachment, the render pass must
+	// hand it over ready to be presented. When a resolve target is used
+	// instead, the color attachment is a transient multisampled image and the
+	// resolve target ends in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR.
+	colorAttachment.finalLayout = mode == ColorAttachmentMode::DirectToSwapchain
+		? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		: VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	this->getLogger().info()
 		<< "Selected swapchain format: " << swapchainFormat;
@@ -82,7 +99,7 @@ void evan::ASwapchainContext::createRenderPass(
 	subpass.pColorAttachments		= &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-	if (resolveToSwapchain) {
+	if (mode == ColorAttachmentMode::ResolveToSwapchain) {
 		colorAttachmentResolve.format		 = swapchainFormat;
 		colorAttachmentResolve.samples		 = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachmentResolve.loadOp		 = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -106,8 +123,11 @@ void evan::ASwapchainContext::createRenderPass(
 	} else {
 		subpass.pResolveAttachments = nullptr;
 		this->getLogger().info()
-			<< "Rendering directly into the swapchain image without a "
-			   "resolve attachment.";
+			<< (mode == ColorAttachmentMode::DirectToSwapchain
+					? "Rendering directly into the swapchain image without a "
+					  "resolve attachment."
+					: "Rendering into the runtime swapchain image without a "
+					  "resolve attachment.");
 	}
 
 	this->getLogger().info()

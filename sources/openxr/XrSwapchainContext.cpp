@@ -67,7 +67,7 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	selectMsaaSamples(deviceContext);
 
 	createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
-					 _resolveToSwapchain);
+					 _colorAttachmentMode);
 
 	auto swapchainFormat = selectSwapchainFormat(
 		deviceContext.getDeviceBackend()->getPhysicalDevice(),
@@ -84,6 +84,9 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 		swapchainCreateInfo.height	  = viewConfig.recommendedImageRectHeight;
 		swapchainCreateInfo.mipCount  = 1;
 		swapchainCreateInfo.faceCount = 1;
+		// The render pass and framebuffers are built for this sample count
+		// (see selectMsaaSamples), so it must stay the runtime's recommended
+		// value rather than the application one.
 		swapchainCreateInfo.sampleCount =
 			viewConfig.recommendedSwapchainSampleCount;
 		swapchainCreateInfo.usageFlags =
@@ -101,12 +104,12 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 			continue;
 		}
 		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain			= swapchain,
-			.createInfo			= swapchainCreateInfo,
-			.renderPass			= _renderPass,
-			.deviceContext		= deviceContext,
-			.msaaSamples		= _msaaSamples,
-			.resolveToSwapchain = _resolveToSwapchain
+			.swapchain			 = swapchain,
+			.createInfo			 = swapchainCreateInfo,
+			.renderPass			 = _renderPass,
+			.deviceContext		 = deviceContext,
+			.msaaSamples		 = _msaaSamples,
+			.colorAttachmentMode = _colorAttachmentMode
 		};
 		_swapchainImages.push_back(
 			std::make_shared<XrSwapchainImage>(properties));
@@ -116,32 +119,60 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 void evan::XrSwapchainContext::selectMsaaSamples(
 	const DeviceContext &deviceContext)
 {
+	// The swapchain images belong to the runtime, and their sample count is
+	// whatever it handed out (XrSwapchainCreateInfo::sampleCount asks for the
+	// recommended value). The render pass and the framebuffers have to match
+	// that count, so a runtime that only offers multisampled swapchain images
+	// overrides the application setting.
+	const uint32_t recommended = _viewsConfigurations.empty()
+		? 0u
+		: _viewsConfigurations.front().recommendedSwapchainSampleCount;
+	const VkSampleCountFlagBits runtimeSamples =
+		toVkSampleCountFlagBits(recommended);
+	const VkSampleCountFlagBits requested = deviceContext.getMsaaSamples();
+
 	if (_viewsConfigurations.empty()) {
-		_msaaSamples		= deviceContext.getMsaaSamples();
-		_resolveToSwapchain = true;
 		this->getLogger().warning()
-			<< "No OpenXR view configurations available, falling back to "
-			   "device MSAA sample count.";
+			<< "No OpenXR view configuration available. Using " << requested
+			<< " sample(s).";
+		_msaaSamples		 = requested;
+		_colorAttachmentMode = requested == VK_SAMPLE_COUNT_1_BIT
+			? ColorAttachmentMode::SwapchainImageAttachment
+			: ColorAttachmentMode::ResolveToSwapchain;
 		return;
 	}
 
-	uint32_t recommended =
-		_viewsConfigurations.front().recommendedSwapchainSampleCount;
-	VkSampleCountFlagBits swapchainSamples =
-		toVkSampleCountFlagBits(recommended);
-
-	if (swapchainSamples == VK_SAMPLE_COUNT_1_BIT) {
-		_msaaSamples		= deviceContext.getMsaaSamples();
-		_resolveToSwapchain = true;
+	if (runtimeSamples != VK_SAMPLE_COUNT_1_BIT) {
+		// The runtime only hands out multisampled swapchain images: render
+		// into them directly, their sample count cannot be lowered.
+		_msaaSamples		 = runtimeSamples;
+		_colorAttachmentMode = ColorAttachmentMode::SwapchainImageAttachment;
+		if (requested != runtimeSamples) {
+			this->getLogger().warning()
+				<< "The OpenXR runtime recommends a " << recommended
+				<< "-sample swapchain, so the application request of "
+				<< requested << " sample(s) is ignored.";
+		}
+	} else if (requested == VK_SAMPLE_COUNT_1_BIT) {
+		// Default path: no multisampling anywhere and no resolve. The render
+		// pass targets the single-sampled swapchain image directly.
+		_msaaSamples		 = VK_SAMPLE_COUNT_1_BIT;
+		_colorAttachmentMode = ColorAttachmentMode::SwapchainImageAttachment;
 	} else {
-		_msaaSamples		= swapchainSamples;
-		_resolveToSwapchain = false;
+		// The application asked for multisampling: shade into an engine-owned
+		// multisampled color image and resolve it into the single-sampled
+		// swapchain image.
+		_msaaSamples		 = requested;
+		_colorAttachmentMode = ColorAttachmentMode::ResolveToSwapchain;
 	}
 
 	this->getLogger().info()
 		<< "OpenXR recommended swapchain sample count: " << recommended
 		<< ", using MSAA samples: " << _msaaSamples
-		<< ", resolve to swapchain: " << (_resolveToSwapchain ? "yes" : "no");
+		<< ", resolve to swapchain: "
+		<< (_colorAttachmentMode == ColorAttachmentMode::ResolveToSwapchain
+				? "yes"
+				: "no");
 }
 
 ////////////////////
@@ -191,6 +222,9 @@ void evan::XrSwapchainContext::recreateSwapchain(
 		swapchainCreateInfo.height	  = viewConfig.recommendedImageRectHeight;
 		swapchainCreateInfo.mipCount  = 1;
 		swapchainCreateInfo.faceCount = 1;
+		// The render pass and framebuffers are built for this sample count
+		// (see selectMsaaSamples), so it must stay the runtime's recommended
+		// value rather than the application one.
 		swapchainCreateInfo.sampleCount =
 			viewConfig.recommendedSwapchainSampleCount;
 		swapchainCreateInfo.usageFlags =
@@ -208,12 +242,12 @@ void evan::XrSwapchainContext::recreateSwapchain(
 			continue;
 		}
 		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain			= swapchain,
-			.createInfo			= swapchainCreateInfo,
-			.renderPass			= _renderPass,
-			.deviceContext		= deviceContext,
-			.msaaSamples		= _msaaSamples,
-			.resolveToSwapchain = _resolveToSwapchain
+			.swapchain			 = swapchain,
+			.createInfo			 = swapchainCreateInfo,
+			.renderPass			 = _renderPass,
+			.deviceContext		 = deviceContext,
+			.msaaSamples		 = _msaaSamples,
+			.colorAttachmentMode = _colorAttachmentMode
 		};
 		_swapchainImages.push_back(
 			std::make_shared<XrSwapchainImage>(properties));

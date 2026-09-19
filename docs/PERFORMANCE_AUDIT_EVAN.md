@@ -96,7 +96,7 @@ Desktop path is the same minus the OpenXR calls, with
 | 5 | `Scene::getMeshes()` reallocates per frame | CONFIRMED | `Scene.cpp:69-80` |
 | 6 | `RessourceManager::sync()` per frame + per object-add (map copies + prefix scans) | CONFIRMED | `RessourceManager.cpp:77-174`; `Engine.cpp:139,166,190,222,238` |
 | 7 | `vkQueueWaitIdle` on every mesh upload / vertex update | CONFIRMED | `ADeviceBackend.cpp:214-241`; `GPUMesh.cpp:80,161` |
-| 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | LIKELY (GPU) | `DeviceContext.cpp:178-181`; `Renderer.cpp:442-461` |
+| 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | RESOLVED (MSAA + blending; multiview pending) | `DeviceContext.cpp` (MSAA opt-in); `Renderer.cpp` (`PipelineVariant`, depth-sorted draws) |
 | 9 | `GPUMaterial::getDescriptorSets()` returns vector by value | RESOLVED | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` |
 | 10 | No `VkPipelineCache` (pipelines created with `VK_NULL_HANDLE`) | RESOLVED | `DeviceContext.cpp`; `Renderer.cpp` |
 
@@ -169,11 +169,21 @@ with timestamps/RenderDoc:
 - **No instancing/batching** — identical meshes are separate draws.
 - **No multiview** — stereo is two full passes (`Renderer.cpp`), doubling
   vertex/fragment work and command recording.
-- **4× MSAA** by default (`DeviceContext.cpp:178-181`) with
-  `resolveToSwapchain` (`XrSwapchainContext.cpp`) — 4× color/depth bandwidth.
-- **Blending always on** for every pipeline (`Renderer.cpp:453-461`), even for
-  opaque geometry, and no front-to-back sorting, so overdraw/ROP cost is
-  unbounded.
+- **MSAA is opt-in** (`DeviceContext::setMsaaSamples`, `RenderSettings`), one
+  sample by default. A single-sampled desktop swapchain renders straight into
+  the swapchain image (`ColorAttachmentMode::DirectToSwapchain`): no
+  multisampled color image, no resolve pass, no multiplied depth bandwidth.
+  `EVAN_MSAA=1|2|4` measures the difference without a rebuild. The OpenXR
+  context still uses whatever sample count the runtime recommends when it only
+  hands out multisampled swapchain images.
+- **Blending is opt-in per pipeline.** Each shader has an opaque and an
+  alpha-blended variant (`Renderer::PipelineVariant`), selected from the
+  material's `AlphaMode`. Opaque draws keep depth writes, blended draws do not,
+  and the opaque pass is ordered front-to-back (depth bucketed, so state
+  batching survives), the blended pass back-to-front.
+- **Measurement still pending:** the bandwidth and ROP deltas above are still
+  hypotheses until confirmed with GPU timestamps or a RenderDoc capture at N =
+  100 and N = 1000, at 1× vs 4× and blend on vs off.
 - Uniform buffer read per vertex with an identity `model` matrix
   (`Renderer.cpp:597`), so world transforms are baked on the CPU — the GPU does
   no per-instance transform, but the CPU must regenerate geometry on pose
@@ -296,7 +306,7 @@ frame in flight during stereo.
 | P1.4 | Done: `getDescriptorSets()` returns const reference | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` | Allocation per material bind (removed) | Done | Done |
 | P1.5 | `vkQueueWaitIdle` per upload | `ADeviceBackend.cpp:233` | Queue drain on every upload | Medium | 3–5 days |
 | P1.6 | Done: `VkPipelineCache` created on the device, used by every pipeline and persisted across runs | `PipelineCache.hpp`; `DeviceContext.cpp`; `Renderer.cpp` | Startup + runtime compile | Done | Done |
-| P1.7 | Reduce MSAA / disable blend for opaque | `DeviceContext.cpp:178`; `Renderer.cpp:453` | Bandwidth/ROP | Easy | 1–2 days |
+| P1.7 | Done: MSAA is opt-in (1× default) and blending only on alpha pipelines | `RenderSettings.hpp`; `DeviceContext.cpp`; `Renderer.cpp` | Bandwidth/ROP (removed by default; measure the delta) | Done | Done |
 
 ### P2 — Medium impact
 
@@ -305,7 +315,9 @@ frame in flight during stereo.
 - P2.2 Move per-object transforms to a GPU instance/SSBO buffer (enables
   P1.3).
 - P2.3 `VK_KHR_multiview` for stereo.
-- P2.4 Sort draw calls by pipeline/material (and front-to-back for opaque).
+- P2.4 Done: draws are split opaque/alpha and depth-ordered inside each group
+  (`Renderer.cpp`); revisit the ordering once P1.3 batching lands, since
+  state-first ordering batches more but overdraws more.
 - P2.5 Replace `std::map` `_pipelines` with a flat array indexed by shader ID
   (`Renderer.cpp`).
 

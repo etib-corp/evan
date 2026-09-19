@@ -21,7 +21,7 @@ evan::DesktopSwapchainContext::DesktopSwapchainContext(
 	this->getLogger().info() << "Initializing DesktopSwapchainContext...";
 
 	this->createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
-						   true);
+						   desktopColorAttachmentMode(_msaaSamples));
 
 	this->getLogger().info()
 		<< "Creating swapchain images for DesktopSwapchainContext...";

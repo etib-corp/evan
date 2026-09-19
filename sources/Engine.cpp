@@ -61,7 +61,7 @@ namespace
 
 evan::Engine::Engine(
 	std::shared_ptr<utility::RessourceProvider> ressourceProvider,
-	std::shared_ptr<IPlatform> platform)
+	std::shared_ptr<IPlatform> platform, RenderSettings settings)
 	: _platform(platform)
 	, _ressourceProvider(ressourceProvider)
 	, _lastFrameTime(std::chrono::steady_clock::now())
@@ -90,7 +90,18 @@ evan::Engine::Engine(
 	ressourceProvider->loadShader(shaderPrefix + "mesh.vert.spv",
 								  shaderPrefix + "mesh.frag.spv");
 
-	_deviceContext	  = std::make_shared<DeviceContext>(*platform);
+	_deviceContext = std::make_shared<DeviceContext>(*platform);
+
+	// The sample count is baked into the render pass and the framebuffers the
+	// swapchain creates, so it has to be applied before the swapchain exists.
+	// setMsaaSamples() validates the request and lets the EVAN_MSAA
+	// environment variable win, which is how the cost of multisampling is
+	// measured without a rebuild.
+	_deviceContext->setMsaaSamples(settings.msaaSamples);
+	this->getLogger().info()
+		<< "Rendering with " << _deviceContext->getMsaaSamples()
+		<< " sample(s) per pixel.";
+
 	_swapchainContext = platform->createSwapchainContext(*_deviceContext);
 
 	auto deviceBackend = _deviceContext->getDeviceBackend();
@@ -100,6 +111,7 @@ evan::Engine::Engine(
 	_renderer = std::make_shared<Renderer>(
 		_deviceContext, _swapchainContext->getRenderPass(),
 		_swapchainContext->getMsaaSamples(), _ressourceManager);
+	_renderer->setOpaqueSortMode(settings.opaqueSort);
 	_ressourceManager->init(_renderer);
 	_currentScene = 0;
 
