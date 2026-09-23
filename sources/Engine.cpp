@@ -134,6 +134,12 @@ evan::Engine::~Engine()
 // Public Methods //
 ////////////////////
 
+size_t evan::Engine::addText(utility::graphic::Text text)
+{
+	auto textPtr = std::make_shared<utility::graphic::Text>(std::move(text));
+	return addText(textPtr);
+}
+
 size_t evan::Engine::addText(std::shared_ptr<utility::graphic::Text> text)
 {
 	if (text->getContent().empty()) {
@@ -258,6 +264,12 @@ size_t evan::Engine::addObject(
 }
 
 size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
+							 const std::string &materialName)
+{
+	return addMesh(mesh, materialName, "default");
+}
+
+size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
 							 const std::string &materialName,
 							 const std::string &shader)
 {
@@ -365,12 +377,27 @@ evan::Error evan::Engine::update()
 	this->getLogger().info() << "Updating engine state...";
 
 	// Handle viewport input if capture is enabled
-	if (_shouldCaptureViewportInput) {
+	if (shouldCaptureViewportInput()) {
 		handleViewportInput(_capturedViewportEvents);
 		_capturedViewportEvents.clear();
 	}
+}
 
-	return Error::Ok;
+void evan::Engine::clear()
+{
+	// Vulkan clears the render target through the render pass clear values,
+	// so there is nothing to do here.
+}
+
+void evan::Engine::present()
+{
+	render();
+}
+
+utility::graphic::SizeF
+	evan::Engine::measureText(const utility::graphic::Text &text) const
+{
+	return text.getTextDimensions();
 }
 
 evan::Error evan::Engine::render()
@@ -385,7 +412,7 @@ evan::Error evan::Engine::getLastError() const
 	return _platform->getLastError();
 }
 
-std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
+void evan::Engine::pollEvents()
 {
 	this->getLogger().info() << "Polling events from platform...";
 
@@ -426,7 +453,7 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 	if (_platform->shouldClose())
 		events.emplace_back(quitEventFactory.create());
 
-	if (_shouldCaptureViewportInput) {
+	if (shouldCaptureViewportInput()) {
 		this->getLogger().info()
 			<< "Captured " << events.size() << " events for viewport input.";
 		_capturedViewportEvents.insert(_capturedViewportEvents.end(),
@@ -438,7 +465,15 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 			<< " events, but viewport input capture is disabled.";
 	}
 
-	return events;
+	auto &callback = getEventCallback();
+	if (!callback) {
+		this->getLogger().warning()
+			<< "No event callback set, skipping event dispatch.";
+		return;
+	}
+	for (auto &event: events) {
+		callback(event);
+	}
 }
 
 void evan::Engine::handleViewportInput(
