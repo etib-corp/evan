@@ -125,6 +125,19 @@ namespace evan
 		size_t addObject(std::shared_ptr<RenderObject> object);
 
 		/**
+		 * @brief Updates a render object in the renderer's object registry.
+		 *
+		 * The renderer owns the registry of render objects drawn each frame.
+		 * The object is updated in-place using the provided object ID, which
+		 * must correspond to an existing registered render object.
+		 *
+		 * @param object A shared pointer to the RenderObject to update.
+		 * @param objectID The unique object ID of the render object to update.
+		 * @return True if the update was successful, false otherwise.
+		 */
+		bool updateObject(std::shared_ptr<RenderObject> object, size_t objectID);
+
+		/**
 		 * @brief Removes a render object from the renderer's registry.
 		 *
 		 * @param objectID The object ID of the render object to remove.

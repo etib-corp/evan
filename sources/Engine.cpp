@@ -59,6 +59,26 @@ namespace
 			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
 										   finalQ.w));
 	}
+
+	/**
+	 * @brief Resolves the shader name backing a material, used as the pipeline
+	 * layer label of the associated RenderObject.
+	 *
+	 * @param ressourceProvider The provider owning the material registry.
+	 * @param materialID The material identifier.
+	 * @return The material's shader name, or "mesh" when unknown.
+	 */
+	std::string resolvePipelineLayer(
+		const std::shared_ptr<utility::RessourceProvider> &ressourceProvider,
+		uint32_t materialID)
+	{
+		const auto &materials = ressourceProvider->getMaterials();
+		const auto materialIt = materials.find(materialID);
+		if (materialIt != materials.end() && materialIt->second) {
+			return materialIt->second->getShaderName();
+		}
+		return "mesh";
+	}
 }	 // namespace
 
 evan::Engine::Engine(
@@ -134,156 +154,88 @@ evan::Engine::~Engine()
 // Public Methods //
 ////////////////////
 
-size_t evan::Engine::addText(utility::graphic::Text text)
+size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
+							const std::string &materialName,
+							const std::string &shader)
 {
-	auto textPtr = std::make_shared<utility::graphic::Text>(std::move(text));
-	return addText(textPtr);
-}
-
-size_t evan::Engine::addText(std::shared_ptr<utility::graphic::Text> text)
-{
-	if (text->getContent().empty()) {
-		this->getLogger().warning()
-			<< "Attempted to add text with empty content. Skipping.";
-		return 0;	 // Skip adding empty text
-	}
-
-	this->getLogger().info() << "Drawing text: " << text->getContent();
-
+	auto material_id = _ressourceProvider->getMaterialID(materialName);
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	auto material_id = _ressourceProvider->getMaterialID(
-		text->getFontFamily() + "_" + std::to_string(text->getFontSize())
-		+ "_material");
-
-	if (material_id == 0) {
-		this->getLogger().warning()
-			<< "Material '" << text->getFontFamily() << "_"
-			<< text->getFontSize()
-			<< "' not found for text object. Text will not be rendered.";
-		return 0;	 // Skip rendering this text if its material is not found
-	}
-
-	this->getLogger().info()
-		<< "Converting text meshes to raw objects for rendering...";
-	for (const auto &mesh: text->getMeshes()) {
-		this->getLogger().debug()
-			<< "Processing mesh with " << mesh->getVertices().size()
-			<< " vertices and " << mesh->getIndices().size() << " indices.";
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	this->getLogger().info() << "Creating RenderObject for text...";
-	std::shared_ptr<RenderObject> textObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "text");
-
-	this->getLogger().info() << "Adding text RenderObject to engine...";
-	auto objectID = _renderer->addObject(textObject);
+	rawObjects.emplace(material_id, mesh);
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects, shader);
+	auto objectID = _renderer->addObject(renderObject);
 	_ressourceManager->sync();
 	return objectID;
 }
 
-size_t evan::Engine::addPrimitive(
-	std::shared_ptr<utility::graphic::Primitive> primitive)
-{
-	if (!primitive || primitive->getMeshes().empty()) {
-		this->getLogger().warning()
-			<< "Attempted to add an empty primitive. Skipping.";
-		return 0;
-	}
-
-	this->getLogger().info() << "Drawing primitive with "
-							 << primitive->getMeshes().size() << " meshes.";
-
-	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
-
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	for (const auto &mesh: primitive->getMeshes()) {
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	std::shared_ptr<RenderObject> primitiveObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID = _renderer->addObject(primitiveObject);
-	_ressourceManager->sync();
-
-	return objectID;
-}
-
-size_t evan::Engine::addModel(std::shared_ptr<utility::graphic::Model> model)
-{
-	auto modelTypeStr = std::string(
-		model->type() == utility::graphic::Model::ModelType::OBJ ? "OBJ"
-																 : "Unknown");
-
-	this->getLogger().info() << "Drawing model of type: " << modelTypeStr;
-
-	auto material_id = model->getMaterialID();
-
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	for (const auto &mesh: model->getMeshes()) {
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	std::shared_ptr<RenderObject> modelObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID = _renderer->addObject(modelObject);
-	_ressourceManager->sync();
-
-	return objectID;
-}
-
-size_t evan::Engine::addObject(
-	std::shared_ptr<utility::graphic::Renderable> object,
-	const std::string &renderMethod)
+size_t evan::Engine::createObject(std::shared_ptr<utility::graphic::Renderable> object)
 {
 	if (!object || object->getMeshes().empty()) {
 		this->getLogger().warning()
-			<< "Attempted to add an empty renderable object. Skipping.";
+			<< "Attempted to create an empty renderable object. Skipping.";
 		return 0;
 	}
 
 	this->getLogger().info()
-		<< "Drawing renderable object with " << object->getMeshes().size()
-		<< " meshes using render method: " << renderMethod;
+		<< "Creating renderable object with " << object->getMeshes().size()
+		<< " meshes.";
 
-	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
+	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
+
+	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
+	for (const auto &mesh: object->getMeshes()) {
+		rawObjects.emplace(material_id, *mesh);
+	}
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects,
+		resolvePipelineLayer(_ressourceProvider, material_id));
+	auto objectID = _renderer->addObject(renderObject);
+	_ressourceManager->sync();
+	return objectID;
+}
+
+bool evan::Engine::updateObject(std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
+{
+	if (!object || object->getMeshes().empty()) {
+		this->getLogger().warning()
+			<< "Attempted to update an empty renderable object. Skipping.";
+		return false;
+	}
+
+	auto existing = _renderer->getObject(objectID);
+	if (!existing) {
+		this->getLogger().warning()
+			<< "Renderable object with ID " << objectID
+			<< " not found. Update failed.";
+		return false;
+	}
+
+	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
 
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	for (const auto &mesh: object->getMeshes()) {
 		rawObjects.emplace(material_id, *mesh);
 	}
 
-	const std::string pipelineLayer =
-		renderMethod.empty() ? "mesh" : renderMethod;
+	if (existing->updateMeshes(rawObjects)) {
+		this->getLogger().info()
+			<< "Updated renderable object " << objectID << " in place.";
+		_ressourceManager->sync();
+		return true;
+	}
+
+	this->getLogger().info()
+		<< "Renderable object " << objectID
+		<< " topology changed. Rebuilding GPU resources in place.";
 	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
-		_deviceContext, rawObjects, pipelineLayer);
-	auto objectID = _renderer->addObject(renderObject);
+		_deviceContext, rawObjects,
+		resolvePipelineLayer(_ressourceProvider, material_id));
+	bool updated = _renderer->updateObject(renderObject, objectID);
 	_ressourceManager->sync();
-
-	return objectID;
+	return updated;
 }
 
-size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
-							 const std::string &materialName)
-{
-	return addMesh(mesh, materialName, "default");
-}
-
-size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
-							 const std::string &materialName,
-							 const std::string &shader)
-{
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	auto material_id = _ressourceProvider->getMaterialID(materialName);
-	rawObjects.emplace(material_id, mesh);
-	std::shared_ptr<RenderObject> meshObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, shader);
-	auto objectID = _renderer->addObject(meshObject);
-	_ressourceManager->sync();
-	return objectID;
-}
-
-bool evan::Engine::removeObject(size_t objectID)
+bool evan::Engine::removeObject( std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
 {
 	this->getLogger().info() << "Removing renderable object with ID "
 							 << objectID << " from engine...";
@@ -371,7 +323,7 @@ utility::graphic::ViewF evan::Engine::getView(void) const
 		leftView.getNearPlane(), leftView.getFarPlane());
 }
 
-evan::Error evan::Engine::update()
+void evan::Engine::update()
 {
 	updateDeltaTime();
 	this->getLogger().info() << "Updating engine state...";

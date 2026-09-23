@@ -163,6 +163,21 @@ size_t evan::Renderer::addObject(std::shared_ptr<RenderObject> object)
 	return objectID;
 }
 
+bool evan::Renderer::updateObject(std::shared_ptr<RenderObject> object, size_t objectID)
+{
+	this->getLogger().info() << "Updating render object with ID " << objectID
+							 << " in Renderer...";
+	auto it = _objects.find(objectID);
+	if (it == _objects.end()) {
+		this->getLogger().warning()
+			<< "Render object with ID " << objectID
+			<< " not found in Renderer. Update failed.";
+		return false;
+	}
+	it->second = object;
+	return true;
+}
+
 bool evan::Renderer::removeObject(size_t objectID)
 {
 	this->getLogger().info()

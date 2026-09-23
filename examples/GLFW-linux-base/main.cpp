@@ -94,7 +94,7 @@ int main(void)
 
 	auto cubePrimitive = std::make_shared<utility::graphic::Primitive>(
 		std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
-	engine.addPrimitive(cubePrimitive);
+	engine.createObject(cubePrimitive);
 
 	while (!platform->shouldClose()) {
 		engine.update();
