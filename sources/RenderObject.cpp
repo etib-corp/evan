@@ -82,6 +82,41 @@ void evan::RenderObject::setTransform(const glm::mat4 &transform)
 	}
 }
 
+bool evan::RenderObject::updateMeshes(
+	const std::map<uint32_t, utility::graphic::Mesh> &rawObjects)
+{
+	if (rawObjects.size() != _meshes.size()) {
+		this->getLogger().info()
+			<< "Mesh count changed (" << _meshes.size() << " -> "
+			<< rawObjects.size() << "). Rebuild required.";
+		return false;
+	}
+
+	auto existingIt = _meshes.begin();
+	for (const auto &entry: rawObjects) {
+		const auto &mesh	  = entry.second;
+		const auto &gpuMesh = *existingIt;
+
+		if (mesh.getVertices().size() != gpuMesh->getVertexCount()
+			|| mesh.getIndices().size()
+				!= static_cast<size_t>(gpuMesh->getIndexCount())) {
+			this->getLogger().info()
+				<< "Mesh topology changed. Rebuild required.";
+			return false;
+		}
+
+		std::vector<GPUVertex> gpuVertices;
+		gpuVertices.reserve(mesh.getVertices().size());
+		for (const auto &vertex: mesh.getVertices()) {
+			gpuVertices.push_back(GPUVertex::createFromVertex(vertex));
+		}
+		gpuMesh->updateVertices(gpuVertices);
+		++existingIt;
+	}
+
+	return true;
+}
+
 /////////////
 // Getters //
 /////////////

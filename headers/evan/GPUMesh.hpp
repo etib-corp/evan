@@ -142,6 +142,17 @@ namespace evan
 		uint32_t getIndexCount() const;
 
 		/**
+		 * @brief Retrieves the number of vertices the vertex buffer was
+		 * allocated for.
+		 *
+		 * Used by RenderObject::updateMeshes() to decide whether an incoming
+		 * mesh can be re-uploaded in place or requires a buffer rebuild.
+		 *
+		 * @return The vertex count of this mesh.
+		 */
+		size_t getVertexCount() const;
+
+		/**
 		 * @brief Retrieves the material ID associated with this GPUMesh
 		 * instance.
 		 *
