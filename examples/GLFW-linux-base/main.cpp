@@ -96,6 +96,13 @@ int main(void)
 		std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
 	engine.createObject(cubePrimitive);
 
+	utility::graphic::PoseF pose(utility::graphic::PositionF(0.0f, 0.0f, -1.0f),
+									 utility::graphic::OrientationF(0.0f, 0.0f, 0.0f, 1.0f));
+	std::shared_ptr<utility::graphic::Text> text =
+	std::make_shared<utility::graphic::Text>(ressourceProvider, pose, utility::graphic::Color32Bit(255, 255, 255, 255), "Hello World!", 24, "fonts/Roboto-Regular.ttf");
+
+	engine.createObject(text);
+
 	while (!platform->shouldClose()) {
 		engine.update();
 		engine.render();
