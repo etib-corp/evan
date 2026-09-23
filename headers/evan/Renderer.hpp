@@ -534,6 +534,22 @@ namespace evan
 		 */
 		void createDescriptorPool(VkDevice device, uint32_t materialCount);
 
+		/**
+		 * @brief Retrieves the list of GPU meshes associated with the
+		 * registered render objects.
+		 *
+		 * This method returns a vector of shared pointers to GPUMesh objects
+		 * that are associated with the registered render objects in the
+		 * Renderer. Each GPUMesh represents a mesh that can be drawn during
+		 * rendering operations. Implement this method to provide access to the
+		 * list of GPU meshes for other components of the rendering system that
+		 * may need to access or manipulate the meshes for rendering purposes.
+		 *
+		 * @return A vector of shared pointers to GPUMesh objects associated
+		 * with the registered render objects.
+		 */
+		std::vector<std::shared_ptr<GPUMesh>> getMeshes() const;
+
 		std::shared_ptr<RessourceManager>
 			_ressourceManager;	  ///< A shared pointer to the RessourceManager,
 								  ///< which is responsible for managing

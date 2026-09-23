@@ -281,15 +281,7 @@ bool evan::Engine::removeObject(size_t objectID)
 bool evan::Engine::setObjectTransform(size_t objectID,
 									  const glm::mat4 &transform)
 {
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return false;
-	}
-	auto object =
-		currentSceneIt->second->getObject(static_cast<uint32_t>(objectID));
-	if (!object) {
-		return false;
-	}
+	auto object = _renderer->getObject(objectID);
 	object->setTransform(transform);
 	return true;
 }

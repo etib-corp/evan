@@ -208,13 +208,6 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		return Error::SwapchainOutOfDate;
 	}
 
-	std::vector<std::shared_ptr<GPUMesh>> meshes;
-	meshes.reserve(_objects.size());
-	for (const auto &[_, object]: _objects) {
-		const auto &objectMeshes = object->getMeshes();
-		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
-	}
-
 	auto &frame						 = *_frames[_currentFrameIndex];
 	const ViewSet &viewSet			 = swapchainContext.getViewSet();
 	const std::size_t swapchainCount = swapchainContext.getSwapchainCount();
@@ -812,7 +805,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 			<< swapChainExtent.width << "x" << swapChainExtent.height;
 	}
 
-	const auto &meshes = scene.getMeshes();
+	const auto &meshes = this->getMeshes();
 
 	DrawStats stats {};
 	stats.totalMeshes = meshes.size();
@@ -1164,4 +1157,14 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		this->getLogger().error() << "Failed to record command buffer!";
 		return;
 	}
+}
+
+std::vector<std::shared_ptr<evan::GPUMesh>> evan::Renderer::getMeshes() const
+{
+	std::vector<std::shared_ptr<evan::GPUMesh>> meshes;
+	for (const auto &[id, object]: _objects) {
+		const auto &objectMeshes = object->getMeshes();
+		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
+	}
+	return meshes;
 }
