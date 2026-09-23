@@ -7,6 +7,7 @@
 
 #include "evan/glfw/platform/WindowsPlatform.hpp"
 
+#include <cstdlib>
 #include <stdexcept>
 
 evan::WindowsDesktopPlatform::WindowsDesktopPlatform(const std::string &name,
@@ -60,4 +61,18 @@ VkSurfaceKHR
 	}
 	this->getLogger().info() << "Vulkan surface created successfully";
 	return surface;
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+std::filesystem::path
+	evan::WindowsDesktopPlatform::getDefaultCacheRoot() const
+{
+	const char *localAppData = std::getenv("LOCALAPPDATA");
+	if (localAppData == nullptr || localAppData[0] == '\0') {
+		return {};
+	}
+	return std::filesystem::path(localAppData);
 }

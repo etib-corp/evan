@@ -9,6 +9,8 @@
 
 #include "evan/openxr/IXrPlatform.hpp"
 
+#include <filesystem>
+
 namespace evan
 {
 
@@ -71,6 +73,15 @@ namespace evan
 		 * OpenXR platform as an XrBaseInStructure.
 		 */
 		const XrBaseInStructure *getInstanceCreateInfo() const override;
+
+		protected:
+		/**
+		 * @brief Get the Linux cache root directory.
+		 *
+		 * @return `XDG_CACHE_HOME` when set, `~/.cache` otherwise, or an empty
+		 * path when neither is available.
+		 */
+		std::filesystem::path getDefaultCacheRoot() const override;
 	};
 
 }	 // namespace evan

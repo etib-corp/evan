@@ -87,13 +87,13 @@ namespace evan
 			 * max LOD covering every generated mip level).
 			 */
 			SamplerSettings()
-				: minLod(0.0f),
-				  maxLod(-1.0f),
-				  anisotropyEnable(VK_TRUE),
-				  maxAnisotropy(0.0f),
-				  addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT),
-				  addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT),
-				  addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+				: minLod(0.0f)
+				, maxLod(-1.0f)
+				, anisotropyEnable(VK_TRUE)
+				, maxAnisotropy(0.0f)
+				, addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+				, addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+				, addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT)
 			{
 			}
 
@@ -220,7 +220,7 @@ namespace evan
 		 */
 		GPUTexture(std::shared_ptr<DeviceContext> deviceContext,
 				   const utility::graphic::Texture &texture,
-				   TextureType type = TextureType::Albedo,
+				   TextureType type				   = TextureType::Albedo,
 				   const SamplerSettings &settings = SamplerSettings {});
 
 		/**
@@ -380,9 +380,10 @@ namespace evan
 		 * addressing modes, and mipmapping behavior. This information is used
 		 * to
 		 */
-		void createSampler(const ADeviceBackend &deviceBackend,
-						   VkSamplerCreateInfo samplerInfo,
-						   const SamplerSettings &settings = SamplerSettings {});
+		void
+			createSampler(const ADeviceBackend &deviceBackend,
+						  VkSamplerCreateInfo samplerInfo,
+						  const SamplerSettings &settings = SamplerSettings {});
 
 		/**
 		 * @brief The Vulkan image associated with this GPUTexture, which holds

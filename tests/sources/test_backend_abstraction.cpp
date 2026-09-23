@@ -27,6 +27,7 @@
 #include <evan/IPlatform.hpp>
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -59,8 +60,7 @@ namespace xider::tests
 			return 0;
 		}
 
-		std::vector<int64_t>
-			enumerateSwapchainFormats(uint32_t) const override
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t) const override
 		{
 			return {};
 		}
@@ -75,8 +75,8 @@ namespace xider::tests
 			return evan::Error::Ok;
 		}
 
-		evan::Error
-			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error processFrame(VkPresentInfoKHR,
+								 evan::ASwapchainImage &) override
 		{
 			return evan::Error::Ok;
 		}
@@ -113,8 +113,7 @@ namespace xider::tests
 			return 0;
 		}
 
-		std::vector<int64_t>
-			enumerateSwapchainFormats(uint32_t) const override
+		std::vector<int64_t> enumerateSwapchainFormats(uint32_t) const override
 		{
 			return {};
 		}
@@ -129,8 +128,8 @@ namespace xider::tests
 			return evan::Error::Ok;
 		}
 
-		evan::Error
-			processFrame(VkPresentInfoKHR, evan::ASwapchainImage &) override
+		evan::Error processFrame(VkPresentInfoKHR,
+								 evan::ASwapchainImage &) override
 		{
 			return evan::Error::Ok;
 		}
@@ -188,6 +187,12 @@ namespace xider::tests
 			createSwapchainContext(const evan::DeviceContext &) const override
 		{
 			return nullptr;
+		}
+
+		protected:
+		std::filesystem::path getDefaultCacheRoot() const override
+		{
+			return {};
 		}
 	};
 

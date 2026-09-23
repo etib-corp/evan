@@ -26,17 +26,17 @@ namespace evan
 		Ok = 0,
 
 		// Recoverable — the consumer should react and keep running.
-		Suboptimal,			 // VK_SUBOPTIMAL_KHR: presentable, recreate soon
-		SwapchainOutOfDate,	 // VK_ERROR_OUT_OF_DATE_KHR: recreate swapchain
-		NotReady,			 // VK_NOT_READY / XR session not running / invalid
-							 // time
+		Suboptimal,			   // VK_SUBOPTIMAL_KHR: presentable, recreate soon
+		SwapchainOutOfDate,	   // VK_ERROR_OUT_OF_DATE_KHR: recreate swapchain
+		NotReady,	 // VK_NOT_READY / XR session not running / invalid
+					 // time
 
 		// Fatal — the consumer should stop cleanly.
-		DeviceLost,	 // VK_ERROR_DEVICE_LOST
-		RuntimeLost,	 // XR_ERROR_SESSION_LOST / XR_ERROR_INSTANCE_LOST /
-					 // XR_SESSION_STATE_LOSS_PENDING
-		OutOfMemory,	 // VK_ERROR_OUT_OF_{HOST,DEVICE}_MEMORY
-		RuntimeError	 // anything else / GLFW errors
+		DeviceLost,		// VK_ERROR_DEVICE_LOST
+		RuntimeLost,	// XR_ERROR_SESSION_LOST / XR_ERROR_INSTANCE_LOST /
+						// XR_SESSION_STATE_LOSS_PENDING
+		OutOfMemory,	// VK_ERROR_OUT_OF_{HOST,DEVICE}_MEMORY
+		RuntimeError	// anything else / GLFW errors
 	};
 
 	/**
@@ -83,8 +83,7 @@ namespace evan
 	 * @tparam T The value type (must be default-constructible, which Vulkan
 	 * handles and std::vector/std::shared_ptr satisfy).
 	 */
-	template <typename T>
-	struct Result {
+	template<typename T> struct Result {
 		Error code = Error::Ok;
 		T value {};
 	};

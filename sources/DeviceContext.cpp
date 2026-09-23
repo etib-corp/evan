@@ -97,16 +97,33 @@ evan::DeviceContext::DeviceContext(const IPlatform &platform)
 	}
 	this->createGraphicsQueue();
 	this->createCommandPool();
+
+	QueueFamilyIndices indices = _deviceBackend->findQueueFamilies();
+	_transferManager.init(_deviceBackend->getDevice(),
+						  _deviceBackend->getPhysicalDevice(), _graphicsQueue,
+						  indices.graphicsFamily.value());
+
+	this->getLogger().info() << "Creating pipeline cache...";
+	_pipelineCache.init(_deviceBackend->getDevice(),
+						_deviceBackend->getPhysicalDevice(),
+						platform.getPipelineCachePath());
 }
 
 evan::DeviceContext::~DeviceContext()
 {
 	this->getLogger().info() << "Cleaning up device context...";
+	_transferManager.destroy();
 	vkDestroyCommandPool(_deviceBackend->getDevice(), _commandPool, nullptr);
 	if (enableValidationLayers && _debugMessenger != VK_NULL_HANDLE) {
 		this->destroyDebugUtilsMessengerEXT(_deviceBackend->getInstance(),
 											_debugMessenger);
 	}
+	// The pipelines created with the cache are already destroyed by the
+	// renderer at this point, so the blob can be flushed to disk before the
+	// cache and the device go away.
+	this->getLogger().info() << "Persisting pipeline cache...";
+	_pipelineCache.persist();
+	_pipelineCache.destroy(_deviceBackend->getDevice());
 	_deviceBackend.reset();
 }
 
@@ -156,6 +173,16 @@ VkCommandPool evan::DeviceContext::getCommandPool() const
 VkQueue evan::DeviceContext::getGraphicsQueue() const
 {
 	return _graphicsQueue;
+}
+
+evan::TransferManager &evan::DeviceContext::getTransferManager()
+{
+	return _transferManager;
+}
+
+const evan::PipelineCache &evan::DeviceContext::getPipelineCache() const
+{
+	return _pipelineCache;
 }
 
 void evan::DeviceContext::getMaxUsableSampleCount()
@@ -229,8 +256,8 @@ void evan::DeviceContext::createGraphicsQueue()
 
 	this->getLogger().info()
 		<< "Graphics queue family index: " << indices.graphicsFamily.value();
-	vkGetDeviceQueue(_deviceBackend->getDevice(), indices.graphicsFamily.value(), 0,
-					 &_graphicsQueue);
+	vkGetDeviceQueue(_deviceBackend->getDevice(),
+					 indices.graphicsFamily.value(), 0, &_graphicsQueue);
 }
 
 bool evan::DeviceContext::checkDebugUtilsSupport(VkInstance instance)
@@ -301,8 +328,9 @@ void evan::DeviceContext::setupDebugMessenger()
 	VkDebugUtilsMessengerCreateInfoEXT createInfo;
 
 	this->populateDebugMessengerCreateInfo(createInfo, defaultDebugCallback);
-	if (this->createDebugUtilsMessengerEXT(
-			_deviceBackend->getInstance(), &createInfo, nullptr, &_debugMessenger)
+	if (this->createDebugUtilsMessengerEXT(_deviceBackend->getInstance(),
+										   &createInfo, nullptr,
+										   &_debugMessenger)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to set up debug messenger!";
 		return;

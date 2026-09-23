@@ -17,8 +17,9 @@
 
 #include "evan/GPUShader.hpp"
 #include "evan/GPUVertex.hpp"
+#include "evan/GPUMesh.hpp"
 
-#include "evan/Scene.hpp"
+#include "evan/RenderObject.hpp"
 
 #include <utility/graphic/view.hpp>
 
@@ -28,6 +29,8 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <memory>
+#include <vector>
 
 namespace evan
 {
@@ -110,25 +113,52 @@ namespace evan
 		void destroy(VkDevice device);
 
 		/**
+		 * @brief Registers a render object in the renderer's object registry.
+		 *
+		 * The renderer owns the registry of render objects drawn each frame.
+		 * The object is assigned a unique object ID, which can later be used
+		 * to remove it or to access it (e.g. for in-place mesh updates).
+		 *
+		 * @param object A shared pointer to the RenderObject to register.
+		 * @return The unique object ID assigned to the render object.
+		 */
+		size_t addObject(std::shared_ptr<RenderObject> object);
+
+		/**
+		 * @brief Removes a render object from the renderer's registry.
+		 *
+		 * @param objectID The object ID of the render object to remove.
+		 * @return True if the object was found and removed, false otherwise.
+		 */
+		bool removeObject(size_t objectID);
+
+		/**
+		 * @brief Retrieves a render object from the renderer's registry.
+		 *
+		 * @param objectID The object ID of the render object to retrieve.
+		 * @return A shared pointer to the RenderObject if found, or nullptr if
+		 * no object with the given ID exists.
+		 */
+		std::shared_ptr<RenderObject> getObject(size_t objectID) const;
+
+		/**
 		 * @brief Draws a frame by recording command buffers and submitting them
 		 * to the graphics queue.
 		 *
 		 * This method handles the rendering of a frame by updating the uniform
-		 * buffer with scene data, recording the command buffer with the
+		 * buffer, recording the command buffer with the
 		 * appropriate render pass and framebuffer, and submitting the command
 		 * buffer to the graphics queue for execution. It takes references to
-		 * the DeviceContext, ASwapchainContext, and Scene as parameters to
-		 * access the necessary resources and data for rendering. Implement this
-		 * method to ensure that frames are rendered correctly based on the
-		 * current scene and swapchain context.
+		 * the DeviceContext and ASwapchainContext as parameters to access the
+		 * necessary resources and data for rendering. Implement this method to
+		 * ensure that frames are rendered correctly based on the registered
+		 * render objects and the swapchain context.
 		 *
 		 * @param deviceContext A reference to the DeviceContext, which provides
 		 * access to the Vulkan device and related resources.
 		 * @param swapchainContext A reference to the ASwapchainContext, which
 		 * provides access to the swapchain and render pass for rendering
 		 * operations.
-		 * @param scene A reference to the Scene, which contains the data to be
-		 * rendered in the frame, including meshes, materials, and textures.
 		 *
 		 * @return evan::Error::Ok on success. evan::Error::Suboptimal or
 		 * evan::Error::SwapchainOutOfDate when the swapchain was recreated and
@@ -136,14 +166,13 @@ namespace evan
 		 * (e.g. evan::Error::DeviceLost) and the caller should stop cleanly.
 		 *
 		 * @note This method should be called for each frame that needs to be
-		 * rendered. Ensure that the DeviceContext, ASwapchainContext, and Scene
-		 * are properly initialized and contain valid data before calling this
+		 * rendered. Ensure that the DeviceContext and ASwapchainContext are
+		 * properly initialized and contain valid data before calling this
 		 * method to avoid rendering issues or exceptions during command buffer
 		 * recording and submission.
 		 */
 		Error drawFrame(const DeviceContext &deviceContext,
-						ASwapchainContext &swapchainContext,
-						const Scene &scene);
+						ASwapchainContext &swapchainContext);
 
 		/**
 		 * @brief Creates a frame for rendering.
@@ -217,6 +246,101 @@ namespace evan
 		 * Renderer.
 		 */
 		VkDescriptorSetLayout getDescriptorSetLayout() const;
+
+		/**
+		 * @brief Enables or disables frustum and distance culling.
+		 *
+		 * When enabled, meshes whose bounds are fully outside the current
+		 * view frustum (or beyond the maximum draw distance) are skipped
+		 * before recording their draw commands. Disable for debugging: a
+		 * wrong bound then never hides geometry.
+		 *
+		 * @param enabled True to cull, false to draw every mesh.
+		 */
+		void setCullingEnabled(bool enabled) { _cullingEnabled = enabled; }
+
+		/**
+		 * @brief Checks whether culling is currently enabled.
+		 *
+		 * @return True when culling is enabled.
+		 */
+		[[nodiscard]] bool isCullingEnabled() const { return _cullingEnabled; }
+
+		/**
+		 * @brief Sets the maximum draw distance for distance culling.
+		 *
+		 * Meshes whose bounding sphere is entirely beyond this distance from
+		 * the view are culled. A value of 0 disables distance culling.
+		 *
+		 * @param maxDistance Maximum draw distance in world units (0 disables).
+		 */
+		void setMaxDrawDistance(float maxDistance)
+		{
+			_maxDrawDistance = maxDistance;
+		}
+
+		/**
+		 * @brief Retrieves the maximum draw distance.
+		 *
+		 * @return The maximum draw distance (0 means disabled).
+		 */
+		[[nodiscard]] float getMaxDrawDistance() const
+		{
+			return _maxDrawDistance;
+		}
+
+		/**
+		 * @brief Enables or disables instanced rendering.
+		 *
+		 * When enabled, consecutive meshes sharing the same geometry
+		 * (pipeline, material, vertex and index buffers) are merged into a
+		 * single vkCmdDrawIndexed with instanceCount > 1, and each mesh's
+		 * transform is fed to the vertex shader from the per-frame instance
+		 * buffer. The application must use per-instance transforms and a
+		 * vertex shader that consumes the instance matrix for this to render
+		 * correctly. Disabled by default.
+		 *
+		 * @param enabled True to batch identical meshes into instanced draws.
+		 */
+		void setInstancingEnabled(bool enabled)
+		{
+			_instancingEnabled = enabled;
+		}
+
+		/**
+		 * @brief Checks whether instanced rendering is enabled.
+		 *
+		 * @return True when instancing is enabled.
+		 */
+		[[nodiscard]] bool isInstancingEnabled() const
+		{
+			return _instancingEnabled;
+		}
+
+		/**
+		 * @brief Enables or disables indirect drawing.
+		 *
+		 * When enabled, the sorted draws are written into the per-frame
+		 * indirect buffer and submitted with vkCmdDrawIndexedIndirect, one
+		 * call per consecutive group sharing the same pipeline/descriptor/
+		 * vertex state. Disabled by default.
+		 *
+		 * @param enabled True to batch draws through the indirect buffer.
+		 */
+		void setIndirectDrawingEnabled(bool enabled)
+		{
+			_indirectDrawingEnabled = enabled;
+		}
+
+		/**
+		 * @brief Checks whether indirect drawing is enabled.
+		 *
+		 * @return True when indirect drawing is enabled.
+		 */
+		[[nodiscard]] bool isIndirectDrawingEnabled() const
+		{
+			return _indirectDrawingEnabled;
+		}
 
 		protected:
 		std::map<uint32_t, VkPipeline>
@@ -301,21 +425,36 @@ namespace evan
 		 */
 		VkDescriptorPool _descriptorPool;
 
+		/**
+		 * @brief The registry of render objects owned by the renderer.
+		 *
+		 * The key is the unique object ID returned by addObject(), and the
+		 * value is the RenderObject whose GPU meshes are drawn each frame.
+		 * This is the single owner of the renderable content registered by
+		 * the application.
+		 */
+		std::map<size_t, std::shared_ptr<RenderObject>> _objects;
+
+		/**
+		 * @brief A counter to generate unique object IDs for the registered
+		 * render objects. Incremented each time a new object is added.
+		 */
+		size_t _nextObjectID = 1;
+
 		private:
 		/**
-		 * @brief Updates the uniform buffer with scene data for the current
+		 * @brief Updates the uniform buffer with view data for the current
 		 * frame.
 		 *
 		 * This method is responsible for updating the uniform buffer with the
-		 * necessary data from the Scene for the current frame being rendered.
-		 * It takes references to the Scene, ASwapchainContext, and the current
-		 * frame index as parameters to access the relevant data and resources
+		 * view data for the current frame being rendered.
+		 * It takes the current view as parameter to access the relevant data
 		 * needed for updating the uniform buffer. Implement this method to
 		 * ensure that the uniform buffer contains the correct data for
-		 * rendering the scene in each frame.
+		 * rendering in each frame.
 		 */
-		void updateUniformBuffer(const Scene &scene,
-								 const utility::graphic::ViewF &view);
+		void updateUniformBuffer(const utility::graphic::ViewF &view,
+								 std::size_t viewSlot);
 
 		/**
 		 * @brief Resets the command buffers for the current frame.
@@ -334,17 +473,20 @@ namespace evan
 		 *
 		 * This method is responsible for recording the command buffer with the
 		 * necessary commands to render a frame based on the provided render
-		 * pass, framebuffer, swap chain extent, and scene data. It takes
+		 * pass, framebuffer, swap chain extent, and mesh list. It takes
 		 * references to the render pass, framebuffer, swap chain extent, and
-		 * scene as parameters to access the relevant resources and data needed
+		 * mesh list as parameters to access the relevant resources and data needed
 		 * for recording the command buffer. Implement this method to ensure
 		 * that the command buffer contains the correct commands for rendering
 		 * the scene in each frame.
+		 *
+		 * @param view The view state used to build the culling frustum.
 		 */
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
 								 VkExtent2D swapChainExtent,
-								 const Scene &scene);
+								 std::size_t viewSlot,
+								 const utility::graphic::ViewF &view);
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering
@@ -392,6 +534,22 @@ namespace evan
 		 */
 		void createDescriptorPool(VkDevice device, uint32_t materialCount);
 
+		/**
+		 * @brief Retrieves the list of GPU meshes associated with the
+		 * registered render objects.
+		 *
+		 * This method returns a vector of shared pointers to GPUMesh objects
+		 * that are associated with the registered render objects in the
+		 * Renderer. Each GPUMesh represents a mesh that can be drawn during
+		 * rendering operations. Implement this method to provide access to the
+		 * list of GPU meshes for other components of the rendering system that
+		 * may need to access or manipulate the meshes for rendering purposes.
+		 *
+		 * @return A vector of shared pointers to GPUMesh objects associated
+		 * with the registered render objects.
+		 */
+		std::vector<std::shared_ptr<GPUMesh>> getMeshes() const;
+
 		std::shared_ptr<RessourceManager>
 			_ressourceManager;	  ///< A shared pointer to the RessourceManager,
 								  ///< which is responsible for managing
@@ -404,5 +562,25 @@ namespace evan
 								  ///< allows the Renderer to efficiently manage
 								  ///< and utilize resources during the
 								  ///< rendering process.
+
+		/**
+		 * @brief Whether frustum and distance culling are active.
+		 */
+		bool _cullingEnabled = true;
+
+		/**
+		 * @brief Maximum draw distance for distance culling (0 disables it).
+		 */
+		float _maxDrawDistance = 0.0f;
+
+		/**
+		 * @brief Whether identical meshes are merged into instanced draws.
+		 */
+		bool _instancingEnabled = false;
+
+		/**
+		 * @brief Whether draws are batched through an indirect draw buffer.
+		 */
+		bool _indirectDrawingEnabled = false;
 	};
 }	 // namespace evan

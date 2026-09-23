@@ -9,6 +9,8 @@
 
 #include "evan/openxr/IXrPlatform.hpp"
 
+#include <filesystem>
+
 namespace evan
 {
 	/**
@@ -171,6 +173,21 @@ namespace evan
 		 * lifecycle on Android devices.
 		 */
 		AndroidAppState _appState = {};
+
+		protected:
+		/**
+		 * @brief Get the cache root directory of the Android application.
+		 *
+		 * Android applications may only write inside the directories the
+		 * system gave them, so this method asks the Java activity for its
+		 * cache directory (`Context.getCacheDir()`) through the Java VM stored
+		 * in the platform data. This is where the Vulkan pipeline cache blob
+		 * is persisted, so compiled pipelines are reused across launches.
+		 *
+		 * @return The absolute path of the application cache directory, or an
+		 * empty path when it cannot be resolved (which disables persistence).
+		 */
+		std::filesystem::path getDefaultCacheRoot() const override;
 
 		private:
 #ifdef __ANDROID__

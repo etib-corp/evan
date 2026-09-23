@@ -9,6 +9,8 @@
 
 #include "evan/glfw/IDesktopPlatform.hpp"
 
+#include <filesystem>
+
 namespace evan
 {
 	/**
@@ -67,5 +69,14 @@ namespace evan
 		 * create a window surface that can be used with Vulkan on Linux.
 		 */
 		VkSurfaceKHR createSurface(VkInstance instance) const override;
+
+		protected:
+		/**
+		 * @brief Get the Linux cache root directory.
+		 *
+		 * @return `XDG_CACHE_HOME` when set, `~/.cache` otherwise, or an empty
+		 * path when neither is available.
+		 */
+		std::filesystem::path getDefaultCacheRoot() const override;
 	};
 }	 // namespace evan

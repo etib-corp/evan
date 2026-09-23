@@ -12,15 +12,18 @@ set(EVAN_SOURCES_COMMON
     sources/Engine.cpp
     sources/Error.cpp
     sources/Frame.cpp
+    sources/Frustum.cpp
     sources/GPUMaterial.cpp
     sources/GPUMesh.cpp
     sources/GPUShader.cpp
     sources/GPUTexture.cpp
+    sources/IPlatform.cpp
     sources/MemoryType.cpp
+    sources/PipelineCache.cpp
     sources/RenderObject.cpp
     sources/Renderer.cpp
     sources/RessourceManager.cpp
-    sources/Scene.cpp
+    sources/TransferManager.cpp
     sources/Version.cpp
     sources/ViewSet.cpp
 )

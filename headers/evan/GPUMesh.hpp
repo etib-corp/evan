@@ -13,6 +13,10 @@
 
 #include "evan/GPUVertex.hpp"
 
+#include <glm/glm.hpp>
+
+#include <utility/math/aabb.hpp>
+
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
@@ -154,6 +158,36 @@ namespace evan
 		uint32_t getMaterialID() const;
 
 		/**
+		 * @brief Retrieves the axis-aligned bounding box of this mesh.
+		 *
+		 * The box is computed from the vertex positions at creation time and
+		 * refreshed whenever updateVertices() is called. An empty box
+		 * (isEmpty()) means the mesh has no vertices and must be treated as
+		 * always visible by culling code.
+		 *
+		 * @return A constant reference to the mesh bounding box.
+		 */
+		[[nodiscard]] const utility::math::AabbF &getBounds() const;
+
+		/**
+		 * @brief Sets the per-instance model transform of this mesh.
+		 *
+		 * Used only when renderer instancing is enabled: the transform is
+		 * written into the per-frame instance buffer and applied by the
+		 * vertex shader instead of baking it into the vertex positions.
+		 *
+		 * @param transform The 4x4 model matrix of this mesh instance.
+		 */
+		void setTransform(const glm::mat4 &transform);
+
+		/**
+		 * @brief Retrieves the per-instance model transform of this mesh.
+		 *
+		 * @return The 4x4 model matrix (identity by default).
+		 */
+		[[nodiscard]] const glm::mat4 &getTransform() const;
+
+		/**
 		 * @brief Updates the vertex data of the mesh in place.
 		 *
 		 * This method re-uploads vertex data to the already-allocated vertex
@@ -168,7 +202,8 @@ namespace evan
 		 *
 		 * @note The method performs a staging upload followed by a buffer copy,
 		 * so it should not be called every frame for large meshes. It avoids
-		 * buffer creation and destruction, but still performs a device transfer.
+		 * buffer creation and destruction, but still performs a device
+		 * transfer.
 		 */
 		void updateVertices(const std::vector<GPUVertex> &vertices);
 
@@ -259,6 +294,18 @@ namespace evan
 		 * properties.
 		 */
 		uint32_t _materialID = 0;
+
+		/**
+		 * Per-instance model transform. Identity by default; only consumed
+		 * when renderer instancing is enabled.
+		 */
+		glm::mat4 _transform = glm::mat4(1.0f);
+
+		/**
+		 * The mesh bounding box, computed from vertex positions and refreshed
+		 * by updateVertices(). Empty when the mesh has no vertices.
+		 */
+		utility::math::AabbF _bounds;
 
 		/**
 		 * The device context used to create this mesh, kept alive for the

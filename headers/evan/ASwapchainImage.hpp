@@ -299,8 +299,7 @@ namespace evan
 		 * framebuffer only references the swapchain image view and the depth
 		 * view.
 		 */
-		void createFramebuffers(VkDevice logicalDevice,
-								VkRenderPass renderPass,
+		void createFramebuffers(VkDevice logicalDevice, VkRenderPass renderPass,
 								bool resolveToSwapchain);
 
 		/**

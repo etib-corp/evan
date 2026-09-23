@@ -45,8 +45,8 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 					<< shaderID << ". Defaulting to Albedo.";
 				textureType = GPUTexture::TextureType::Albedo;
 		}
-		_textures.emplace_back(std::make_shared<GPUTexture>(
-			deviceContext, *texture, textureType));
+		_textures.emplace_back(
+			std::make_shared<GPUTexture>(deviceContext, *texture, textureType));
 	}
 
 	_descriptorPool = renderer.getDescriptorPool();
@@ -90,8 +90,8 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 							   uint32_t shaderID)
 {
 	if (material.getVersion() == _uploadedVersion) {
-		this->getLogger().info()
-			<< "GREP No update needed for GPUMaterial with shader ID: "
+		this->getLogger().debug()
+			<< "No update needed for GPUMaterial with shader ID: "
 			<< shaderID << " and material version: " << material.getVersion()
 			<< ". Material version is unchanged.";
 		return;
@@ -137,13 +137,13 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 					<< shaderID << ". Defaulting to Albedo.";
 				textureType = GPUTexture::TextureType::Albedo;
 		}
-		_textures.emplace_back(std::make_shared<GPUTexture>(
-			deviceContext, *texture, textureType));
+		_textures.emplace_back(
+			std::make_shared<GPUTexture>(deviceContext, *texture, textureType));
 	}
 
-	vkFreeDescriptorSets(deviceBackend->getDevice(), renderer.getDescriptorPool(),
-						 static_cast<uint32_t>(_descriptorSets.size()),
-						 _descriptorSets.data());
+	vkFreeDescriptorSets(
+		deviceBackend->getDevice(), renderer.getDescriptorPool(),
+		static_cast<uint32_t>(_descriptorSets.size()), _descriptorSets.data());
 	this->createDescriptorSets(
 		deviceBackend->getDevice(), renderer.getDescriptorSetLayout(),
 		renderer.getDescriptorPool(), renderer.getUniformBuffers());
@@ -155,7 +155,8 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 // Getters //
 /////////////
 
-std::vector<VkDescriptorSet> evan::GPUMaterial::getDescriptorSets() const
+const std::vector<VkDescriptorSet> &
+evan::GPUMaterial::getDescriptorSets() const
 {
 	return _descriptorSets;
 }
@@ -246,7 +247,7 @@ void evan::GPUMaterial::createDescriptorSets(
 		uboWrite.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		uboWrite.dstSet			 = _descriptorSets[i];
 		uboWrite.dstBinding		 = 0;
-		uboWrite.descriptorType	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboWrite.descriptorType	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		uboWrite.descriptorCount = 1;
 		uboWrite.pBufferInfo	 = &bufferInfo;
 

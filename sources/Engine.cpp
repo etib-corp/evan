@@ -7,16 +7,59 @@
 
 #include <typeindex>
 #include <limits>
+#include <cmath>
+#include <map>
 
 #include <utility/event/quit_event.hpp>
 #include <utility/event/keyboard_event.hpp>
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
+#include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_button_event.hpp>
 
 #include "evan/Engine.hpp"
+#include "evan/RenderObject.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+
+namespace
+{
+	/**
+	 * @brief Applies a world-space view offset to a tracked pose.
+	 *
+	 * Matches how XrSwapchainContext applies the offset to the tracked eye
+	 * poses: the offset position is added and the offset orientation is
+	 * pre-multiplied onto the tracked orientation.
+	 *
+	 * @param pose The tracked pose to offset.
+	 * @param offset The world-space offset to apply.
+	 * @return The offset pose.
+	 */
+	utility::graphic::PoseF
+		applyViewOffset(const utility::graphic::PoseF &pose,
+						const utility::graphic::PoseF &offset)
+	{
+		const auto &position	 = pose.getPosition();
+		const auto &orientation	 = pose.getOrientation();
+		const auto &offsetPos	 = offset.getPosition();
+		const auto &offsetOrient = offset.getOrientation();
+
+		glm::quat baseQ(orientation.w, orientation.x, orientation.y,
+						orientation.z);
+		glm::quat offsetQ(offsetOrient.w, offsetOrient.x, offsetOrient.y,
+						  offsetOrient.z);
+		glm::quat finalQ = glm::normalize(offsetQ * baseQ);
+
+		return utility::graphic::PoseF(
+			utility::graphic::PositionF(position.getX() + offsetPos.getX(),
+										position.getY() + offsetPos.getY(),
+										position.getZ() + offsetPos.getZ()),
+			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
+										   finalQ.w));
+	}
+}	 // namespace
 
 evan::Engine::Engine(
 	std::shared_ptr<utility::RessourceProvider> ressourceProvider,
@@ -60,9 +103,6 @@ evan::Engine::Engine(
 		_deviceContext, _swapchainContext->getRenderPass(),
 		_swapchainContext->getMsaaSamples(), _ressourceManager);
 	_ressourceManager->init(_renderer);
-	_currentScene = 0;
-
-	_scenes[0] = std::make_shared<Scene>();
 }
 
 evan::Engine::~Engine()
@@ -78,11 +118,9 @@ evan::Engine::~Engine()
 	vkDeviceWaitIdle(device);
 
 	_swapchainContext->destroy(device);
-	for (auto &[_, scene]: _scenes) {
-		scene->destroy(device);
-	}
 	// Release materials, textures and shaders before the renderer destroys the
-	// descriptor pool and uniform buffers they reference.
+	// descriptor pool and uniform buffers they reference. The renderer owns the
+	// registered render objects and destroys their GPU meshes in its destroy().
 	_ressourceManager->cleanup();
 	_renderer->destroy(device);
 	_renderer.reset();
@@ -138,10 +176,8 @@ size_t evan::Engine::addText(std::shared_ptr<utility::graphic::Text> text)
 	std::shared_ptr<RenderObject> textObject =
 		std::make_shared<RenderObject>(_deviceContext, rawObjects, "text");
 
-	this->getLogger().info()
-		<< "Adding text RenderObject to current scene: " << _currentScene;
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, textObject);
+	this->getLogger().info() << "Adding text RenderObject to engine...";
+	auto objectID = _renderer->addObject(textObject);
 	_ressourceManager->sync();
 	return objectID;
 }
@@ -167,8 +203,7 @@ size_t evan::Engine::addPrimitive(
 
 	std::shared_ptr<RenderObject> primitiveObject =
 		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, primitiveObject);
+	auto objectID = _renderer->addObject(primitiveObject);
 	_ressourceManager->sync();
 
 	return objectID;
@@ -191,8 +226,7 @@ size_t evan::Engine::addModel(std::shared_ptr<utility::graphic::Model> model)
 
 	std::shared_ptr<RenderObject> modelObject =
 		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, modelObject);
+	auto objectID = _renderer->addObject(modelObject);
 	_ressourceManager->sync();
 
 	return objectID;
@@ -223,8 +257,7 @@ size_t evan::Engine::addObject(
 		renderMethod.empty() ? "mesh" : renderMethod;
 	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
 		_deviceContext, rawObjects, pipelineLayer);
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, renderObject);
+	auto objectID = _renderer->addObject(renderObject);
 	_ressourceManager->sync();
 
 	return objectID;
@@ -245,20 +278,54 @@ size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
 	rawObjects.emplace(material_id, mesh);
 	std::shared_ptr<RenderObject> meshObject =
 		std::make_shared<RenderObject>(_deviceContext, rawObjects, shader);
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, meshObject);
+	auto objectID = _renderer->addObject(meshObject);
 	_ressourceManager->sync();
 	return objectID;
 }
 
 bool evan::Engine::removeObject(size_t objectID)
 {
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return false;
+	this->getLogger().info() << "Removing renderable object with ID "
+							 << objectID << " from engine...";
+	return _renderer->removeObject(objectID);
+}
+
+bool evan::Engine::setObjectTransform(size_t objectID,
+									  const glm::mat4 &transform)
+{
+	auto object = _renderer->getObject(objectID);
+	object->setTransform(transform);
+	return true;
+}
+
+void evan::Engine::setInstancingEnabled(bool enabled)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot enable instancing: renderer not initialized.";
+		return;
 	}
-	return currentSceneIt->second->removeObject(
-		static_cast<uint32_t>(objectID));
+	_renderer->setInstancingEnabled(enabled);
+}
+
+bool evan::Engine::isInstancingEnabled() const
+{
+	return _renderer && _renderer->isInstancingEnabled();
+}
+
+void evan::Engine::setIndirectDrawingEnabled(bool enabled)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot enable indirect drawing: renderer not initialized.";
+		return;
+	}
+	_renderer->setIndirectDrawingEnabled(enabled);
+}
+
+bool evan::Engine::isIndirectDrawingEnabled() const
+{
+	return _renderer && _renderer->isIndirectDrawingEnabled();
 }
 
 utility::graphic::ViewF evan::Engine::getView(void) const
@@ -304,17 +371,7 @@ utility::graphic::ViewF evan::Engine::getView(void) const
 		leftView.getNearPlane(), leftView.getFarPlane());
 }
 
-void evan::Engine::addScene(size_t sceneIndex)
-{
-	this->getLogger().info() << "Adding new scene with index: " << sceneIndex;
-
-	_scenes[sceneIndex] = std::make_shared<Scene>();
-	if (_scenes.size() == 1) {
-		_currentScene = sceneIndex;
-	}
-}
-
-void evan::Engine::update()
+evan::Error evan::Engine::update()
 {
 	updateDeltaTime();
 	this->getLogger().info() << "Updating engine state...";
@@ -347,23 +404,7 @@ evan::Error evan::Engine::render()
 {
 	this->getLogger().info() << "Starting render process...";
 
-	if (_scenes.empty()) {
-		this->getLogger().warning()
-			<< "No scenes available to render. Skipping render process.";
-		return Error::Ok;
-	}
-
-	this->getLogger().info()
-		<< "Rendering current scene with index: " << _currentScene;
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		this->getLogger().warning()
-			<< "Current scene not found. Skipping render process.";
-		return Error::RuntimeError;
-	}
-
-	return _renderer->drawFrame(*_deviceContext, *_swapchainContext,
-								*currentSceneIt->second);
+	return _renderer->drawFrame(*_deviceContext, *_swapchainContext);
 }
 
 evan::Error evan::Engine::getLastError() const
@@ -377,6 +418,37 @@ void evan::Engine::pollEvents()
 
 	utility::event::QuitEvent::Factory quitEventFactory;
 	auto events = _platform->pollEvents(*_deviceContext->getDeviceBackend());
+
+	// The view offset moves the viewer without moving the raw tracking space,
+	// so tracked hands must be offset by the same amount to stay attached to
+	// the virtual body (and keep the debug ray aligned with the hand).
+	const auto &viewOffset = _swapchainContext->getViewOffset();
+	for (auto &event: events) {
+		if (auto handMotionEvent =
+				std::dynamic_pointer_cast<utility::event::HandMotionEvent>(
+					event)) {
+			handMotionEvent->setAim(
+				applyViewOffset(handMotionEvent->getAim(), viewOffset));
+			handMotionEvent->setGrip(
+				applyViewOffset(handMotionEvent->getGrip(), viewOffset));
+		}
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			thumbStickEvent->setAim(
+				applyViewOffset(thumbStickEvent->getAim(), viewOffset));
+			thumbStickEvent->setGrip(
+				applyViewOffset(thumbStickEvent->getGrip(), viewOffset));
+		}
+		if (auto handButtonEvent =
+				std::dynamic_pointer_cast<utility::event::HandButtonEvent>(
+					event)) {
+			handButtonEvent->setAim(
+				applyViewOffset(handButtonEvent->getAim(), viewOffset));
+			handButtonEvent->setGrip(
+				applyViewOffset(handButtonEvent->getGrip(), viewOffset));
+		}
+	}
 
 	if (_platform->shouldClose())
 		events.emplace_back(quitEventFactory.create());
@@ -401,19 +473,6 @@ void evan::Engine::pollEvents()
 	}
 	for (auto &event: events) {
 		callback(event);
-	}
-}
-
-void evan::Engine::switchScene(size_t sceneIndex)
-{
-	this->getLogger().info() << "Switching to scene with index: " << sceneIndex;
-	if (_scenes.find(sceneIndex) != _scenes.end()) {
-		this->getLogger().info()
-			<< "Scene found. Switching current scene to index: " << sceneIndex;
-		_currentScene = sceneIndex;
-	} else {
-		this->getLogger().warning()
-			<< "Scene index " << sceneIndex << " does not exist.";
 	}
 }
 
@@ -458,6 +517,14 @@ void evan::Engine::handleViewportInput(
 					event)) {
 			handleHandMotionEvent(handMotionEvent, position, orientation,
 								  100.0f, 0.1f, _deltaTime);
+			continue;
+		}
+
+		if (auto thumbStickEvent =
+				std::dynamic_pointer_cast<utility::event::HandThumbStickEvent>(
+					event)) {
+			handleThumbStickEvent(thumbStickEvent, position, orientation, 10.0f,
+								  0.1f, _deltaTime);
 			continue;
 		}
 	}
@@ -602,6 +669,53 @@ void evan::Engine::handleHandMotionEvent(
 	updateDebugRay(handRay);
 }
 
+void evan::Engine::handleThumbStickEvent(
+	const std::shared_ptr<utility::event::HandThumbStickEvent> &thumbStickEvent,
+	utility::graphic::PositionF &position,
+	utility::graphic::OrientationF &orientation, float movementSpeed,
+	float rotationSpeed, float deltaTime)
+{
+	constexpr float deadZone = 0.15f;
+
+	const float axisX = thumbStickEvent->getX();
+	const float axisY = thumbStickEvent->getY();
+
+	if (std::abs(axisX) < deadZone && std::abs(axisY) < deadZone) {
+		return;
+	}
+
+	glm::quat q(orientation.w, orientation.x, orientation.y, orientation.z);
+
+	switch (thumbStickEvent->getHandType()) {
+		case utility::event::HandEvent::HandType::Left: {
+			glm::vec3 forward =
+				glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f));
+			glm::vec3 right = glm::normalize(q * glm::vec3(1.0f, 0.0f, 0.0f));
+
+			glm::vec3 movement =
+				(forward * axisY + right * axisX) * movementSpeed * deltaTime;
+
+			position = utility::graphic::PositionF(
+				position.getX() + movement.x, position.getY() + movement.y,
+				position.getZ() + movement.z);
+			break;
+		}
+		case utility::event::HandEvent::HandType::Right: {
+			glm::quat yawRotation = glm::angleAxis(
+				axisX * rotationSpeed * deltaTime, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			glm::quat newOrientation = glm::normalize(yawRotation * q);
+
+			orientation = utility::graphic::OrientationF(
+				newOrientation.x, newOrientation.y, newOrientation.z,
+				newOrientation.w);
+			break;
+		}
+		default:
+			break;
+	}
+}
+
 void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 {
 	utility::graphic::Mesh rayMesh =
@@ -612,16 +726,9 @@ void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 		return;
 	}
 
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return;
-	}
-
-	auto renderObject = currentSceneIt->second->getObject(
-		static_cast<uint32_t>(_debugRayObjectID));
+	auto renderObject = _renderer->getObject(_debugRayObjectID);
 	if (!renderObject) {
-		// The debug ray was registered in a different scene. Recreate it in
-		// the current scene.
+		// The debug ray object no longer exists. Recreate it.
 		_debugRayObjectID = this->addMesh(rayMesh, "mesh_material");
 		return;
 	}
@@ -641,16 +748,17 @@ void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 
 void evan::Engine::updateDeltaTime(void)
 {
-	static constexpr auto targetFrameTime =
-		std::chrono::duration<float>(1.0f / 60.0f);
-
 	auto currentTime = std::chrono::steady_clock::now();
 	auto elapsed	 = currentTime - _lastFrameTime;
 
-	if (elapsed < targetFrameTime) {
-		std::this_thread::sleep_for(targetFrameTime - elapsed);
-		currentTime = std::chrono::steady_clock::now();
-		elapsed		= currentTime - _lastFrameTime;
+	if (_targetFps > 0.0f) {
+		const auto targetFrameTime =
+			std::chrono::duration<float>(1.0f / _targetFps);
+		if (elapsed < targetFrameTime) {
+			std::this_thread::sleep_for(targetFrameTime - elapsed);
+			currentTime = std::chrono::steady_clock::now();
+			elapsed		= currentTime - _lastFrameTime;
+		}
 	}
 
 	_deltaTime	   = std::chrono::duration<float>(elapsed).count();

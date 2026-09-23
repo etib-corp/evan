@@ -333,6 +333,12 @@ namespace evan
 		VkQueue _presentQueue = VK_NULL_HANDLE;
 
 		/**
+		 * The platform instance used to query platform-specific Vulkan
+		 * requirements (instance creation flags and device extensions).
+		 */
+		const IPlatform *_platform = nullptr;
+
+		/**
 		 * @brief Checks if the specified Vulkan physical device is suitable for
 		 * use.
 		 *

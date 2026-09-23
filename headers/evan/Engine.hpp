@@ -15,9 +15,10 @@
 
 #include "evan/DeviceContext.hpp"
 #include "evan/Renderer.hpp"
-#include "evan/Scene.hpp"
 #include "evan/ASwapchainContext.hpp"
 #include "evan/IPlatform.hpp"
+
+#include <glm/glm.hpp>
 
 #include <utility/graphic/model.hpp>
 #include <utility/graphic/primitive.hpp>
@@ -31,13 +32,13 @@
 #include <utility/event/mouse_motion_event.hpp>
 #include <utility/event/mouse_button_event.hpp>
 #include <utility/event/hand_motion_event.hpp>
+#include <utility/event/hand_thumb_stick_event.hpp>
 
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
 #include <utility/engine.hpp>
 
-#include "Scene.hpp"
 #include "RenderObject.hpp"
 #include "RessourceManager.hpp"
 
@@ -49,17 +50,17 @@ namespace evan
 	/**
 	 * @brief The Engine class is the main entry point for the Evan Engine. It
 	 * manages the core components of the engine, including the device context,
-	 * renderer, scenes, swapchain context, and platform abstraction. The
+	 * renderer, swapchain context, and platform abstraction. The
 	 * Engine class is responsible for initializing these components, running
 	 * the main loop of the engine, and providing methods for updating and
-	 * rendering scenes. It serves as the central hub for managing the engine's
-	 * functionality and orchestrating the various subsystems to create a
-	 * cohesive experience.
+	 * rendering its render objects. It serves as the central hub for managing
+	 * the engine's functionality and orchestrating the various subsystems to
+	 * create a cohesive experience.
 	 *
 	 * The Engine class provides a high-level interface for interacting with
-	 * the engine, allowing users to add scenes, handle updates, and manage
-	 * rendering without needing to directly interact with the lower-level
-	 * components. It abstracts away the complexities of Vulkan and
+	 * the engine, allowing users to add render objects, handle updates, and
+	 * manage rendering without needing to directly interact with the
+	 * lower-level components. It abstracts away the complexities of Vulkan and
 	 * platform-specific details, providing a more user-friendly API for
 	 * developers using the Evan Engine.
 	 *
@@ -155,6 +156,57 @@ namespace evan
 		 * @return True when the object was removed from the scene.
 		 */
 		bool removeObject(size_t objectID) override;
+
+		/**
+		 * @brief Sets the model transform of an object in the current scene.
+		 *
+		 * The transform is stored per mesh and applied by the vertex shader
+		 * only when renderer instancing is enabled (see
+		 * Renderer::setInstancingEnabled). Before that, object transforms
+		 * continue to be baked into the uploaded vertex data.
+		 *
+		 * @param objectID The identifier returned by addText/addMesh/addObject.
+		 * @param transform The 4x4 model matrix to apply to the object.
+		 * @return True when the object was found and updated.
+		 */
+		bool setObjectTransform(size_t objectID, const glm::mat4 &transform);
+
+		/**
+		 * @brief Enables or disables instanced rendering.
+		 *
+		 * Forwards to the underlying Renderer. See
+		 * Renderer::setInstancingEnabled for details: the application must
+		 * use local-space geometry, per-object transforms and a vertex
+		 * shader that consumes the per-instance matrix for this to render
+		 * correctly.
+		 *
+		 * @param enabled True to merge identical meshes into instanced draws.
+		 */
+		void setInstancingEnabled(bool enabled);
+
+		/**
+		 * @brief Checks whether instanced rendering is enabled.
+		 *
+		 * @return True when instancing is enabled.
+		 */
+		[[nodiscard]] bool isInstancingEnabled() const;
+
+		/**
+		 * @brief Enables or disables indirect drawing.
+		 *
+		 * Forwards to the underlying Renderer. See
+		 * Renderer::setIndirectDrawingEnabled for details.
+		 *
+		 * @param enabled True to batch draws through the indirect buffer.
+		 */
+		void setIndirectDrawingEnabled(bool enabled);
+
+		/**
+		 * @brief Checks whether indirect drawing is enabled.
+		 *
+		 * @return True when indirect drawing is enabled.
+		 */
+		[[nodiscard]] bool isIndirectDrawingEnabled() const;
 
 		/**
 		 * @brief Get the mirrored view state.
@@ -319,11 +371,11 @@ namespace evan
 		void present(void) override;
 
 		/**
-		 * @brief Renders the current scene. This method is responsible for
-		 * drawing the objects in the current scene to the screen using the
-		 * renderer. It typically involves setting up the necessary graphics
-		 * pipelines, binding resources, and issuing draw calls to render the
-		 * objects in the scene. The render method may also handle
+		 * @brief Renders the engine's render objects. This method is
+		 * responsible for drawing the render objects registered in the engine
+		 * to the screen using the renderer. It typically involves setting up
+		 * the necessary graphics pipelines, binding resources, and issuing draw
+		 * calls to render the objects. The render method may also handle
 		 * post-processing effects, such as bloom or anti-aliasing, depending on
 		 * the specific requirements of the application being developed with the
 		 * engine.
@@ -334,7 +386,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error render();	   // For rendering the current scene.
+		Error render();	   // For rendering the render objects.
 
 		/**
 		 * @brief Returns the last error recorded by the platform.
@@ -376,35 +428,60 @@ namespace evan
 		void pollEvents() override;
 
 		/**
-		 * @brief Adds a new scene to the engine. This method allows users to
-		 * add a new scene to the engine by providing the necessary data, such
-		 * as texture paths and mesh data. The method takes in a vector of
-		 * texture paths, which are used to load the textures for the scene, and
-		 * a map of mesh data, which contains the information about the meshes
-		 * to be rendered in the scene. The method creates a new Scene object
-		 * using the provided data and adds it to the vector of scenes managed
-		 * by the engine. This allows users to easily create and manage multiple
-		 * scenes within the engine, enabling them to switch between different
-		 * scenes as needed.
+		 * @brief Checks if the engine should capture viewport input. This
+		 * method returns a boolean value indicating whether the engine is
+		 * currently set to capture input events for the viewport, such as mouse
+		 * movements or keyboard inputs.
 		 *
-		 * @param sceneIndex Scene identifier.
-		 *
-		 * @note The Engine class is designed to be flexible and extensible,
-		 * allowing for future enhancements and additions to the engine's
-		 * capabilities. The current implementation focuses on establishing the
-		 * core structure and functionality of the engine, with plans for
-		 * further improvements and optimizations in the future.
+		 * @return True if the engine should capture viewport input, false
+		 * otherwise.
 		 */
-		void addScene(size_t sceneIndex) override;
+		bool shouldCaptureViewportInput(void) const
+		{
+			return _shouldCaptureViewportInput;
+		}
 
 		/**
-		 * @brief Switches the current scene to the scene with the specified
-		 * index. This method allows users to navigate between different scenes
-		 * managed by the engine.
+		 * @brief Sets whether the engine should capture viewport input. This
+		 * method allows users to enable or disable the capturing of input
+		 * events for the viewport, such as mouse movements or keyboard inputs.
 		 *
-		 * @param sceneIndex The index of the scene to switch to.
+		 * @param shouldCapture A boolean value indicating whether the engine
+		 * should capture viewport input (true) or not (false).
 		 */
-		void switchScene(size_t sceneIndex);
+		void setShouldCaptureViewportInput(bool shouldCapture)
+		{
+			_shouldCaptureViewportInput = shouldCapture;
+		}
+
+		/**
+		 * @brief Gets the configured target frame rate for the loop limiter.
+		 *
+		 * A value of 0 means the loop is uncapped and paced by the
+		 * presentation mechanism (vsync on desktop, xrWaitFrame on OpenXR).
+		 *
+		 * @return The target FPS, or 0 when the limiter is disabled.
+		 */
+		float getTargetFps(void) const
+		{
+			return _targetFps;
+		}
+
+		/**
+		 * @brief Sets an optional frame-rate limiter for the main loop.
+		 *
+		 * When set to a value greater than 0, updateDeltaTime() sleeps to
+		 * prevent the loop from running faster than this rate. When set to 0
+		 * (the default), no artificial limit is applied and the loop is paced
+		 * by the presentation mechanism (vsync on desktop, xrWaitFrame on
+		 * OpenXR).
+		 *
+		 * @param fps The target frame rate, or 0 to disable the limiter.
+		 */
+		void setTargetFps(float fps)
+		{
+			_targetFps = fps;
+		}
 
 		protected:
 		/**
@@ -448,28 +525,6 @@ namespace evan
 		 * screen.
 		 */
 		std::shared_ptr<Renderer> _renderer;
-
-		/**
-		 * A map of scenes managed by the engine, where the key is a unique
-		 * identifier (size_t) for each scene, and the value is a Scene object
-		 * containing the data and resources for that scene. This allows the
-		 * engine to manage multiple scenes simultaneously, enabling users to
-		 * switch between different scenes as needed. Each Scene object contains
-		 * the necessary data for rendering, such as meshes, materials, and
-		 * textures, allowing the engine to efficiently manage and render
-		 * multiple scenes within the application.
-		 */
-		std::map<size_t, std::shared_ptr<Scene>> _scenes;
-
-		/**
-		 * An index to keep track of the current scene being rendered or
-		 * managed. This allows the engine to switch between different scenes as
-		 * needed, enabling users to easily navigate through different parts of
-		 * their application or game. The _currentScene index can be used to
-		 * determine which scene is currently active and should be rendered or
-		 * updated during the main loop of the engine.
-		 */
-		size_t _currentScene;
 
 		/**
 		 * A shared pointer to an ASwapchainContext object, which manages the
@@ -518,15 +573,16 @@ namespace evan
 
 		private:
 		/**
-		 * A counter to generate unique object IDs for scenes, render objects,
-		 * or other entities managed by the engine. This counter is incremented
-		 * each time a new object is created, ensuring that each object receives
-		 * a unique identifier that can be used for tracking and management
-		 * purposes within the engine. The _nextObjectID can be used to assign
-		 * IDs to new scenes, render objects, or any other entities that require
-		 * unique identification within the engine's data structures.
+		 * When true, the engine copies keyboard and mouse input for movement:
+		 * - Keyboard events are copied for entity movement and related actions.
+		 * - Mouse movement is copied for view/camera rotation.
+		 * - Event copying to UI entities is disabled.
+		 *
+		 * This flag is typically true when the UI does not have focus on
+		 * any entity. When false, input is routed to the UI instead of the
+		 * viewport.
 		 */
-		size_t _nextObjectID = 1;
+		bool _shouldCaptureViewportInput = true;
 
 		/**
 		 * A vector of shared pointers to Event objects representing the events
@@ -643,6 +699,26 @@ namespace evan
 			float rotationSpeed, float deltaTime);
 
 		/**
+		 * @brief Processes thumb stick events for camera movement and rotation.
+		 *
+		 * The left hand thumb stick translates the camera relative to its
+		 * current orientation, while the right hand thumb stick yaws it.
+		 *
+		 * @param thumbStickEvent The thumb stick event to process.
+		 * @param position Current camera position (modified in place).
+		 * @param orientation Current camera orientation (modified in place).
+		 * @param movementSpeed Movement speed multiplier.
+		 * @param rotationSpeed Rotation speed multiplier.
+		 * @param deltaTime Time elapsed since the last frame in seconds.
+		 */
+		void handleThumbStickEvent(
+			const std::shared_ptr<utility::event::HandThumbStickEvent>
+				&thumbStickEvent,
+			utility::graphic::PositionF &position,
+			utility::graphic::OrientationF &orientation, float movementSpeed,
+			float rotationSpeed, float deltaTime);
+
+		/**
 		 * @brief Updates the persistent debug ray visualization.
 		 *
 		 * Creates the debug ray mesh on the first call and updates its vertex
@@ -662,6 +738,15 @@ namespace evan
 		 * @brief Stores the delta time from the last frame in seconds.
 		 */
 		float _deltaTime { 0.0f };
+
+		/**
+		 * @brief Optional frame-rate limiter for the main loop.
+		 *
+		 * When greater than 0, updateDeltaTime() sleeps to hold the loop at
+		 * this frame rate. When 0 (the default), the loop is uncapped and
+		 * paced by the presentation mechanism.
+		 */
+		float _targetFps { 0.0f };
 
 		/**
 		 * @brief Get the delta time from the last frame in seconds.

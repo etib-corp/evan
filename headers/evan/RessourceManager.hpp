@@ -7,7 +7,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include <utility/ressource_provider.hpp>
@@ -98,6 +100,11 @@ namespace evan
 		 * @note This method should be called whenever there are changes in the
 		 * loaded materials or textures to ensure that the GPU resources are up
 		 * to date.
+		 *
+		 * @note This method binds const references to the provider's live maps.
+		 * It must run on the same thread as, and never interleaved with, any
+		 * provider mutation (e.g. font-atlas generation), otherwise iteration
+		 * would race with map reallocation.
 		 */
 		void sync(bool refresh = false);
 
@@ -145,13 +152,15 @@ namespace evan
 		std::shared_ptr<GPUShader> getShader(uint32_t id) const;
 
 		/**
-		 * @brief Retrieves a map of all GPUShaders managed by the
+		 * @brief Retrieves the map of all GPUShaders managed by the
 		 * RessourceManager.
 		 *
-		 * @return An unordered map where the key is the unique shader ID and
-		 * the value is a shared pointer to the corresponding GPUShader.
+		 * @return A const reference to the unordered map where the key is the
+		 * unique shader ID and the value is a shared pointer to the
+		 * corresponding GPUShader.
 		 */
-		std::unordered_map<uint32_t, std::shared_ptr<GPUShader>>
+		[[nodiscard]] const std::unordered_map<uint32_t,
+											   std::shared_ptr<GPUShader>> &
 			getShaders() const;
 
 		protected:
@@ -202,5 +211,22 @@ namespace evan
 		 * retrieval based on their unique IDs.
 		 */
 		std::unordered_map<uint32_t, std::shared_ptr<GPUShader>> _shaders;
+
+		/**
+		 * @brief Version of the provider at the last full synchronization pass.
+		 *
+		 * Snapshot taken before the pass and stored after it, so a mutation
+		 * occurring mid-pass stays unseen and triggers another pass next sync.
+		 */
+		uint64_t _syncedVersion = 0;
+
+		/**
+		 * @brief Whether at least one full synchronization pass has completed.
+		 *
+		 * Prevents the first sync() from being skipped: the provider starts at
+		 * version 0, so a bare version comparison would treat it as "already
+		 * synchronized".
+		 */
+		bool _synchronized = false;
 	};
 }	 // namespace evan

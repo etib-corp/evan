@@ -75,6 +75,13 @@ void evan::RenderObject::destroy(VkDevice device)
 	}
 }
 
+void evan::RenderObject::setTransform(const glm::mat4 &transform)
+{
+	for (const auto &mesh: _meshes) {
+		mesh->setTransform(transform);
+	}
+}
+
 /////////////
 // Getters //
 /////////////

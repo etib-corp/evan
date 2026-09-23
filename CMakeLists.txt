@@ -15,6 +15,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable CTest at the top level so tests are registered in the root
+# CTestTestfile.cmake (enable_testing() in a subdirectory is not enough).
+include(CTest)
+
 # 01. Policy & standard setup
 
 # 02. Options & configuration
@@ -113,12 +117,6 @@ if(NOT BUILD_DOCS_ONLY)
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
     )
-    # Prefer a local utility checkout (../utility) for development so that
-    # local fixes are picked up without pushing to GitHub first.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../utility/CMakeLists.txt")
-        set(FETCHCONTENT_SOURCE_DIR_UTILITY
-            "${CMAKE_CURRENT_SOURCE_DIR}/../utility" CACHE PATH "" FORCE)
-    endif()
     FetchContent_MakeAvailable(utility)
 
     # 04. Library definition

@@ -331,15 +331,16 @@ flowchart LR
 
 ### AR-302 — World-locked reference space + coordinate bridge
 - Provide a world-locked origin (LOCAL/STAGE-based) and a documented transform
-  between runtime scene/anchor poses and the engine scene coordinate system
-  (today scene content is head/camera-anchored with no real-world meaning).
+  between runtime scene/anchor poses and the engine's content coordinate system
+  (today engine content is head/camera-anchored with no real-world meaning).
 - **Accept:** a plane returned by the runtime can be expressed in the engine's
-  scene transform; math is unit-tested.
+  content transform; math is unit-tested.
 
-### AR-303 — Environment as engine scene content (planes/meshes + occlusion)
-- Import runtime planes/environment meshes into `Scene` as renderable/occluder
-  objects (reuse `addPrimitive`/mesh paths) with optional visual debug
-  (wireframe planes), refreshed on scene-compute updates.
+### AR-303 — Environment as engine content (planes/meshes + occlusion)
+- Import runtime planes/environment meshes as renderable/occluder objects,
+  registered through the engine's render-object API (reuse the mesh/add
+  paths), with optional visual debug (wireframe planes), refreshed on
+  scene-compute updates.
 - **Accept:** app can opt to show detected planes/meshes; meshes update when the
   room changes; cleanup on AR off.
 

@@ -29,8 +29,8 @@
 
 int main(void)
 {
-	auto platform =
-		std::make_shared<evan::WindowsDesktopPlatform>("windows base", 800, 600);
+	auto platform = std::make_shared<evan::WindowsDesktopPlatform>(
+		"windows base", 800, 600);
 
 	auto systemIO = std::make_shared<utility::DefaultSystemIO>();
 	auto ressourceProvider =

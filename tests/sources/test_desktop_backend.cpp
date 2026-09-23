@@ -30,6 +30,7 @@
 
 	#include <gtest/gtest.h>
 
+	#include <filesystem>
 	#include <memory>
 	#include <string>
 	#include <vector>
@@ -72,14 +73,20 @@ namespace xider::tests
 		{
 			return nullptr;
 		}
+
+		protected:
+		std::filesystem::path getDefaultCacheRoot() const override
+		{
+			return {};
+		}
 	};
 
 	TEST(DesktopBackendTest, ConstructorRejectsNonDesktopPlatform)
 	{
 		NonDesktopPlatform platform;
 
-		EXPECT_THROW(evan::DesktopBackend{platform}, std::logic_error);
+		EXPECT_THROW(evan::DesktopBackend { platform }, std::logic_error);
 	}
 }	 // namespace xider::tests
 
-#endif	 // __GLFW__
+#endif	  // __GLFW__

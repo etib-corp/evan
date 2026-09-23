@@ -20,29 +20,27 @@
  SOFTWARE.
  */
 
-#include <cstdint>
-#include <iostream>
+#include <evan/GPUMaterial.hpp>
 
-#include <evan/Scene.hpp>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-int main(void)
+#include <gtest/gtest.h>
+
+namespace xider::tests
 {
-	evan::Scene scene;
+	static_assert(
+		std::is_reference_v<decltype(std::declval<const evan::GPUMaterial &>()
+										 .getDescriptorSets())>,
+		"GPUMaterial::getDescriptorSets() must return a const reference to "
+		"avoid per-bind vector copies (PERFORMANCE_AUDIT_EVAN.md P1.4)");
 
-	// Add renderable objects to the scene. In a real application these would
-	// be RenderObject instances backed by GPU meshes; here we demonstrate the
-	// CPU-side object-management API.
-	for (std::uint32_t i = 0; i < 10; ++i) {
-		scene.addObject(i, nullptr);
+	TEST(GPUMaterial, GetDescriptorSetsReturnsConstReference)
+	{
+		EXPECT_TRUE(
+			(std::is_reference_v<decltype(
+				std::declval<const evan::GPUMaterial &>()
+					.getDescriptorSets())>));
 	}
-
-	std::cout << "Added 10 objects to the scene.\n";
-
-	// Remove a subset of objects.
-	for (std::uint32_t i = 0; i < 5; ++i) {
-		scene.removeObject(i);
-	}
-
-	std::cout << "Removed 5 objects from the scene.\n";
-	return 0;
-}
+}	 // namespace xider::tests

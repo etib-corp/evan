@@ -7,6 +7,7 @@
 
 #include "evan/ASwapchainContext.hpp"
 
+#include <cstdint>
 #include <numbers>
 
 void evan::ASwapchainContext::createRenderPass(
@@ -18,7 +19,8 @@ void evan::ASwapchainContext::createRenderPass(
 	auto swapchainFormatCount = deviceBackend->countSwapchainFormats();
 	auto swapchainFormats =
 		deviceBackend->enumerateSwapchainFormats(swapchainFormatCount);
-	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
+	auto swapchainFormat = selectSwapchainFormat(
+		deviceBackend->getPhysicalDevice(), swapchainFormats);
 
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format		   = swapchainFormat;
@@ -71,9 +73,8 @@ void evan::ASwapchainContext::createRenderPass(
 	VkAttachmentReference colorAttachmentResolveRef {};
 	colorAttachmentResolveRef.attachment = 2;
 
-	std::vector<VkAttachmentDescription> attachments = {
-		colorAttachment, depthAttachment
-	};
+	std::vector<VkAttachmentDescription> attachments = { colorAttachment,
+														 depthAttachment };
 
 	VkSubpassDescription subpass {};
 	subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -82,14 +83,15 @@ void evan::ASwapchainContext::createRenderPass(
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	if (resolveToSwapchain) {
-		colorAttachmentResolve.format		   = swapchainFormat;
-		colorAttachmentResolve.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachmentResolve.loadOp		   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachmentResolve.finalLayout	  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachmentResolve.format		 = swapchainFormat;
+		colorAttachmentResolve.samples		 = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachmentResolve.loadOp		 = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.storeOp		 = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.stencilStoreOp =
+			VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachmentResolve.finalLayout	 = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		colorAttachmentResolveRef.layout =
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -113,8 +115,7 @@ void evan::ASwapchainContext::createRenderPass(
 		<< subpass.pipelineBindPoint
 		<< ", color attachment count: " << subpass.colorAttachmentCount
 		<< ", depth-stencil attachment reference: "
-		<< depthAttachmentRef.attachment
-		<< ", and color attachment reference: "
+		<< depthAttachmentRef.attachment << ", and color attachment reference: "
 		<< colorAttachmentRef.attachment;
 
 	VkSubpassDependency dependency {};
@@ -186,7 +187,8 @@ bool evan::ASwapchainContext::needsSwapchainRecreation() const
 	return false;
 }
 
-utility::graphic::ViewF evan::ASwapchainContext::getView(std::size_t index) const
+utility::graphic::ViewF
+	evan::ASwapchainContext::getView(std::size_t index) const
 {
 	return getViewSet().getView(index);
 }
@@ -195,6 +197,12 @@ void evan::ASwapchainContext::setView(std::size_t index,
 									  const utility::graphic::ViewF &view)
 {
 	getViewSet().setView(index, view);
+}
+
+const utility::graphic::PoseF &
+	evan::ASwapchainContext::getViewOffset(void) const
+{
+	return _viewOffset;
 }
 
 std::size_t evan::ASwapchainContext::getViewCount(void) const
@@ -208,6 +216,7 @@ glm::mat4 evan::ASwapchainContext::getProjection(std::size_t index) const
 }
 
 VkFormat evan::ASwapchainContext::selectSwapchainFormat(
+	VkPhysicalDevice physicalDevice,
 	const std::vector<int64_t> &swapchainFormats)
 {
 	this->getLogger().info()
@@ -224,21 +233,45 @@ VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 								 << swapchainFormats[i];
 	}
 
-	auto swapchainFormatIt =
-		std::find_first_of(swapchainFormats.begin(), swapchainFormats.end(),
-						   std::begin(kPreferredSwapchainFormats),
-						   std::end(kPreferredSwapchainFormats));
-
-	if (swapchainFormatIt == swapchainFormats.end()) {
-		this->getLogger().info() << "No preferred swapchain format found, "
-									"using first available format.";
-		return static_cast<VkFormat>(swapchainFormats[0]);
+	if (swapchainFormats.empty()) {
+		this->getLogger().warning()
+			<< "No swapchain formats reported by the runtime, using fallback "
+			   "format.";
+		return fallbackSwapchainFormat(physicalDevice);
 	}
 
-	this->getLogger().info()
-		<< "Selected preferred swapchain format: " << *swapchainFormatIt;
+	for (int64_t candidate: swapchainFormats) {
+		for (VkFormat preferred: kPreferredSwapchainFormats) {
+			if (candidate == static_cast<int64_t>(preferred)) {
+				this->getLogger().info()
+					<< "Selected preferred swapchain format: " << preferred;
+				return preferred;
+			}
+		}
+	}
 
-	return static_cast<VkFormat>(*swapchainFormatIt);
+	for (int64_t candidate: swapchainFormats) {
+		if (!isPlausibleVkFormat(candidate)) {
+			this->getLogger().warning()
+				<< "Ignoring invalid swapchain format value: " << candidate;
+			continue;
+		}
+
+		VkFormat format = static_cast<VkFormat>(candidate);
+		if (physicalDevice == VK_NULL_HANDLE
+			|| supportsColorAttachment(physicalDevice, format)) {
+			this->getLogger().info() << "Selected swapchain format: " << format;
+			return format;
+		}
+
+		this->getLogger().warning()
+			<< "Ignoring unsupported swapchain format: " << format;
+	}
+
+	this->getLogger().error()
+		<< "No valid or supported swapchain format found, using fallback "
+		   "format.";
+	return fallbackSwapchainFormat(physicalDevice);
 }
 
 VkFormat evan::ASwapchainContext::findSupportedFormat(
@@ -297,8 +330,8 @@ utility::math::Vector2F evan::ASwapchainContext::getViewportSize() const
 	return viewportSize;
 }
 
-void evan::ASwapchainContext::updateViewForExtent(
-	utility::graphic::ViewF &view, VkExtent2D extent)
+void evan::ASwapchainContext::updateViewForExtent(utility::graphic::ViewF &view,
+												  VkExtent2D extent)
 {
 	const auto width  = static_cast<float>(extent.width);
 	const auto height = static_cast<float>(extent.height);
@@ -312,4 +345,36 @@ void evan::ASwapchainContext::updateViewForExtent(
 
 	const float aspectRatio = height > 0.0f ? width / height : 1.0f;
 	view.setPerspective(verticalFov, aspectRatio);
+}
+
+bool evan::ASwapchainContext::isPlausibleVkFormat(int64_t value)
+{
+	return value > static_cast<int64_t>(VK_FORMAT_UNDEFINED)
+		&& value < static_cast<int64_t>(VK_FORMAT_MAX_ENUM);
+}
+
+bool evan::ASwapchainContext::supportsColorAttachment(
+	VkPhysicalDevice physicalDevice, VkFormat format)
+{
+	VkFormatProperties properties;
+	vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
+	return (properties.optimalTilingFeatures
+			& VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+		== VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+}
+
+VkFormat evan::ASwapchainContext::fallbackSwapchainFormat(
+	VkPhysicalDevice physicalDevice)
+{
+	constexpr VkFormat kFallbacks[] = { VK_FORMAT_B8G8R8A8_UNORM,
+										VK_FORMAT_R8G8B8A8_UNORM };
+
+	for (VkFormat format: kFallbacks) {
+		if (physicalDevice == VK_NULL_HANDLE
+			|| supportsColorAttachment(physicalDevice, format)) {
+			return format;
+		}
+	}
+
+	return VK_FORMAT_B8G8R8A8_UNORM;
 }

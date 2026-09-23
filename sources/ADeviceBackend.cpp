@@ -226,11 +226,18 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 
 	this->getLogger().info() << "Submitting command buffer...";
 
-	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	VkFenceCreateInfo fenceInfo {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	VkFence fence = VK_NULL_HANDLE;
+	vkCreateFence(_device, &fenceInfo, nullptr, &fence);
 
-	this->getLogger().info() << "Waiting for queue to become idle...";
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence);
 
-	vkQueueWaitIdle(graphicsQueue);
+	this->getLogger().info() << "Waiting for submission to complete...";
+
+	// Wait only for this submission instead of draining the whole queue.
+	vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkDestroyFence(_device, fence, nullptr);
 
 	this->getLogger().info() << "Freeing command buffer...";
 

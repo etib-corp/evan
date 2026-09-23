@@ -48,6 +48,7 @@ namespace
 	}
 }	 // namespace
 
-evan::glfw::GlfwContext::GlfwContext() : _state(acquireGlfw())
+evan::glfw::GlfwContext::GlfwContext()
+	: _state(acquireGlfw())
 {
 }

@@ -239,8 +239,33 @@ utility::event::MouseMotionEvent::MousePosition
 	double yPos = 0.0;
 
 	glfwGetCursorPos(_window, &xPos, &yPos);
+	return convertCursorPosition(xPos, yPos);
+}
+
+utility::event::MouseMotionEvent::MousePosition
+	evan::IDesktopPlatform::convertCursorPosition(double xPos, double yPos) const
+{
+	int windowWidth		 = 0;
+	int windowHeight	 = 0;
+	int framebufferWidth  = 0;
+	int framebufferHeight = 0;
+
+	glfwGetWindowSize(_window, &windowWidth, &windowHeight);
+	glfwGetFramebufferSize(_window, &framebufferWidth, &framebufferHeight);
+
+	const float scaleX =
+		windowWidth > 0
+			? static_cast<float>(framebufferWidth)
+					/ static_cast<float>(windowWidth)
+			: 1.0f;
+	const float scaleY =
+		windowHeight > 0
+			? static_cast<float>(framebufferHeight)
+					/ static_cast<float>(windowHeight)
+			: 1.0f;
+
 	return utility::event::MouseMotionEvent::MousePosition {
-		static_cast<float>(xPos), static_cast<float>(yPos)
+		static_cast<float>(xPos * scaleX), static_cast<float>(yPos * scaleY)
 	};
 }
 

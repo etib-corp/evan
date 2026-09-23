@@ -7,6 +7,7 @@
 
 #include "evan/glfw/platform/LinuxDesktopPlatform.hpp"
 
+#include <cstdlib>
 #include <stdexcept>
 
 evan::LinuxDesktopPlatform::LinuxDesktopPlatform(const std::string &name,
@@ -61,4 +62,23 @@ VkSurfaceKHR
 	}
 	this->getLogger().info() << "Vulkan surface created successfully";
 	return surface;
+}
+
+///////////////////////
+// Protected Methods //
+///////////////////////
+
+std::filesystem::path
+	evan::LinuxDesktopPlatform::getDefaultCacheRoot() const
+{
+	const char *xdgCache = std::getenv("XDG_CACHE_HOME");
+	if (xdgCache != nullptr && xdgCache[0] != '\0') {
+		return std::filesystem::path(xdgCache);
+	}
+
+	const char *home = std::getenv("HOME");
+	if (home == nullptr || home[0] == '\0') {
+		return {};
+	}
+	return std::filesystem::path(home) / ".cache";
 }

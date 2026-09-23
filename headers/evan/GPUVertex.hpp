@@ -12,8 +12,21 @@
 
 #include <utility/graphic/vertex.hpp>
 
+#include <glm/glm.hpp>
+
 namespace evan
 {
+	/**
+	 * @brief Per-instance data fed to the vertex shader.
+	 *
+	 * One GPUInstance is consumed per drawn instance. The model matrix
+	 * replaces the CPU-baked world transform when instancing is enabled,
+	 * letting identical meshes share geometry and differ only by transform.
+	 */
+	struct GPUInstance {
+		glm::mat4 model = glm::mat4(1.0f);
+	};
+
 	/**
 	 * @brief GPUVertex structure.
 	 *
@@ -83,6 +96,51 @@ namespace evan
 			attributeDescriptions[2].location = 2;
 			attributeDescriptions[2].format	  = VK_FORMAT_R32G32_SFLOAT;
 			attributeDescriptions[2].offset	  = offsetof(GPUVertex, texCoord);
+
+			return attributeDescriptions;
+		}
+
+		/**
+		 * @brief Get the binding description for per-instance data.
+		 *
+		 * Binding 1 carries one 4x4 model matrix per instance at an instance
+		 * input rate, so identical meshes can be drawn with a single
+		 * vkCmdDrawIndexed(instanceCount = N).
+		 *
+		 * @return VkVertexInputBindingDescription for the instance data.
+		 */
+		static VkVertexInputBindingDescription getInstanceBindingDescription()
+		{
+			VkVertexInputBindingDescription bindingDescription {};
+			bindingDescription.binding	 = 1;
+			bindingDescription.stride	 = sizeof(GPUInstance);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+			return bindingDescription;
+		}
+
+		/**
+		 * @brief Get the attribute descriptions for per-instance data.
+		 *
+		 * The instance model matrix is exposed as four consecutive vec4
+		 * attributes (locations 3 to 6), one per column of the matrix.
+		 *
+		 * @return std::array<VkVertexInputAttributeDescription, 4> The
+		 *         instance attribute descriptions.
+		 */
+		static std::array<VkVertexInputAttributeDescription, 4>
+			getInstanceAttributeDescriptions()
+		{
+			std::array<VkVertexInputAttributeDescription, 4>
+				attributeDescriptions {};
+
+			for (std::size_t i = 0; i < 4; ++i) {
+				attributeDescriptions[i].binding  = 1;
+				attributeDescriptions[i].location = static_cast<uint32_t>(3 + i);
+				attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescriptions[i].offset =
+					static_cast<uint32_t>(i * sizeof(glm::vec4));
+			}
 
 			return attributeDescriptions;
 		}

@@ -12,9 +12,9 @@
 
 evan::GPUTexture::GPUTexture(std::shared_ptr<DeviceContext> deviceContext,
 							 const utility::graphic::Texture &texture,
-							 TextureType type,
-							 const SamplerSettings &settings)
-              : _deviceContext(deviceContext), type(type)
+							 TextureType type, const SamplerSettings &settings)
+	: _deviceContext(deviceContext)
+	, type(type)
 {
 	this->getLogger().info() << "Creating GPUTexture...";
 
@@ -81,6 +81,10 @@ void evan::GPUTexture::cleanup()
 		return;
 	}
 
+	// Block until pending uploads/mipmap generation referencing this image
+	// have completed before destroying it.
+	_deviceContext->getTransferManager().waitIdle();
+
 	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
 	this->getLogger().info() << "Destroying image view...";
@@ -123,8 +127,6 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 		* (texture.type() == utility::graphic::Texture::TextureType::FontAtlas
 			   ? 1
 			   : 4);
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
 
 	this->getLogger().info()
 		<< "Calculated image size: " << imageSize << " bytes";
@@ -146,35 +148,16 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	}
 	this->getLogger().info() << "Calculated mip levels: " << _mipLevel;
 
-	ADeviceBackend::CreateBufferProperties stagingBufferProperties = {
-		._size		 = imageSize,
-		._usage		 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		._properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-			| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		._buffer	   = stagingBuffer,
-		._bufferMemory = stagingBufferMemory
-	};
-
-	deviceBackend.createBuffer(stagingBufferProperties);
-
-	void *data;
-
-	this->getLogger().info()
-		<< "Mapping staging buffer memory and copying pixel data...";
-	vkMapMemory(deviceBackend.getDevice(), stagingBufferMemory, 0, imageSize, 0,
-				&data);
-	memcpy(data, pixels, static_cast<size_t>(imageSize));
-
-	this->getLogger().info() << "Unmapping staging buffer memory...";
-	vkUnmapMemory(deviceBackend.getDevice(), stagingBufferMemory);
+	VkFormat imageFormat = type == TextureType::FontAtlas
+		? VK_FORMAT_R8_UNORM
+		: VK_FORMAT_R8G8B8A8_SRGB;
 
 	ADeviceBackend::CreateImageProperties imageProperties = {
 		._width		 = (uint32_t)texWidth,
 		._height	 = (uint32_t)texHeight,
 		._mipLevels	 = _mipLevel,
 		._numSamples = VK_SAMPLE_COUNT_1_BIT,
-		._format	 = type == TextureType::FontAtlas ? VK_FORMAT_R8_UNORM
-													  : VK_FORMAT_R8G8B8A8_SRGB,
+		._format	 = imageFormat,
 		._tiling	 = VK_IMAGE_TILING_OPTIMAL,
 		._usage		 = VK_IMAGE_USAGE_TRANSFER_SRC_BIT
 			| VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -185,54 +168,49 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	this->getLogger().info() << "Creating image...";
 	deviceBackend.createImage(imageProperties);
 
-	ADeviceBackend::TransitionImageLayoutProperties transitionProperties = {
-		._commandPool	= commandPool,
-		._graphicsQueue = graphicsQueue,
-		._image			= _image,
-		._format		= type == TextureType::FontAtlas ? VK_FORMAT_R8_UNORM
-														 : VK_FORMAT_R8G8B8A8_SRGB,
-		._oldLayout		= VK_IMAGE_LAYOUT_UNDEFINED,
-		._newLayout		= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		._mipLevels		= _mipLevel
-	};
-	deviceBackend.transitionImageLayout(transitionProperties);
+	auto &transfer = _deviceContext->getTransferManager();
 
-	ADeviceBackend::CopyBufferToImageProperties copyProperties = {
-		._commandPool	= commandPool,
-		._graphicsQueue = graphicsQueue,
-		._buffer		= stagingBuffer,
-		._image			= _image,
-		._width			= (uint32_t)texWidth,
-		._height		= (uint32_t)texHeight
-	};
-	deviceBackend.copyBufferToImage(copyProperties);
+	this->getLogger().info() << "Recording image layout transition...";
+	transfer.transitionImageLayout(_image, imageFormat,
+								   VK_IMAGE_LAYOUT_UNDEFINED,
+								   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+								   _mipLevel);
+
+	VkBufferImageCopy region {};
+	region.bufferOffset					  = 0;
+	region.bufferRowLength				  = 0;
+	region.bufferImageHeight			  = 0;
+	region.imageSubresource.aspectMask	  = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel	  = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount	  = 1;
+	region.imageOffset					  = { 0, 0, 0 };
+	region.imageExtent = { texWidth, texHeight, 1 };
+
+	this->getLogger().info() << "Recording pixel upload...";
+	transfer.uploadBufferToImage(pixels, imageSize, _image, region);
 
 	GenerateMipmapsProperties propertiesMipmap = {
 		._commandPool	= commandPool,
 		._graphicsQueue = graphicsQueue,
 		._image			= _image,
-		._imageFormat	= type == TextureType::FontAtlas
-			  ? VK_FORMAT_R8_UNORM
-			  : VK_FORMAT_R8G8B8A8_SRGB,
+		._imageFormat	= imageFormat,
 		._texWidth		= (uint32_t)texWidth,
 		._texHeight		= (uint32_t)texHeight,
 		._mipLevels		= _mipLevel
 	};
 	this->generateMipmaps(propertiesMipmap, deviceBackend);
-
-	this->getLogger().info() << "Cleaning up staging buffer...";
-	vkDestroyBuffer(deviceBackend.getDevice(), stagingBuffer, nullptr);
-	vkFreeMemory(deviceBackend.getDevice(), stagingBufferMemory, nullptr);
 }
 
 void evan::GPUTexture::createImageView(const ADeviceBackend &deviceBackend)
 {
 	this->getLogger().info() << "Creating image view...";
-	view = deviceBackend.createImageView(_image,
-										 type == TextureType::FontAtlas
-											 ? VK_FORMAT_R8_UNORM
-											 : VK_FORMAT_R8G8B8A8_SRGB,
-										 VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel)
+	view = deviceBackend
+			   .createImageView(_image,
+								type == TextureType::FontAtlas
+									? VK_FORMAT_R8_UNORM
+									: VK_FORMAT_R8G8B8A8_SRGB,
+								VK_IMAGE_ASPECT_COLOR_BIT, _mipLevel)
 			   .value;
 }
 
@@ -260,7 +238,8 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 	}
 
 	VkPhysicalDeviceProperties properties {};
-	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(), &properties);
+	vkGetPhysicalDeviceProperties(deviceBackend.getPhysicalDevice(),
+								  &properties);
 
 	// Check if samplerInfo is "empty" by testing its sType field.
 	// If sType is not set, it's likely uninitialized.
@@ -276,7 +255,8 @@ void evan::GPUTexture::createSampler(const ADeviceBackend &deviceBackend,
 					   properties.limits.maxSamplerAnisotropy);
 	}
 
-	if (vkCreateSampler(deviceBackend.getDevice(), &samplerInfo, nullptr, &sampler)
+	if (vkCreateSampler(deviceBackend.getDevice(), &samplerInfo, nullptr,
+						&sampler)
 		!= VK_SUCCESS) {
 		this->getLogger().error() << "Failed to create texture sampler!";
 		return;
@@ -291,12 +271,14 @@ void evan::GPUTexture::generateMipmaps(
 	const GenerateMipmapsProperties &properties,
 	const ADeviceBackend &deviceBackend)
 {
+	(void)deviceBackend;
+
 	this->getLogger().info() << "Generating mipmaps for GPUTexture...";
 
 	VkFormatProperties formatProperties;
-	vkGetPhysicalDeviceFormatProperties(deviceBackend.getPhysicalDevice(),
-										properties._imageFormat,
-										&formatProperties);
+	vkGetPhysicalDeviceFormatProperties(
+		_deviceContext->getDeviceBackend()->getPhysicalDevice(),
+		properties._imageFormat, &formatProperties);
 
 	if (!(formatProperties.optimalTilingFeatures
 		  & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
@@ -305,98 +287,10 @@ void evan::GPUTexture::generateMipmaps(
 		return;
 	}
 
-	VkCommandBuffer commandBuffer =
-		deviceBackend.beginSingleTimeCommands(properties._commandPool);
+	_deviceContext->getTransferManager().generateMipmaps(
+		properties._image, properties._imageFormat, properties._texWidth,
+		properties._texHeight, properties._mipLevels);
 
-	VkImageMemoryBarrier barrier {};
-	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.image				= properties._image;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount		= 1;
-	barrier.subresourceRange.levelCount		= 1;
-
-	int32_t mipWidth  = properties._texWidth;
-	int32_t mipHeight = properties._texHeight;
-
-	this->getLogger().info() << "Starting mipmap generation loop...";
-
-	for (uint32_t i = 1; i < properties._mipLevels; i++) {
-		this->getLogger().info()
-			<< "Generating mip level " << i << " with dimensions " << mipWidth
-			<< "x" << mipHeight;
-
-		barrier.subresourceRange.baseMipLevel = i - 1;
-		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-		this->getLogger().info() << "Transitioning mip level " << i - 1
-								 << " to TRANSFER_SRC_OPTIMAL for blitting...";
-		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-							 VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
-							 nullptr, 1, &barrier);
-
-		VkImageBlit blit {};
-		blit.srcOffsets[0]				   = { 0, 0, 0 };
-		blit.srcOffsets[1]				   = { mipWidth, mipHeight, 1 };
-		blit.srcSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.srcSubresource.mipLevel	   = i - 1;
-		blit.srcSubresource.baseArrayLayer = 0;
-		blit.srcSubresource.layerCount	   = 1;
-		blit.dstOffsets[0]				   = { 0, 0, 0 };
-		blit.dstOffsets[1]				   = { mipWidth > 1 ? mipWidth / 2 : 1,
-							   mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-		blit.dstSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.dstSubresource.mipLevel	   = i;
-		blit.dstSubresource.baseArrayLayer = 0;
-		blit.dstSubresource.layerCount	   = 1;
-
-		this->getLogger().info() << "Blitting from mip level " << i - 1
-								 << " to mip level " << i << "...";
-		vkCmdBlitImage(commandBuffer, properties._image,
-					   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, properties._image,
-					   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
-					   VK_FILTER_LINEAR);
-
-		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		this->getLogger().info() << "Transitioning mip level " << i - 1
-								 << " to SHADER_READ_ONLY_OPTIMAL...";
-		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-							 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-							 nullptr, 0, nullptr, 1, &barrier);
-
-		if (mipWidth > 1) {
-			this->getLogger().info() << "Halving mip width for next level...";
-			mipWidth /= 2;
-		}
-		if (mipHeight > 1) {
-			this->getLogger().info() << "Halving mip height for next level...";
-			mipHeight /= 2;
-		}
-	}
-
-	barrier.subresourceRange.baseMipLevel = properties._mipLevels - 1;
-	barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-	this->getLogger().info()
-		<< "Transitioning final mip level " << properties._mipLevels - 1
-		<< " to SHADER_READ_ONLY_OPTIMAL...";
-	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
-						 0, nullptr, 1, &barrier);
-	deviceBackend.endSingleTimeCommands(
-		properties._commandPool, properties._graphicsQueue, commandBuffer);
 	this->getLogger().info() << "Mipmap generation completed.";
 }
 

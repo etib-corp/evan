@@ -109,8 +109,8 @@ void evan::DesktopSwapchainContext::recreateSwapchain(
 		<< "Updating view for the new swapchain extent while preserving the "
 		   "camera transform...";
 	auto view = this->getViewSet()[0].view;
-	ASwapchainContext::updateViewForExtent(
-		view, newSwapchainImage->getExtent());
+	ASwapchainContext::updateViewForExtent(view,
+										   newSwapchainImage->getExtent());
 	this->getViewSet().setView(0, view);
 
 	_framebufferResized = false;
@@ -158,8 +158,9 @@ bool evan::DesktopSwapchainContext::needsSwapchainRecreation() const
 	return _framebufferResized;
 }
 
-void evan::DesktopSwapchainContext::framebufferSizeCallback(
-	GLFWwindow *window, int width, int height)
+void evan::DesktopSwapchainContext::framebufferSizeCallback(GLFWwindow *window,
+															int width,
+															int height)
 {
 	(void)width;
 	(void)height;

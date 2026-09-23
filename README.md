@@ -8,7 +8,7 @@ loop that drives the application.
 
 - Vulkan-based rendering and swapchain management.
 - Desktop and XR platform abstractions.
-- Scene, mesh, shader, and material helpers.
+- Mesh, shader, and material helpers.
 - Optional backend integration for OpenXR or GLFW.
 
 ## Key Concepts
@@ -17,7 +17,8 @@ loop that drives the application.
 - **Platform** — abstracts the target backend (OpenXR or GLFW) and platform
   (Android, Linux, Windows, macOS).
 - **Device & swapchain** — manage Vulkan resources and frame ownership.
-- **Scene** — holds renderable objects, meshes, and materials.
+- **Render objects** — GPU meshes registered through the engine and drawn each
+  frame.
 - **Mesh / shader / material** — describe renderable content.
 
 ## Quickstart
@@ -39,7 +40,7 @@ cmake --build build
 
 - CMake 3.10+
 - A C++20 compiler
-- The Vulkan SDK
+- The Vulkan SDK (download from [LunarG](https://vulkan.lunarg.com/sdk/home))
 - Doxygen + Graphviz (only for `-DBUILD_DOCS=ON`)
 
 Evan fetches its dependencies (Utility, GLM, STB) via CMake `FetchContent`.

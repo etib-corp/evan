@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include <glm/gtc/quaternion.hpp>
+
 namespace
 {
 	/**
@@ -23,13 +25,20 @@ namespace
 	VkSampleCountFlagBits toVkSampleCountFlagBits(uint32_t sampleCount)
 	{
 		switch (sampleCount) {
-			case 2: return VK_SAMPLE_COUNT_2_BIT;
-			case 4: return VK_SAMPLE_COUNT_4_BIT;
-			case 8: return VK_SAMPLE_COUNT_8_BIT;
-			case 16: return VK_SAMPLE_COUNT_16_BIT;
-			case 32: return VK_SAMPLE_COUNT_32_BIT;
-			case 64: return VK_SAMPLE_COUNT_64_BIT;
-			default: return VK_SAMPLE_COUNT_1_BIT;
+			case 2:
+				return VK_SAMPLE_COUNT_2_BIT;
+			case 4:
+				return VK_SAMPLE_COUNT_4_BIT;
+			case 8:
+				return VK_SAMPLE_COUNT_8_BIT;
+			case 16:
+				return VK_SAMPLE_COUNT_16_BIT;
+			case 32:
+				return VK_SAMPLE_COUNT_32_BIT;
+			case 64:
+				return VK_SAMPLE_COUNT_64_BIT;
+			default:
+				return VK_SAMPLE_COUNT_1_BIT;
 		}
 	}
 }	 // namespace
@@ -60,7 +69,9 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
 					 _resolveToSwapchain);
 
-	auto swapchainFormat = selectSwapchainFormat(swapchainFormats);
+	auto swapchainFormat = selectSwapchainFormat(
+		deviceContext.getDeviceBackend()->getPhysicalDevice(),
+		swapchainFormats);
 
 	for (const auto &viewConfig: _viewsConfigurations) {
 		this->getLogger().info() << "Creating swapchain for view configuration";
@@ -130,8 +141,7 @@ void evan::XrSwapchainContext::selectMsaaSamples(
 	this->getLogger().info()
 		<< "OpenXR recommended swapchain sample count: " << recommended
 		<< ", using MSAA samples: " << _msaaSamples
-		<< ", resolve to swapchain: "
-		<< (_resolveToSwapchain ? "yes" : "no");
+		<< ", resolve to swapchain: " << (_resolveToSwapchain ? "yes" : "no");
 }
 
 ////////////////////
@@ -174,6 +184,7 @@ void evan::XrSwapchainContext::recreateSwapchain(
 		swapchainCreateInfo.type	  = XR_TYPE_SWAPCHAIN_CREATE_INFO;
 		swapchainCreateInfo.arraySize = 1;
 		swapchainCreateInfo.format	  = selectSwapchainFormat(
+			   deviceContext.getDeviceBackend()->getPhysicalDevice(),
 			   deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
 				   deviceContext.getDeviceBackend()->countSwapchainFormats()));
 		swapchainCreateInfo.width	  = viewConfig.recommendedImageRectWidth;
@@ -318,17 +329,65 @@ void evan::XrSwapchainContext::syncViewSet()
 		_viewSet.resize(_views.size());
 	}
 
+	// Track the raw head center before applying the locomotion offset so that
+	// setView can reduce the requested pose to an offset relative to it.
+	if (!_views.empty()) {
+		glm::vec3 centerPosition(0.0f);
+		for (const auto &xrView: _views) {
+			centerPosition +=
+				glm::vec3(xrView.pose.position.x, xrView.pose.position.y,
+						  xrView.pose.position.z);
+		}
+		centerPosition /= static_cast<float>(_views.size());
+
+		glm::quat centerOrientation(1.0f, 0.0f, 0.0f, 0.0f);
+		if (_views.size() == 1) {
+			const auto &orientation = _views[0].pose.orientation;
+			centerOrientation		= glm::quat(orientation.w, orientation.x,
+												orientation.y, orientation.z);
+		} else {
+			const auto &left  = _views[0].pose.orientation;
+			const auto &right = _views[1].pose.orientation;
+			glm::quat leftQ(left.w, left.x, left.y, left.z);
+			glm::quat rightQ(right.w, right.x, right.y, right.z);
+			centerOrientation = glm::normalize(glm::slerp(leftQ, rightQ, 0.5f));
+		}
+
+		_baseCenterPose = utility::graphic::PoseF(
+			utility::graphic::PositionF(centerPosition.x, centerPosition.y,
+										centerPosition.z),
+			utility::graphic::OrientationF(
+				centerOrientation.x, centerOrientation.y, centerOrientation.z,
+				centerOrientation.w));
+		_hasBaseCenter = true;
+	}
+
+	const auto &offsetPose	 = _viewOffset.getPosition();
+	const auto &offsetOrient = _viewOffset.getOrientation();
+	const glm::quat offsetQ(offsetOrient.w, offsetOrient.x, offsetOrient.y,
+							offsetOrient.z);
+	const glm::vec3 offsetPosition(offsetPose.getX(), offsetPose.getY(),
+								   offsetPose.getZ());
+
 	for (std::size_t i = 0; i < _views.size(); ++i) {
 		_viewSet[i].swapchainIndex = i;
 
 		utility::graphic::ViewF view;
 		const auto &xrPose = _views[i].pose;
-		utility::graphic::PositionF position(
-			xrPose.position.x, xrPose.position.y, xrPose.position.z);
-		utility::graphic::OrientationF orientation(
-			xrPose.orientation.x, xrPose.orientation.y, xrPose.orientation.z,
-			xrPose.orientation.w);
-		utility::graphic::PoseF pose(position, orientation);
+
+		glm::quat baseQ(xrPose.orientation.w, xrPose.orientation.x,
+						xrPose.orientation.y, xrPose.orientation.z);
+		glm::quat finalQ = glm::normalize(offsetQ * baseQ);
+
+		glm::vec3 basePosition(xrPose.position.x, xrPose.position.y,
+							   xrPose.position.z);
+		glm::vec3 finalPosition = basePosition + offsetPosition;
+
+		utility::graphic::PoseF pose(
+			utility::graphic::PositionF(finalPosition.x, finalPosition.y,
+										finalPosition.z),
+			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
+										   finalQ.w));
 		utility::graphic::FieldOfViewF fov(
 			_views[i].fov.angleUp, _views[i].fov.angleDown,
 			_views[i].fov.angleLeft, _views[i].fov.angleRight);
@@ -345,6 +404,34 @@ void evan::XrSwapchainContext::setView(std::size_t index,
 									   const utility::graphic::ViewF &view)
 
 {
+	(void)index;
+
 	_nearPlane = view.getNearPlane();
 	_farPlane  = view.getFarPlane();
+
+	if (!_hasBaseCenter) {
+		return;
+	}
+
+	// The runtime refreshes the tracked eye poses every frame, so the requested
+	// pose is stored as a world-space offset relative to the tracked head
+	// center and re-applied by syncViewSet.
+	const auto requestedPosition = view.getPose().getPosition();
+	const auto requestedOrient	 = view.getPose().getOrientation();
+	const auto basePosition		 = _baseCenterPose.getPosition();
+	const auto baseOrient		 = _baseCenterPose.getOrientation();
+
+	glm::quat requestedQ(requestedOrient.w, requestedOrient.x,
+						 requestedOrient.y, requestedOrient.z);
+	glm::quat baseQ(baseOrient.w, baseOrient.x, baseOrient.y, baseOrient.z);
+
+	glm::quat offsetQ = glm::normalize(requestedQ * glm::inverse(baseQ));
+
+	_viewOffset = utility::graphic::PoseF(
+		utility::graphic::PositionF(
+			requestedPosition.getX() - basePosition.getX(),
+			requestedPosition.getY() - basePosition.getY(),
+			requestedPosition.getZ() - basePosition.getZ()),
+		utility::graphic::OrientationF(offsetQ.x, offsetQ.y, offsetQ.z,
+									   offsetQ.w));
 }

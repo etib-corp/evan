@@ -15,6 +15,7 @@
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
+#include <filesystem>
 #include <string>
 
 namespace evan
@@ -49,6 +50,56 @@ namespace evan
 		 */
 		virtual std::vector<std::string>
 			getRequiredInstanceExtensions() const = 0;
+
+		/**
+		 * @brief Get platform-specific Vulkan instance creation flags.
+		 *
+		 * @return Flags to OR into VkInstanceCreateInfo::flags.
+		 *
+		 * Platforms that require special instance creation flags (e.g. the
+		 * portability enumeration bit on macOS/MoltenVK) override this method.
+		 */
+		virtual VkInstanceCreateFlags getInstanceCreateFlags() const
+		{
+			return 0;
+		}
+
+		/**
+		 * @brief Get platform-specific required Vulkan device extensions.
+		 *
+		 * @return A vector of strings representing the required device
+		 * extensions.
+		 *
+		 * Platforms that require additional device extensions (e.g. the
+		 * portability subset on macOS/MoltenVK) override this method.
+		 */
+		virtual std::vector<std::string> getRequiredDeviceExtensions() const
+		{
+			return {};
+		}
+
+		/**
+		 * @brief Get the path where the Vulkan pipeline cache is persisted.
+		 *
+		 * The returned path is where the cache blob written by
+		 * `PipelineCache::persist()` is stored, and where the next run looks for
+		 * a blob to reuse, so pipelines are not recompiled from scratch on every
+		 * launch.
+		 *
+		 * The default implementation honors two environment variables and then
+		 * falls back to the per-user cache directory of the running platform:
+		 * - `EVAN_PIPELINE_CACHE_DISABLE`, set to any non-empty value other than
+		 *   `0`, disables persistence entirely.
+		 * - `EVAN_PIPELINE_CACHE_DIR` overrides the cache root directory, which
+		 *   lets an application keep the blob next to its own build output.
+		 *
+		 * Platforms without a writable cache location return an empty path, in
+		 * which case the pipeline cache is kept in memory only.
+		 *
+		 * @return The path of the pipeline cache blob, or an empty path to
+		 * disable persistence.
+		 */
+		virtual std::filesystem::path getPipelineCachePath() const;
 
 		/**
 		 * @brief Check if the platform should close.
@@ -111,6 +162,24 @@ namespace evan
 		}
 
 		protected:
+		/**
+		 * @brief Get the platform-specific cache root directory.
+		 *
+		 * This is the directory the pipeline cache blob is stored under, before
+		 * the `EVAN_PIPELINE_CACHE_DIR` override is applied. It is where the
+		 * platform is allowed to write user data, for example `~/Library/Caches`
+		 * on macOS, `XDG_CACHE_HOME` or `~/.cache` on Linux, `%LOCALAPPDATA%` on
+		 * Windows, and the application cache directory on Android.
+		 *
+		 * Every concrete platform implements this method, because only the
+		 * platform knows which directory it is allowed to write to. Returning an
+		 * empty path disables persistence.
+		 *
+		 * @return The cache root directory, or an empty path when the platform
+		 * has no writable cache location.
+		 */
+		virtual std::filesystem::path getDefaultCacheRoot() const = 0;
+
 		/**
 		 * @brief Sticky error recorded by the platform while polling events.
 		 */
