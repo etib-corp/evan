@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <cstdint>
 #include <vector>
 
 namespace evan
@@ -356,30 +357,27 @@ namespace evan
 		}
 
 		protected:
-		std::map<uint32_t, VkPipeline>
-			_pipelines;	   ///< A map of pipeline layer identifiers to Vulkan
-						   ///< pipeline objects. This map is used to manage
-						   ///< different graphics pipelines for rendering
-						   ///< operations based on the pipeline layer
-						   ///< associated with render objects. Each entry in
-						   ///< the map corresponds to a specific pipeline layer
-						   ///< and its associated Vulkan pipeline, which can be
-						   ///< used for rendering objects that belong to that
-						   ///< layer.
+		std::vector<VkPipeline>
+			_pipelines;	   ///< Graphics pipelines indexed by shader ID, so a
+						   ///< lookup is a single bounds-checked index. Entries
+						   ///< for shaders that have no pipeline (or failed to
+						   ///< create) hold VK_NULL_HANDLE; index 0 is reserved
+						   ///< for the "invalid shader ID" returned by
+						   ///< RessourceProvider::getShaderID().
+						   ///<
+						   ///< @note Shader IDs come from a counter shared by every
+						   ///< resource type in the provider, so they are sparse:
+						   ///< the vector is sized to (largest shader ID + 1), not
+						   ///< to the number of shaders. The slots between two IDs
+						   ///< cost one pointer each and stay null.
 
-		std::map<uint32_t, VkPipelineLayout>
-			_pipelineLayouts;	 ///< A map of pipeline layer identifiers to
-								 ///< Vulkan pipeline layout objects. This map
-								 ///< is used to manage different pipeline
-								 ///< layouts for rendering operations based on
-								 ///< the pipeline layer associated with render
-								 ///< objects. Each entry in the map corresponds
-								 ///< to a specific pipeline layer and its
-								 ///< associated Vulkan pipeline layout, which
-								 ///< defines the interface between shader
-								 ///< stages and the resources bound to the
-								 ///< graphics pipeline for rendering objects
-								 ///< that belong to that layer.
+		VkPipelineLayout
+			_pipelineLayout = VK_NULL_HANDLE;	 ///< Single pipeline layout shared
+												 ///< by every graphics pipeline. All
+												 ///< pipelines are built from the same
+												 ///< descriptor set layout and the same
+												 ///< push-constant range, so one layout is
+												 ///< enough.
 
 		/**
 		 * @brief A collection of frames used for rendering.
@@ -456,7 +454,26 @@ namespace evan
 
 		private:
 		/**
-		 * @brief Updates the uniform buffer with view data for the current
+		 * @brief Resolves the graphics pipeline bound to a shader ID.
+		 *
+		 * Performs a single bounds-checked index into _pipelines and returns
+		 * VK_NULL_HANDLE when the shader ID is out of range, has no pipeline,
+		 * or is the invalid ID 0 returned by
+		 * RessourceProvider::getShaderID().
+		 *
+		 * @param shaderID Shader ID to resolve.
+		 *
+		 * @return The matching pipeline, or VK_NULL_HANDLE if there is none.
+		 */
+		[[nodiscard]] VkPipeline pipelineFor(uint32_t shaderID) const
+		{
+			return shaderID < _pipelines.size()
+				? _pipelines[shaderID]
+				: VK_NULL_HANDLE;
+		}
+
+		/**
+		 * @brief Updates the uniform buffer with scene data for the current
 		 * frame.
 		 *
 		 * This method is responsible for updating the uniform buffer with the
