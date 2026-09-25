@@ -86,8 +86,13 @@ namespace evan
 		 * @param deviceBackend A reference to the device backend that provides
 		 * access to Vulkan resources and functions needed to create
 		 * synchronization objects and uniform buffers.
+		 * @param perFrameSlotCount Number of view/swapchain slots to allocate
+		 * per-frame resources for, normally
+		 * frameSlotCount(viewCount, swapchainCount). Clamped to
+		 * [1, MAX_SWAPCHAINS].
 		 */
-		Frame(std::shared_ptr<DeviceContext> deviceContext);
+		Frame(std::shared_ptr<DeviceContext> deviceContext,
+			  std::size_t perFrameSlotCount);
 
 		~Frame();
 
@@ -120,6 +125,14 @@ namespace evan
 		 * @return The Vulkan command buffer for this view.
 		 */
 		VkCommandBuffer getCommandBuffer(std::size_t viewSlot) const;
+
+		/**
+		 * @brief Gets the number of view/swapchain slots this frame was
+		 * allocated for.
+		 *
+		 * @return The per-frame slot count.
+		 */
+		std::size_t getPerFrameSlotCount() const;
 
 		/**
 		 * @brief Gets the Vulkan uniform buffer associated with this frame.
@@ -232,6 +245,13 @@ namespace evan
 		 * image is finished and the image can be presented.
 		 */
 		std::vector<VkSemaphore> _renderFinished;
+
+		/**
+		 * Number of view/swapchain slots this frame allocated its per-frame
+		 * resources for (command buffers, semaphores and buffer slots).
+		 * Always in [1, MAX_SWAPCHAINS].
+		 */
+		std::size_t _perFrameSlotCount = 1;
 
 		/**
 		 * @brief Pointer to the mapped memory of the uniform buffer.
