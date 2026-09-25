@@ -42,7 +42,7 @@ namespace
 	struct DrawItem {
 		uint32_t pipelineKey			= 0;
 		uint32_t materialID				= 0;
-		evan::BlendMode blendMode				= evan::BlendMode::Opaque;
+		evan::BlendMode blendMode		= evan::BlendMode::Opaque;
 		VkPipeline pipeline				= VK_NULL_HANDLE;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkDescriptorSet descriptorSet	= VK_NULL_HANDLE;
@@ -145,13 +145,13 @@ void evan::Renderer::destroy(VkDevice device)
 	}
 	_pipelines.clear();
 
-	// The pipeline layout references the descriptor set layout, so it has to
-	// be destroyed before it.
-	if (_pipelineLayout != VK_NULL_HANDLE) {
-		this->getLogger().info() << "Destroying pipeline layout...";
-		vkDestroyPipelineLayout(device, _pipelineLayout, nullptr);
-		_pipelineLayout = VK_NULL_HANDLE;
+	// Pipeline layouts reference the descriptor set layout, so they have to be
+	// destroyed before it.
+	this->getLogger().info() << "Destroying pipeline layouts...";
+	for (const auto &[shaderID, layout]: _pipelineLayouts) {
+		vkDestroyPipelineLayout(device, layout, nullptr);
 	}
+	_pipelineLayouts.clear();
 
 	this->getLogger().info() << "Destroying descriptor set layout...";
 	vkDestroyDescriptorSetLayout(device, _descriptorSetLayout, nullptr);
@@ -487,44 +487,6 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 
 	const auto &shaders = _ressourceManager->getShaders();
 
-	// The pipeline vector is indexed by shader ID. Shader IDs are drawn from a
-	// counter shared by every resource type, so size the vector to the largest
-	// ID present rather than to the shader count; the unused slots stay
-	// VK_NULL_HANDLE.
-	uint32_t maxShaderID = 0;
-	for (const auto &[id, shader]: shaders) {
-		maxShaderID = std::max(maxShaderID, id);
-	}
-	_pipelines.assign(static_cast<std::size_t>(maxShaderID) + 1,
-					  VK_NULL_HANDLE);
-
-	// Every pipeline shares the same descriptor set layout and the same
-	// push-constant range, so a single pipeline layout is created once and
-	// reused by all of them.
-	this->getLogger().info() << "Creating shared pipeline layout...";
-
-	VkPushConstantRange pushConstantRange {};
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushConstantRange.offset	 = 0;
-	pushConstantRange.size		 = sizeof(glm::vec4);
-
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
-	pipelineLayoutInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts	  = &_descriptorSetLayout;
-
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges	  = &pushConstantRange;
-
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-							   &_pipelineLayout)
-		!= VK_SUCCESS) {
-		this->getLogger().error() << "Failed to create pipeline layout !";
-		return;
-	}
-
 	this->getLogger().info() << "Iterating over shaders to create pipelines...";
 	for (const auto &[id, shader]: shaders) {
 		this->getLogger().info() << "Creating pipeline for shader: " << id;
@@ -710,9 +672,9 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 			pipelineInfo.pDepthStencilState	 = &depthStencil;
 
 			const PipelineVariant variant { id, blendMode };
-			if (vkCreateGraphicsPipelines(device, _deviceContext->getPipelineCache().getHandle(), 1,
-										  &pipelineInfo, nullptr,
-										  &_pipelines[variant])
+			if (vkCreateGraphicsPipelines(
+					device, _deviceContext->getPipelineCache().getHandle(), 1,
+					&pipelineInfo, nullptr, &_pipelines[variant])
 				!= VK_SUCCESS) {
 				this->getLogger().error()
 					<< "Failed to create the " << (isAlpha ? "alpha" : "opaque")
