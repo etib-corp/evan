@@ -28,7 +28,8 @@
 
 #include <fstream>
 #include <algorithm>
-#include <map>
+#include <cstdint>
+#include <vector>
 
 namespace evan
 {
@@ -476,6 +477,25 @@ namespace evan
 		VkDescriptorPool _descriptorPool;
 
 		private:
+		/**
+		 * @brief Resolves the graphics pipeline bound to a shader ID.
+		 *
+		 * Performs a single bounds-checked index into _pipelines and returns
+		 * VK_NULL_HANDLE when the shader ID is out of range, has no pipeline,
+		 * or is the invalid ID 0 returned by
+		 * RessourceProvider::getShaderID().
+		 *
+		 * @param shaderID Shader ID to resolve.
+		 *
+		 * @return The matching pipeline, or VK_NULL_HANDLE if there is none.
+		 */
+		[[nodiscard]] VkPipeline pipelineFor(uint32_t shaderID) const
+		{
+			return shaderID < _pipelines.size()
+				? _pipelines[shaderID]
+				: VK_NULL_HANDLE;
+		}
+
 		/**
 		 * @brief Updates the uniform buffer with scene data for the current
 		 * frame.
