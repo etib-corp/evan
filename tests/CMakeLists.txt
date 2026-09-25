@@ -20,6 +20,7 @@ set(TEST_SOURCES
     sources/test_render_settings.cpp
     sources/test_viewset.cpp
     sources/test_render_object.cpp
+    sources/test_frame_slots.cpp
 )
 
 # Fetch GoogleTest
