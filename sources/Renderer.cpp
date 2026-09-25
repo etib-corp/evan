@@ -13,7 +13,6 @@
 
 #include <cstddef>
 #include <cstdlib>
-#include <limits>
 
 namespace
 {
@@ -943,7 +942,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		// opaque geometry so early depth testing rejects occluded fragments,
 		// back-to-front for blended geometry so compositing is correct. Meshes
 		// without usable bounds are treated as infinitely far away.
-		float depth		   = std::numeric_limits<float>::max();
+		float depth		   = kUnknownDepth;
 		const auto &bounds = mesh->getBounds();
 		if (!bounds.isEmpty()) {
 			const glm::vec3 center(bounds.center().x, bounds.center().y,
@@ -961,14 +960,13 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	// bucket count stays meaningful whatever the scene scale is. Draws landing
 	// in the same bucket keep their state ordering, which preserves the run
 	// merging used by instanced and indirect drawing.
-	float nearestDepth	= std::numeric_limits<float>::max();
+	float nearestDepth	= kUnknownDepth;
 	float farthestDepth = 0.0f;
 	for (const auto &item: drawList) {
 		if (item.depth < nearestDepth) {
 			nearestDepth = item.depth;
 		}
-		if (item.depth != std::numeric_limits<float>::max()
-			&& item.depth > farthestDepth) {
+		if (item.depth != kUnknownDepth && item.depth > farthestDepth) {
 			farthestDepth = item.depth;
 		}
 	}

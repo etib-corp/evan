@@ -10,6 +10,7 @@
 #include "evan/EvanPlatform.hpp"
 
 #include <cstdint>
+#include <limits>
 
 namespace evan
 {
@@ -90,13 +91,25 @@ namespace evan
 	constexpr uint32_t kOpaqueDepthBucketCount = 32;
 
 	/**
+	 * @brief Distance given to draws whose distance from the camera is
+	 * unknown.
+	 *
+	 * A mesh without usable bounds has no center to measure from, so the
+	 * renderer keeps it out of the front-to-back order by giving it the
+	 * largest representable distance, which no measured distance reaches. It
+	 * is the value the depth bucket function recognizes as the sentinel.
+	 */
+	constexpr float kUnknownDepth = std::numeric_limits<float>::max();
+
+	/**
 	 * @brief Maps a camera distance onto its depth bucket.
 	 *
 	 * Distances are normalized against the visible range so that the bucket
 	 * size adapts to the scene scale instead of assuming world units. A
-	 * distance that is unknown or not comparable (a NaN, or the sentinel used
-	 * for meshes without bounds) maps to the extra bucket past the last one,
-	 * which keeps those draws at the end of the front-to-back order.
+	 * distance that is unknown or not comparable (a NaN, or kUnknownDepth,
+	 * the sentinel used for meshes without bounds) maps to the extra bucket
+	 * past the last one, which keeps those draws at the end of the
+	 * front-to-back order.
 	 *
 	 * @param depth Distance from the camera to the draw.
 	 * @param nearest Closest distance among the draws being ordered.
@@ -108,13 +121,20 @@ namespace evan
 		opaqueDepthBucket(float depth, float nearest, float span,
 						  uint32_t bucketCount) noexcept
 	{
-		if (!(span > 0.0f) || !(depth >= nearest)) {
+		// A draw whose distance is unknown (kUnknownDepth) or cannot be
+		// compared against the others (a NaN, or every draw when the visible
+		// range is empty) has no place inside the front-to-back order: it
+		// goes to the trailing bucket, past the last real one. The sentinel
+		// is checked explicitly because it is a finite value, so it would
+		// otherwise be clamped onto the last real bucket like any distance
+		// past the visible range.
+		if (!(span > 0.0f) || !(depth >= nearest) || depth == kUnknownDepth) {
 			return bucketCount;
 		}
 
 		const float normalized = (depth - nearest) / span;
-		// Infinity, values past the visible range and NaN all end up here, and
-		// are clamped before the conversion to avoid an out-of-range cast.
+		// Infinity and distances past the visible range saturate on the last
+		// real bucket before the conversion to avoid an out-of-range cast.
 		if (!(normalized < 1.0f)) {
 			return bucketCount - 1;
 		}
