@@ -10,6 +10,7 @@
 #include "evan/EvanPlatform.hpp"
 
 #include "evan/QueueFamilyIndices.hpp"
+#include "evan/RenderSettings.hpp"
 #include "evan/Version.hpp"
 
 #include <utility/logging/loggable.hpp>
@@ -231,14 +232,13 @@ namespace evan
 		void createImageViews(const ADeviceBackend &deviceBackend);
 
 		/**
-		 * @brief Creates color resources for the swapchain images.
+		 * @brief Creates a multisampled color attachment and its image view.
 		 *
-		 * This function creates the necessary color resources for the swapchain
-		 * images, including the color image, its associated image view, and the
-		 * memory allocation for the color image. These resources are essential
-		 * for rendering operations, as they serve as the targets for rendering
-		 * output. The function takes the logical device, physical device, and
-		 * the number of samples for multisampling.
+		 * Creates the color image, its image view and the memory backing it,
+		 * which serve as the target of the rendering output. Only needed by
+		 * ColorAttachmentMode::ResolveToSwapchain render passes: single-sampled
+		 * attachments render directly into the swapchain image, which saves
+		 * both the color image memory and the resolve bandwidth.
 		 *
 		 * @param deviceBackend A reference to the ADeviceBackend instance,
 		 * which provides access to the Vulkan device and other resources needed
@@ -294,13 +294,14 @@ namespace evan
 		 * @param renderPass The Vulkan render pass that defines the structure
 		 * of the rendering operations. This render pass should be compatible
 		 * with the attachments used in the framebuffers.
-		 * @param resolveToSwapchain When true, the framebuffer is created with
-		 * a color, depth and resolve attachment layout. When false, the
-		 * framebuffer only references the swapchain image view and the depth
-		 * view.
+		 * @param mode The color attachment mode the render pass was created
+		 * with. ColorAttachmentMode::ResolveToSwapchain references the
+		 * multisampled color view, the depth view and the swapchain image view
+		 * as the resolve target. The other modes reference the swapchain image
+		 * view and the depth view only.
 		 */
 		void createFramebuffers(VkDevice logicalDevice, VkRenderPass renderPass,
-								bool resolveToSwapchain);
+								ColorAttachmentMode mode);
 
 		/**
 		 * @brief Creates the Vulkan images for the swapchain.

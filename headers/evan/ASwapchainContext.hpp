@@ -10,6 +10,7 @@
 #include "evan/EvanPlatform.hpp"
 #include "evan/ADeviceBackend.hpp"
 #include "evan/ASwapchainImage.hpp"
+#include "evan/RenderSettings.hpp"
 #include "evan/ViewSet.hpp"
 
 #include <utility/graphic/view.hpp>
@@ -408,10 +409,16 @@ namespace evan
 		 * be used in the render pass. This parameter is essential for
 		 * configuring the render pass to support multisampling if required by
 		 * the rendering system.
-		 * @param resolveToSwapchain When true, a one-sample resolve attachment
-		 * targeting the swapchain image is created. When false, the color
-		 * attachment is expected to be the swapchain image itself and no
-		 * resolve attachment is created.
+		 * @param mode How the render pass obtains its single-sampled color
+		 * attachment:
+		 * - ColorAttachmentMode::ResolveToSwapchain adds a multisampled color
+		 *   attachment resolved into the swapchain image;
+		 * - ColorAttachmentMode::DirectToSwapchain makes the swapchain image
+		 * the color attachment and presents from it;
+		 * - ColorAttachmentMode::SwapchainImageAttachment makes the swapchain
+		 *   image the color attachment and leaves it in the color attachment
+		 *   layout, for runtimes that own and present the image themselves
+		 *   (OpenXR).
 		 *
 		 * @note Implement this function to ensure that the render pass is
 		 * properly created and configured according to the specific
@@ -422,7 +429,7 @@ namespace evan
 		 */
 		void createRenderPass(
 			const std::shared_ptr<ADeviceBackend> &deviceBackend,
-			VkSampleCountFlagBits msaaSamples, bool resolveToSwapchain);
+			VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode);
 
 		/**
 		 * @brief Selects the appropriate swapchain format from the available
