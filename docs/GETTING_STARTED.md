@@ -40,27 +40,17 @@ settings.msaaSamples = VK_SAMPLE_COUNT_4_BIT;
 evan::Engine engine(ressourceProvider, platform, settings);
 ```
 
-`settings.opaqueSort` controls how opaque draws are ordered:
+## 4. Add renderable content
 
-- `OpaqueSortMode::FrontToBack` (default) buckets them by depth so nearer
-  geometry is shaded first and occluded fragments are rejected early.
-- `OpaqueSortMode::StateFirst` groups them by pipeline and material instead,
-  which batches more but pays more overdraw.
-
-The ordering can also be changed at runtime with
-`Renderer::setOpaqueSortMode()`. `EVAN_MSAA=1|2|4` overrides the sample count
-without a rebuild, which is how the cost of multisampling is measured.
-
-## 4. Populate a scene
-
-Add renderable objects, meshes, and materials to a `Scene`:
+Add renderable objects (meshes, primitives, models, or text) through the
+`Engine`:
 
 ```cpp
-#include <evan/Scene.hpp>
-
-evan::Scene scene;
-// scene.addObject(id, renderObject);
+#include <evan/Engine.hpp>
 ```
+
+Each `add*()` call registers a render object in the engine and returns its
+object ID, which can later be passed to `removeObject()`.
 
 ## 5. Run the frame loop
 

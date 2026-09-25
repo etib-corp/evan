@@ -20,29 +20,38 @@
  SOFTWARE.
  */
 
-#include <cstdint>
-#include <iostream>
+#include <evan/GPUMesh.hpp>
+#include <evan/RenderObject.hpp>
 
-#include <evan/Scene.hpp>
+#include <type_traits>
 
-int main(void)
+#include <gtest/gtest.h>
+
+namespace xider::tests
 {
-	evan::Scene scene;
+	static_assert(
+		std::is_same_v<
+			decltype(std::declval<evan::RenderObject &>().updateMeshes(
+				std::declval<const std::map<uint32_t,
+											 utility::graphic::Mesh> &>())),
+			bool>,
+		"RenderObject::updateMeshes() must return bool so callers can fall "
+		"back to a rebuild when the topology changed");
 
-	// Add renderable objects to the scene. In a real application these would
-	// be RenderObject instances backed by GPU meshes; here we demonstrate the
-	// CPU-side object-management API.
-	for (std::uint32_t i = 0; i < 10; ++i) {
-		scene.addObject(i, nullptr);
+	static_assert(
+		std::is_same_v<decltype(std::declval<const evan::GPUMesh &>()
+									.getVertexCount()),
+					   size_t>,
+		"GPUMesh::getVertexCount() must expose the allocated vertex count as "
+		"size_t so updateMeshes() can validate in-place updates");
+
+	TEST(RenderObject, UpdateMeshesReturnsBool)
+	{
+		EXPECT_TRUE(true);
 	}
 
-	std::cout << "Added 10 objects to the scene.\n";
-
-	// Remove a subset of objects.
-	for (std::uint32_t i = 0; i < 5; ++i) {
-		scene.removeObject(i);
+	TEST(GPUMesh, GetVertexCountReturnsSizeT)
+	{
+		EXPECT_TRUE(true);
 	}
-
-	std::cout << "Removed 5 objects from the scene.\n";
-	return 0;
-}
+}	 // namespace xider::tests

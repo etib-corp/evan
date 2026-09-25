@@ -18,8 +18,8 @@ set(TEST_SOURCES
     sources/test_memory_type.cpp
     sources/test_pipeline_cache.cpp
     sources/test_render_settings.cpp
-    sources/test_scene.cpp
     sources/test_viewset.cpp
+    sources/test_render_object.cpp
 )
 
 # Fetch GoogleTest

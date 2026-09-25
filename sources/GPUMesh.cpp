@@ -163,6 +163,11 @@ uint32_t evan::GPUMesh::getIndexCount() const
 	return _indexCount;
 }
 
+size_t evan::GPUMesh::getVertexCount() const
+{
+	return _vertexCount;
+}
+
 uint32_t evan::GPUMesh::getMaterialID() const
 {
 	return _materialID;

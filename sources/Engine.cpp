@@ -8,6 +8,7 @@
 #include <typeindex>
 #include <limits>
 #include <cmath>
+#include <map>
 
 #include <utility/event/quit_event.hpp>
 #include <utility/event/keyboard_event.hpp>
@@ -18,6 +19,7 @@
 #include <utility/event/hand_button_event.hpp>
 
 #include "evan/Engine.hpp"
+#include "evan/RenderObject.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
@@ -56,6 +58,26 @@ namespace
 										position.getZ() + offsetPos.getZ()),
 			utility::graphic::OrientationF(finalQ.x, finalQ.y, finalQ.z,
 										   finalQ.w));
+	}
+
+	/**
+	 * @brief Resolves the shader name backing a material, used as the pipeline
+	 * layer label of the associated RenderObject.
+	 *
+	 * @param ressourceProvider The provider owning the material registry.
+	 * @param materialID The material identifier.
+	 * @return The material's shader name, or "mesh" when unknown.
+	 */
+	std::string resolvePipelineLayer(
+		const std::shared_ptr<utility::RessourceProvider> &ressourceProvider,
+		uint32_t materialID)
+	{
+		const auto &materials = ressourceProvider->getMaterials();
+		const auto materialIt = materials.find(materialID);
+		if (materialIt != materials.end() && materialIt->second) {
+			return materialIt->second->getShaderName();
+		}
+		return "mesh";
 	}
 }	 // namespace
 
@@ -113,9 +135,6 @@ evan::Engine::Engine(
 		_swapchainContext->getMsaaSamples(), _ressourceManager);
 	_renderer->setOpaqueSortMode(settings.opaqueSort);
 	_ressourceManager->init(_renderer);
-	_currentScene = 0;
-
-	_scenes[0] = std::make_shared<Scene>();
 }
 
 evan::Engine::~Engine()
@@ -131,11 +150,9 @@ evan::Engine::~Engine()
 	vkDeviceWaitIdle(device);
 
 	_swapchainContext->destroy(device);
-	for (auto &[_, scene]: _scenes) {
-		scene->destroy(device);
-	}
 	// Release materials, textures and shaders before the renderer destroys the
-	// descriptor pool and uniform buffers they reference.
+	// descriptor pool and uniform buffers they reference. The renderer owns the
+	// registered render objects and destroys their GPU meshes in its destroy().
 	_ressourceManager->cleanup();
 	_renderer->destroy(device);
 	_renderer.reset();
@@ -149,171 +166,98 @@ evan::Engine::~Engine()
 // Public Methods //
 ////////////////////
 
-size_t evan::Engine::addText(std::shared_ptr<utility::graphic::Text> text)
+size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
+							const std::string &materialName,
+							const std::string &shader)
 {
-	if (text->getContent().empty()) {
-		this->getLogger().warning()
-			<< "Attempted to add text with empty content. Skipping.";
-		return 0;	 // Skip adding empty text
-	}
-
-	this->getLogger().info() << "Drawing text: " << text->getContent();
-
+	auto material_id = _ressourceProvider->getMaterialID(materialName);
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	auto material_id = _ressourceProvider->getMaterialID(
-		text->getFontFamily() + "_" + std::to_string(text->getFontSize())
-		+ "_material");
-
-	if (material_id == 0) {
-		this->getLogger().warning()
-			<< "Material '" << text->getFontFamily() << "_"
-			<< text->getFontSize()
-			<< "' not found for text object. Text will not be rendered.";
-		return 0;	 // Skip rendering this text if its material is not found
-	}
-
-	this->getLogger().info()
-		<< "Converting text meshes to raw objects for rendering...";
-	for (const auto &mesh: text->getMeshes()) {
-		this->getLogger().debug()
-			<< "Processing mesh with " << mesh->getVertices().size()
-			<< " vertices and " << mesh->getIndices().size() << " indices.";
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	this->getLogger().info() << "Creating RenderObject for text...";
-	std::shared_ptr<RenderObject> textObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "text");
-
-	this->getLogger().info()
-		<< "Adding text RenderObject to current scene: " << _currentScene;
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, textObject);
+	rawObjects.emplace(material_id, mesh);
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects, shader);
+	auto objectID = _renderer->addObject(renderObject);
 	_ressourceManager->sync();
 	return objectID;
 }
 
-size_t evan::Engine::addPrimitive(
-	std::shared_ptr<utility::graphic::Primitive> primitive)
-{
-	if (!primitive || primitive->getMeshes().empty()) {
-		this->getLogger().warning()
-			<< "Attempted to add an empty primitive. Skipping.";
-		return 0;
-	}
-
-	this->getLogger().info() << "Drawing primitive with "
-							 << primitive->getMeshes().size() << " meshes.";
-
-	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
-
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	for (const auto &mesh: primitive->getMeshes()) {
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	std::shared_ptr<RenderObject> primitiveObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, primitiveObject);
-	_ressourceManager->sync();
-
-	return objectID;
-}
-
-size_t evan::Engine::addModel(std::shared_ptr<utility::graphic::Model> model)
-{
-	auto modelTypeStr = std::string(
-		model->type() == utility::graphic::Model::ModelType::OBJ ? "OBJ"
-																 : "Unknown");
-
-	this->getLogger().info() << "Drawing model of type: " << modelTypeStr;
-
-	auto material_id = model->getMaterialID();
-
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	for (const auto &mesh: model->getMeshes()) {
-		rawObjects.emplace(material_id, *mesh);
-	}
-
-	std::shared_ptr<RenderObject> modelObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, "mesh");
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, modelObject);
-	_ressourceManager->sync();
-
-	return objectID;
-}
-
-size_t evan::Engine::addObject(
-	std::shared_ptr<utility::graphic::Renderable> object,
-	const std::string &renderMethod)
+size_t evan::Engine::createObject(std::shared_ptr<utility::graphic::Renderable> object)
 {
 	if (!object || object->getMeshes().empty()) {
 		this->getLogger().warning()
-			<< "Attempted to add an empty renderable object. Skipping.";
+			<< "Attempted to create an empty renderable object. Skipping.";
 		return 0;
 	}
 
 	this->getLogger().info()
-		<< "Drawing renderable object with " << object->getMeshes().size()
-		<< " meshes using render method: " << renderMethod;
+		<< "Creating renderable object with " << object->getMeshes().size()
+		<< " meshes.";
 
-	auto material_id = _ressourceProvider->getMaterialID("mesh_material");
+	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
+
+	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
+	for (const auto &mesh: object->getMeshes()) {
+		rawObjects.emplace(material_id, *mesh);
+	}
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects,
+		resolvePipelineLayer(_ressourceProvider, material_id));
+	auto objectID = _renderer->addObject(renderObject);
+	_ressourceManager->sync();
+	return objectID;
+}
+
+bool evan::Engine::updateObject(std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
+{
+	if (!object || object->getMeshes().empty()) {
+		this->getLogger().warning()
+			<< "Attempted to update an empty renderable object. Skipping.";
+		return false;
+	}
+
+	auto existing = _renderer->getObject(objectID);
+	if (!existing) {
+		this->getLogger().warning()
+			<< "Renderable object with ID " << objectID
+			<< " not found. Update failed.";
+		return false;
+	}
+
+	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
 
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	for (const auto &mesh: object->getMeshes()) {
 		rawObjects.emplace(material_id, *mesh);
 	}
 
-	const std::string pipelineLayer =
-		renderMethod.empty() ? "mesh" : renderMethod;
-	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
-		_deviceContext, rawObjects, pipelineLayer);
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, renderObject);
-	_ressourceManager->sync();
-
-	return objectID;
-}
-
-size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
-							 const std::string &materialName,
-							 const std::string &shader)
-{
-	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
-	auto material_id = _ressourceProvider->getMaterialID(materialName);
-	rawObjects.emplace(material_id, mesh);
-	std::shared_ptr<RenderObject> meshObject =
-		std::make_shared<RenderObject>(_deviceContext, rawObjects, shader);
-	auto objectID =
-		_scenes[_currentScene]->addObject(_nextObjectID++, meshObject);
-	_ressourceManager->sync();
-	return objectID;
-}
-
-bool evan::Engine::removeObject(size_t objectID)
-{
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return false;
+	if (existing->updateMeshes(rawObjects)) {
+		this->getLogger().info()
+			<< "Updated renderable object " << objectID << " in place.";
+		_ressourceManager->sync();
+		return true;
 	}
-	return currentSceneIt->second->removeObject(
-		static_cast<uint32_t>(objectID));
+
+	this->getLogger().info()
+		<< "Renderable object " << objectID
+		<< " topology changed. Rebuilding GPU resources in place.";
+	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
+		_deviceContext, rawObjects,
+		resolvePipelineLayer(_ressourceProvider, material_id));
+	bool updated = _renderer->updateObject(renderObject, objectID);
+	_ressourceManager->sync();
+	return updated;
+}
+
+bool evan::Engine::removeObject( std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
+{
+	this->getLogger().info() << "Removing renderable object with ID "
+							 << objectID << " from engine...";
+	return _renderer->removeObject(objectID);
 }
 
 bool evan::Engine::setObjectTransform(size_t objectID,
 									  const glm::mat4 &transform)
 {
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return false;
-	}
-	auto object =
-		currentSceneIt->second->getObject(static_cast<uint32_t>(objectID));
-	if (!object) {
-		return false;
-	}
+	auto object = _renderer->getObject(objectID);
 	object->setTransform(transform);
 	return true;
 }
@@ -391,51 +335,40 @@ utility::graphic::ViewF evan::Engine::getView(void) const
 		leftView.getNearPlane(), leftView.getFarPlane());
 }
 
-void evan::Engine::addScene(size_t sceneIndex)
-{
-	this->getLogger().info() << "Adding new scene with index: " << sceneIndex;
-
-	_scenes[sceneIndex] = std::make_shared<Scene>();
-	if (_scenes.size() == 1) {
-		_currentScene = sceneIndex;
-	}
-}
-
-evan::Error evan::Engine::update()
+void evan::Engine::update()
 {
 	updateDeltaTime();
 	this->getLogger().info() << "Updating engine state...";
 
 	// Handle viewport input if capture is enabled
-	if (_shouldCaptureViewportInput) {
+	if (shouldCaptureViewportInput()) {
 		handleViewportInput(_capturedViewportEvents);
 		_capturedViewportEvents.clear();
 	}
+}
 
-	return Error::Ok;
+void evan::Engine::clear()
+{
+	// Vulkan clears the render target through the render pass clear values,
+	// so there is nothing to do here.
+}
+
+void evan::Engine::present()
+{
+	render();
+}
+
+utility::graphic::SizeF
+	evan::Engine::measureText(const utility::graphic::Text &text) const
+{
+	return text.getTextDimensions();
 }
 
 evan::Error evan::Engine::render()
 {
 	this->getLogger().info() << "Starting render process...";
 
-	if (_scenes.empty()) {
-		this->getLogger().warning()
-			<< "No scenes available to render. Skipping render process.";
-		return Error::Ok;
-	}
-
-	this->getLogger().info()
-		<< "Rendering current scene with index: " << _currentScene;
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		this->getLogger().warning()
-			<< "Current scene not found. Skipping render process.";
-		return Error::RuntimeError;
-	}
-
-	return _renderer->drawFrame(*_deviceContext, *_swapchainContext,
-								*currentSceneIt->second);
+	return _renderer->drawFrame(*_deviceContext, *_swapchainContext);
 }
 
 evan::Error evan::Engine::getLastError() const
@@ -443,7 +376,7 @@ evan::Error evan::Engine::getLastError() const
 	return _platform->getLastError();
 }
 
-std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
+void evan::Engine::pollEvents()
 {
 	this->getLogger().info() << "Polling events from platform...";
 
@@ -484,7 +417,7 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 	if (_platform->shouldClose())
 		events.emplace_back(quitEventFactory.create());
 
-	if (_shouldCaptureViewportInput) {
+	if (shouldCaptureViewportInput()) {
 		this->getLogger().info()
 			<< "Captured " << events.size() << " events for viewport input.";
 		_capturedViewportEvents.insert(_capturedViewportEvents.end(),
@@ -496,19 +429,14 @@ std::vector<std::shared_ptr<utility::event::Event>> evan::Engine::pollEvents()
 			<< " events, but viewport input capture is disabled.";
 	}
 
-	return events;
-}
-
-void evan::Engine::switchScene(size_t sceneIndex)
-{
-	this->getLogger().info() << "Switching to scene with index: " << sceneIndex;
-	if (_scenes.find(sceneIndex) != _scenes.end()) {
-		this->getLogger().info()
-			<< "Scene found. Switching current scene to index: " << sceneIndex;
-		_currentScene = sceneIndex;
-	} else {
+	auto &callback = getEventCallback();
+	if (!callback) {
 		this->getLogger().warning()
-			<< "Scene index " << sceneIndex << " does not exist.";
+			<< "No event callback set, skipping event dispatch.";
+		return;
+	}
+	for (auto &event: events) {
+		callback(event);
 	}
 }
 
@@ -762,16 +690,9 @@ void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 		return;
 	}
 
-	auto currentSceneIt = _scenes.find(_currentScene);
-	if (currentSceneIt == _scenes.end()) {
-		return;
-	}
-
-	auto renderObject = currentSceneIt->second->getObject(
-		static_cast<uint32_t>(_debugRayObjectID));
+	auto renderObject = _renderer->getObject(_debugRayObjectID);
 	if (!renderObject) {
-		// The debug ray was registered in a different scene. Recreate it in
-		// the current scene.
+		// The debug ray object no longer exists. Recreate it.
 		_debugRayObjectID = this->addMesh(rayMesh, "mesh_material");
 		return;
 	}

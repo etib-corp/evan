@@ -16,7 +16,6 @@
 #include "evan/DeviceContext.hpp"
 #include "evan/RenderSettings.hpp"
 #include "evan/Renderer.hpp"
-#include "evan/Scene.hpp"
 #include "evan/ASwapchainContext.hpp"
 #include "evan/IPlatform.hpp"
 
@@ -39,7 +38,8 @@
 #include <utility/logging/loggable.hpp>
 #include <utility/logging/default_logger.hpp>
 
-#include "Scene.hpp"
+#include <utility/engine.hpp>
+
 #include "RenderObject.hpp"
 #include "RessourceManager.hpp"
 
@@ -51,17 +51,17 @@ namespace evan
 	/**
 	 * @brief The Engine class is the main entry point for the Evan Engine. It
 	 * manages the core components of the engine, including the device context,
-	 * renderer, scenes, swapchain context, and platform abstraction. The
+	 * renderer, swapchain context, and platform abstraction. The
 	 * Engine class is responsible for initializing these components, running
 	 * the main loop of the engine, and providing methods for updating and
-	 * rendering scenes. It serves as the central hub for managing the engine's
-	 * functionality and orchestrating the various subsystems to create a
-	 * cohesive experience.
+	 * rendering its render objects. It serves as the central hub for managing
+	 * the engine's functionality and orchestrating the various subsystems to
+	 * create a cohesive experience.
 	 *
 	 * The Engine class provides a high-level interface for interacting with
-	 * the engine, allowing users to add scenes, handle updates, and manage
-	 * rendering without needing to directly interact with the lower-level
-	 * components. It abstracts away the complexities of Vulkan and
+	 * the engine, allowing users to add render objects, handle updates, and
+	 * manage rendering without needing to directly interact with the
+	 * lower-level components. It abstracts away the complexities of Vulkan and
 	 * platform-specific details, providing a more user-friendly API for
 	 * developers using the Evan Engine.
 	 *
@@ -82,9 +82,7 @@ namespace evan
 	 * establishing the core structure and functionality of the engine, with
 	 * plans for further enhancements and optimizations in the future.
 	 */
-	class Engine:
-		protected utility::logging::Loggable<Engine,
-											 utility::logging::DefaultLogger>
+	class Engine: public utility::Engine
 	{
 		public:
 		/**
@@ -129,36 +127,6 @@ namespace evan
 			   RenderSettings settings = {});
 
 		~Engine();
-
-		/**
-		 * @brief Adds a text object to the scene. This method takes a shared
-		 * pointer to a Text object, which contains the necessary information
-		 * for rendering the text, such as the string content, font, size, and
-		 * color.
-		 *
-		 * The addText method is responsible for setting up the appropriate
-		 * graphics pipeline, binding the necessary resources, and issuing the
-		 * draw calls to render the text on the screen. It interacts with the
-		 * Renderer and DeviceContext to ensure that the text is rendered
-		 * correctly, taking into account factors such as the current scene,
-		 * camera position, and any transformations applied to the text.
-		 *
-		 * @param text A shared pointer to the Text object to be added to the
-		 * scene.
-		 *
-		 * @return The unique identifier (size_t) of the added text object
-		 * within the scene, which can be used for future reference or
-		 * manipulation of the text object in the scene.
-		 */
-		size_t addText(std::shared_ptr<utility::graphic::Text> text);
-
-		/**
-		 * @brief Removes a previously added render object from the current
-		 * scene.
-		 * @param objectID The identifier returned by addText or addMesh.
-		 * @return True when the object was removed from the scene.
-		 */
-		bool removeObject(size_t objectID);
 
 		/**
 		 * @brief Sets the model transform of an object in the current scene.
@@ -215,79 +183,17 @@ namespace evan
 		 * @brief Get the mirrored view state.
 		 * @return The current view.
 		 */
-		utility::graphic::ViewF getView(void) const;
+		utility::graphic::ViewF getView(void) const override;
 
 		/**
-		 * @brief Adds a primitive object to the scene. This method takes a
-		 * shared pointer to a Primitive object, which contains the necessary
-		 * information for rendering the primitive, such as the mesh data,
-		 * material properties, and any transformations applied to the
-		 * primitive.
-		 *
-		 * The addPrimitive method is responsible for setting up the appropriate
-		 * graphics pipeline, binding the necessary resources, and issuing the
-		 * draw calls to render the primitive on the screen. It interacts with
-		 * the Renderer and DeviceContext to ensure that the primitive is
-		 * rendered correctly, taking into account factors such as the current
-		 * scene, camera position, and any transformations applied to the
-		 * primitive.
-		 *
-		 * @param primitive A shared pointer to the Primitive object to be drawn
-		 * on the screen.
-		 * @return The unique identifier (size_t) of the added primitive object
-		 * within the scene, which can be used for future reference or
-		 * manipulation of the primitive object in the scene.
+		 * @brief Measures the pixel dimensions of a given text string when
+		 * rendered with a specific font.
+		 * @param text The text to measure.
+		 * @return A 2D vector containing the width and height of the rendered
+		 * text in pixels.
 		 */
-		size_t addPrimitive(
-			std::shared_ptr<utility::graphic::Primitive> primitive);
-
-		/**
-		 * @brief Adds a model object to the scene. This method takes a shared
-		 * pointer to a Model object, which contains the necessary information
-		 * for rendering the model, such as the mesh data, material properties,
-		 * and any transformations applied to the model.
-		 *
-		 * The addModel method is responsible for setting up the appropriate
-		 * graphics pipeline, binding the necessary resources, and issuing the
-		 * draw calls to render the model on the screen. It interacts with the
-		 * Renderer and DeviceContext to ensure that the model is rendered
-		 * correctly, taking into account factors such as the current scene,
-		 * camera position, and any transformations applied to the model.
-		 *
-		 * @param model A shared pointer to the Model object to be added to the
-		 * scene.
-		 * @return The unique identifier (size_t) of the added model object
-		 * within the scene, which can be used for future reference or
-		 * manipulation of the model object in the scene.
-		 */
-		size_t addModel(std::shared_ptr<utility::graphic::Model> model);
-
-		/**
-		 * @brief Adds a generic renderable object to the scene. This method
-		 * takes a shared pointer to a Renderable object, which is a base class
-		 * for various types of render objects, such as Text, Primitive, and
-		 * Model. The method also takes a string parameter representing the
-		 * render method to be used for drawing the object, allowing for
-		 * flexibility in how the object is rendered.
-		 *
-		 * The addObject method is responsible for determining the appropriate
-		 * graphics pipeline and rendering approach based on the type of the
-		 * Renderable object and the specified render method. It interacts with
-		 * the Renderer and DeviceContext to ensure that the object is rendered
-		 * correctly, taking into account factors such as the current scene,
-		 * camera position, and any transformations applied to the object.
-		 *
-		 * @param object A shared pointer to the Renderable object to be added
-		 * to the scene.
-		 * @param renderMethod A string representing the render method to be
-		 * used for drawing the object, allowing for flexibility in how the
-		 * object is rendered.
-		 * @return The unique identifier (size_t) of the added renderable object
-		 * within the scene, which can be used for future reference or
-		 * manipulation of the renderable object in the scene.
-		 */
-		size_t addObject(std::shared_ptr<utility::graphic::Renderable> object,
-						 const std::string &renderMethod);
+		utility::graphic::SizeF
+			measureText(const utility::graphic::Text &text) const override;
 
 		/**
 		 * @brief Adds a mesh to the renderer. This method takes a Mesh object,
@@ -318,6 +224,32 @@ namespace evan
 					   const std::string &shader	   = "default");
 
 		/**
+		 * @brief Creates a new renderable object.
+		 * @param object The renderable object to create.
+		 * @return The ID of the created object, or 0 if creation failed.
+		 */
+		size_t createObject(
+			std::shared_ptr<utility::graphic::Renderable> object) override;
+
+		/**
+		 * @brief Updates an existing renderable object.
+		 * @param object The updated renderable object.
+		 * @param objectID The ID of the object to update.
+		 * @return True if the update was successful, false otherwise.
+		 */
+		bool updateObject(std::shared_ptr<utility::graphic::Renderable> object,
+						  size_t objectID) override;
+
+		/**
+		 * @brief Removes a renderable object from the engine.
+		 * @param object The renderable object to remove.
+		 * @param objectID The ID of the object to remove.
+		 * @return True if the removal was successful, false otherwise.
+		 */
+		bool removeObject(std::shared_ptr<utility::graphic::Renderable> object,
+						  size_t objectID) override;
+
+		/**
 		 * @brief Updates the state of the engine. This method is responsible
 		 * for handling logic updates, input processing, and other non-rendering
 		 * related tasks. It is typically called once per frame, allowing the
@@ -334,14 +266,29 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error update();
+		void update() override;
 
 		/**
-		 * @brief Renders the current scene. This method is responsible for
-		 * drawing the objects in the current scene to the screen using the
-		 * renderer. It typically involves setting up the necessary graphics
-		 * pipelines, binding resources, and issuing draw calls to render the
-		 * objects in the scene. The render method may also handle
+		 * @brief Clears the current rendering target.
+		 *
+		 * Vulkan clears the render target through the render pass clear values,
+		 * so this is a no-op for the Evan engine.
+		 */
+		void clear(void) override;
+
+		/**
+		 * @brief Presents the composed back buffer to the screen.
+		 *
+		 * Delegates to the renderer's frame drawing pipeline.
+		 */
+		void present(void) override;
+
+		/**
+		 * @brief Renders the engine's render objects. This method is
+		 * responsible for drawing the render objects registered in the engine
+		 * to the screen using the renderer. It typically involves setting up
+		 * the necessary graphics pipelines, binding resources, and issuing draw
+		 * calls to render the objects. The render method may also handle
 		 * post-processing effects, such as bloom or anti-aliasing, depending on
 		 * the specific requirements of the application being developed with the
 		 * engine.
@@ -352,7 +299,7 @@ namespace evan
 		 * core structure and functionality of the engine, with plans for
 		 * further improvements and optimizations in the future.
 		 */
-		Error render();	   // For rendering the current scene.
+		Error render();	   // For rendering the render objects.
 
 		/**
 		 * @brief Returns the last error recorded by the platform.
@@ -391,38 +338,7 @@ namespace evan
 		 * see utility::event::Event for more details on the Event class and its
 		 * derived classes representing specific types of events.
 		 */
-		std::vector<std::shared_ptr<utility::event::Event>> pollEvents();
-
-		/**
-		 * @brief Adds a new scene to the engine. This method allows users to
-		 * add a new scene to the engine by providing the necessary data, such
-		 * as texture paths and mesh data. The method takes in a vector of
-		 * texture paths, which are used to load the textures for the scene, and
-		 * a map of mesh data, which contains the information about the meshes
-		 * to be rendered in the scene. The method creates a new Scene object
-		 * using the provided data and adds it to the vector of scenes managed
-		 * by the engine. This allows users to easily create and manage multiple
-		 * scenes within the engine, enabling them to switch between different
-		 * scenes as needed.
-		 *
-		 * @param sceneIndex Scene identifier.
-		 *
-		 * @note The Engine class is designed to be flexible and extensible,
-		 * allowing for future enhancements and additions to the engine's
-		 * capabilities. The current implementation focuses on establishing the
-		 * core structure and functionality of the engine, with plans for
-		 * further improvements and optimizations in the future.
-		 */
-		void addScene(size_t sceneIndex);
-
-		/**
-		 * @brief Switches the current scene to the scene with the specified
-		 * index. This method allows users to navigate between different scenes
-		 * managed by the engine.
-		 *
-		 * @param sceneIndex The index of the scene to switch to.
-		 */
-		void switchScene(size_t sceneIndex);
+		void pollEvents() override;
 
 		/**
 		 * @brief Checks if the engine should capture viewport input. This
@@ -524,28 +440,6 @@ namespace evan
 		std::shared_ptr<Renderer> _renderer;
 
 		/**
-		 * A map of scenes managed by the engine, where the key is a unique
-		 * identifier (size_t) for each scene, and the value is a Scene object
-		 * containing the data and resources for that scene. This allows the
-		 * engine to manage multiple scenes simultaneously, enabling users to
-		 * switch between different scenes as needed. Each Scene object contains
-		 * the necessary data for rendering, such as meshes, materials, and
-		 * textures, allowing the engine to efficiently manage and render
-		 * multiple scenes within the application.
-		 */
-		std::map<size_t, std::shared_ptr<Scene>> _scenes;
-
-		/**
-		 * An index to keep track of the current scene being rendered or
-		 * managed. This allows the engine to switch between different scenes as
-		 * needed, enabling users to easily navigate through different parts of
-		 * their application or game. The _currentScene index can be used to
-		 * determine which scene is currently active and should be rendered or
-		 * updated during the main loop of the engine.
-		 */
-		size_t _currentScene;
-
-		/**
 		 * A shared pointer to an ASwapchainContext object, which manages the
 		 * Vulkan swapchain and related resources. The ASwapchainContext is
 		 * responsible for creating and managing the swapchain, handling
@@ -591,17 +485,6 @@ namespace evan
 		std::shared_ptr<RessourceManager> _ressourceManager;
 
 		private:
-		/**
-		 * A counter to generate unique object IDs for scenes, render objects,
-		 * or other entities managed by the engine. This counter is incremented
-		 * each time a new object is created, ensuring that each object receives
-		 * a unique identifier that can be used for tracking and management
-		 * purposes within the engine. The _nextObjectID can be used to assign
-		 * IDs to new scenes, render objects, or any other entities that require
-		 * unique identification within the engine's data structures.
-		 */
-		size_t _nextObjectID = 1;
-
 		/**
 		 * When true, the engine copies keyboard and mouse input for movement:
 		 * - Keyboard events are copied for entity movement and related actions.

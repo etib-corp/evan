@@ -91,6 +91,22 @@ namespace evan
 		void setTransform(const glm::mat4 &transform);
 
 		/**
+		 * @brief Updates the meshes of this object in place.
+		 *
+		 * Re-uses the already-allocated GPU vertex buffers whenever the
+		 * topology (mesh count, vertex count and index count) is unchanged,
+		 * avoiding buffer creation and destruction. When the topology differs,
+		 * returns false so the caller can rebuild the object instead.
+		 *
+		 * @param rawObjects A map of material IDs to the new mesh data, with
+		 * the same layout used by the constructor.
+		 * @return True when every mesh was updated in place, false when the
+		 * topology changed and a rebuild is required.
+		 */
+		bool updateMeshes(
+			const std::map<uint32_t, utility::graphic::Mesh> &rawObjects);
+
+		/**
 		 * @brief Retrieves the vector of GPUMesh instances associated with this
 		 * RenderObject. Each GPUMesh represents a mesh that will be rendered as
 		 * part of this object, and contains the necessary GPU resources for
