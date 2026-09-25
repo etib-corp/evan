@@ -130,9 +130,20 @@ evan::Engine::Engine(
 
 	_ressourceManager =
 		std::make_shared<RessourceManager>(ressourceProvider, _deviceContext);
+
+	// Size the per-frame resources from the backend's real view/swapchain
+	// count (desktop: 1, OpenXR: one per eye) instead of always allocating
+	// MAX_SWAPCHAINS slots.
+	const std::size_t perFrameSlotCount =
+		frameSlotCount(_swapchainContext->getViewCount(),
+					   _swapchainContext->getSwapchainCount());
+	this->getLogger().info() << "Allocating " << perFrameSlotCount
+							 << " per-frame slot(s) for the renderer.";
+
 	_renderer = std::make_shared<Renderer>(
 		_deviceContext, _swapchainContext->getRenderPass(),
-		_swapchainContext->getMsaaSamples(), _ressourceManager);
+		_swapchainContext->getMsaaSamples(), perFrameSlotCount,
+		_ressourceManager);
 	_renderer->setOpaqueSortMode(settings.opaqueSort);
 	_ressourceManager->init(_renderer);
 }

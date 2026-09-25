@@ -7,8 +7,14 @@
 
 #include "evan/Frame.hpp"
 
-evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext)
+#include <cassert>
+
+evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext,
+				   std::size_t perFrameSlotCount)
 	: _deviceContext(deviceContext)
+	// Normalise the requested count into [1, MAX_SWAPCHAINS], so a bad caller
+	// can never under- or over-allocate the per-frame resources below.
+	, _perFrameSlotCount(frameSlotCount(perFrameSlotCount, perFrameSlotCount))
 {
 	this->getLogger().info()
 		<< "Creating frame with command pool and device backend...";
@@ -109,6 +115,7 @@ void evan::Frame::cleanup()
 
 void evan::Frame::resetCommandBuffer(std::size_t viewSlot)
 {
+	assert(viewSlot < _commandBuffers.size());
 	this->getLogger().info()
 		<< "Resetting command buffer for view slot " << viewSlot << "...";
 	vkResetCommandBuffer(_commandBuffers[viewSlot],
@@ -121,7 +128,13 @@ void evan::Frame::resetCommandBuffer(std::size_t viewSlot)
 
 VkCommandBuffer evan::Frame::getCommandBuffer(std::size_t viewSlot) const
 {
+	assert(viewSlot < _commandBuffers.size());
 	return _commandBuffers[viewSlot];
+}
+
+std::size_t evan::Frame::getPerFrameSlotCount() const
+{
+	return _perFrameSlotCount;
 }
 
 VkBuffer evan::Frame::getUniformBuffer() const
@@ -185,13 +198,12 @@ void evan::Frame::createCommandBuffer(VkDevice device,
 	allocInfo.sType		  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = commandPool;
 	allocInfo.level		  = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = MAX_SWAPCHAINS;
+	allocInfo.commandBufferCount = static_cast<uint32_t>(_perFrameSlotCount);
 
-	this->getLogger().info()
-		<< "Allocating " << MAX_SWAPCHAINS
-		<< " command buffers from command pool...";
+	this->getLogger().info() << "Allocating " << _perFrameSlotCount
+							 << " command buffers from command pool...";
 
-	_commandBuffers.resize(MAX_SWAPCHAINS);
+	_commandBuffers.resize(_perFrameSlotCount);
 	if (vkAllocateCommandBuffers(device, &allocInfo, _commandBuffers.data())
 		!= VK_SUCCESS) {
 		this->getLogger().error()
@@ -212,10 +224,10 @@ void evan::Frame::createSyncObjects(VkDevice device)
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	_imageAvailable.resize(MAX_SWAPCHAINS);
-	_renderFinished.resize(MAX_SWAPCHAINS);
+	_imageAvailable.resize(_perFrameSlotCount);
+	_renderFinished.resize(_perFrameSlotCount);
 
-	for (int i = 0; i < MAX_SWAPCHAINS; ++i) {
+	for (std::size_t i = 0; i < _perFrameSlotCount; ++i) {
 		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
 							  &_imageAvailable[i])
 				!= VK_SUCCESS
@@ -252,12 +264,11 @@ void evan::Frame::createUniformBuffer(const ADeviceBackend &deviceBackend)
 	_uniformBufferAlignedSize =
 		alignUp(sizeof(UniformBufferObject), minAlignment);
 	const VkDeviceSize bufferSize =
-		_uniformBufferAlignedSize * MAX_SWAPCHAINS;
+		_uniformBufferAlignedSize * _perFrameSlotCount;
 
 	this->getLogger().info()
-		<< "Uniform buffer: " << MAX_SWAPCHAINS << " view slot(s) of "
-		<< _uniformBufferAlignedSize << " bytes (" << bufferSize
-		<< " total).";
+		<< "Uniform buffer: " << _perFrameSlotCount << " view slot(s) of "
+		<< _uniformBufferAlignedSize << " bytes (" << bufferSize << " total).";
 
 	this->getLogger().info()
 		<< "Setting up buffer properties for uniform buffer...";
@@ -301,12 +312,11 @@ void evan::Frame::createInstanceBuffer(const ADeviceBackend &deviceBackend)
 	_instanceBufferAlignedSize =
 		alignUp(instanceStride * MAX_INSTANCES_PER_VIEW, minAlignment);
 	const VkDeviceSize bufferSize =
-		_instanceBufferAlignedSize * MAX_SWAPCHAINS;
+		_instanceBufferAlignedSize * _perFrameSlotCount;
 
 	this->getLogger().info()
-		<< "Instance buffer: " << MAX_SWAPCHAINS << " view slot(s) of "
-		<< _instanceBufferAlignedSize << " bytes (" << bufferSize
-		<< " total).";
+		<< "Instance buffer: " << _perFrameSlotCount << " view slot(s) of "
+		<< _instanceBufferAlignedSize << " bytes (" << bufferSize << " total).";
 
 	ADeviceBackend::CreateBufferProperties bufferProperties = {
 		._size		 = bufferSize,
@@ -321,8 +331,8 @@ void evan::Frame::createInstanceBuffer(const ADeviceBackend &deviceBackend)
 
 	this->getLogger().info() << "Instance buffer created and memory allocated "
 								"successfully. Mapping memory...";
-	vkMapMemory(deviceBackend.getDevice(), _instanceBufferMemory, 0,
-				bufferSize, 0, &_instanceBufferMapped);
+	vkMapMemory(deviceBackend.getDevice(), _instanceBufferMemory, 0, bufferSize,
+				0, &_instanceBufferMapped);
 }
 
 void evan::Frame::createIndirectBuffer(const ADeviceBackend &deviceBackend)
@@ -342,12 +352,11 @@ void evan::Frame::createIndirectBuffer(const ADeviceBackend &deviceBackend)
 	_indirectBufferAlignedSize =
 		alignUp(commandStride * MAX_INDIRECT_COMMANDS_PER_VIEW, minAlignment);
 	const VkDeviceSize bufferSize =
-		_indirectBufferAlignedSize * MAX_SWAPCHAINS;
+		_indirectBufferAlignedSize * _perFrameSlotCount;
 
 	this->getLogger().info()
-		<< "Indirect buffer: " << MAX_SWAPCHAINS << " view slot(s) of "
-		<< _indirectBufferAlignedSize << " bytes (" << bufferSize
-		<< " total).";
+		<< "Indirect buffer: " << _perFrameSlotCount << " view slot(s) of "
+		<< _indirectBufferAlignedSize << " bytes (" << bufferSize << " total).";
 
 	ADeviceBackend::CreateBufferProperties bufferProperties = {
 		._size		 = bufferSize,
@@ -362,6 +371,6 @@ void evan::Frame::createIndirectBuffer(const ADeviceBackend &deviceBackend)
 
 	this->getLogger().info() << "Indirect buffer created and memory allocated "
 								"successfully. Mapping memory...";
-	vkMapMemory(deviceBackend.getDevice(), _indirectBufferMemory, 0,
-				bufferSize, 0, &_indirectBufferMapped);
+	vkMapMemory(deviceBackend.getDevice(), _indirectBufferMemory, 0, bufferSize,
+				0, &_indirectBufferMapped);
 }

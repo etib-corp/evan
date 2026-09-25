@@ -74,6 +74,10 @@ namespace evan
 		 * of the rendering operations.
 		 * @param msaaSamples The MSAA sample count to be used for multisample
 		 * anti aliasing operations in the graphics pipeline.
+		 * @param perFrameSlotCount Number of view/swapchain slots each frame
+		 * allocates per-frame resources for, normally
+		 * frameSlotCount(viewCount, swapchainCount). Clamped to
+		 * [1, MAX_SWAPCHAINS].
 		 * @param ressourceManager A shared pointer to the RessourceManager,
 		 * which is responsible for managing materials, textures, and other
 		 * resources used in rendering. The Renderer interacts with the
@@ -89,6 +93,7 @@ namespace evan
 		 */
 		Renderer(std::shared_ptr<DeviceContext> deviceContext,
 				 VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples,
+				 std::size_t perFrameSlotCount,
 				 std::shared_ptr<RessourceManager> ressourceManager);
 
 		~Renderer();
@@ -191,27 +196,25 @@ namespace evan
 						ASwapchainContext &swapchainContext);
 
 		/**
-		 * @brief Creates a frame for rendering.
+		 * @brief Whether the view at @p viewIndex carries the in-flight fence
+		 * for a submission group of @p viewCount views.
 		 *
-		 * This method initializes a Frame object by allocating the necessary
-		 * Vulkan resources, such as command buffers and synchronization
-		 * objects, for rendering operations. It takes a Vulkan command pool and
-		 * a reference to the ADeviceBackend as parameters to set up the frame
-		 * for rendering. Implement this method to ensure that frames are
-		 * properly created and ready for use in the rendering process.
+		 * @c drawFrame records and submits every view of a frame back-to-back
+		 * and attaches the in-flight fence only to the last submission. The
+		 * graphics queue executes submissions in order, so the last
+		 * submission's completion implies every earlier view has completed;
+		 * attaching the fence to every view would make the CPU wait for each
+		 * eye in turn and reintroduce the P0-03 inter-eye stall.
 		 *
-		 * @param commandPool The Vulkan command pool used to allocate command
-		 * buffers for the frame.
-		 * @param deviceBackend A reference to the ADeviceBackend that provides
-		 * access to Vulkan resources and functions needed to create
-		 * synchronization objects and uniform buffers for the frame.
+		 * Exposed so the invariant can be covered by a unit test.
 		 *
-		 * @note This method should be called during the initialization of the
-		 * Renderer to create the necessary frames for rendering. Ensure that
-		 * the command pool and device backend are properly initialized before
-		 * calling this method to avoid issues during frame creation.
+		 * @param viewIndex Index of the view within the submission group.
+		 * @param viewCount Number of views in the submission group.
+		 * @return True when the view is the last one of the group.
 		 */
-		void createFrame(std::shared_ptr<DeviceContext> deviceContext);
+		[[nodiscard]] static bool
+			viewOwnsInFlightFence(std::size_t viewIndex,
+								  std::size_t viewCount) noexcept;
 
 		/**
 		 * @brief Retrieves the Vulkan descriptor pool associated with the
@@ -549,18 +552,6 @@ namespace evan
 		 */
 		void updateUniformBuffer(const utility::graphic::ViewF &view,
 								 std::size_t viewSlot);
-
-		/**
-		 * @brief Resets the command buffers for the current frame.
-		 *
-		 * This method is responsible for resetting the command buffers
-		 * associated with the current frame being rendered. It ensures that the
-		 * command buffers are in a clean state before recording new commands
-		 * for the next frame. Implement this method to properly manage command
-		 * buffer states and to avoid issues during command buffer recording and
-		 * submission in the rendering process.
-		 */
-		void resetCommandBuffers();
 
 		/**
 		 * @brief Records the command buffer for rendering a frame.

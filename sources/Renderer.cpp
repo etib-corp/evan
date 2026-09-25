@@ -91,6 +91,7 @@ namespace
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
+						 std::size_t perFrameSlotCount,
 						 std::shared_ptr<RessourceManager> ressourceManager)
 	: _ressourceManager(ressourceManager)
 	, _deviceContext(deviceContext)
@@ -117,7 +118,8 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 
 	this->getLogger().info() << "Creating frames for rendering...";
 	for (int frameIndex = 0; frameIndex < MAX_FRAMES_IN_FLIGHT; frameIndex++) {
-		_frames.emplace_back(std::make_shared<Frame>(deviceContext));
+		_frames.emplace_back(
+			std::make_shared<Frame>(deviceContext, perFrameSlotCount));
 	}
 	this->getLogger().info() << "Frames created successfully.";
 }
@@ -296,7 +298,9 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// recorded and submitted back-to-back without waiting for the GPU between
 	// them. The in-flight fence is signaled only by the last submission: the
 	// graphics queue executes submissions in order, so its completion implies
-	// every earlier view has completed as well.
+	// every earlier view has completed as well. viewOwnsInFlightFence() below
+	// encodes that decision and is covered by a unit test; do not attach the
+	// fence to every view, that reintroduces the P0-03 inter-eye stall.
 	std::vector<std::size_t> renderableViews;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const std::size_t s = viewSet[v].swapchainIndex;
@@ -349,8 +353,11 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		submitInfo.pSignalSemaphores =
 			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
-		const bool isLastView = (i + 1 == renderableViews.size());
-		VkFence submitFence	  = isLastView ? frame._inFlight : VK_NULL_HANDLE;
+		// Only the final view carries the in-flight fence (see the step 3
+		// comment above and viewOwnsInFlightFence()).
+		VkFence submitFence = viewOwnsInFlightFence(i, renderableViews.size())
+			? frame._inFlight
+			: VK_NULL_HANDLE;
 
 		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
 											  1, &submitInfo, submitFence);
@@ -421,10 +428,10 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	return Error::Ok;
 }
 
-void evan::Renderer::createFrame(std::shared_ptr<DeviceContext> deviceContext)
+bool evan::Renderer::viewOwnsInFlightFence(std::size_t viewIndex,
+										   std::size_t viewCount) noexcept
 {
-	this->getLogger().info() << "Creating frame with device context...";
-	_frames.emplace_back(std::make_shared<Frame>(deviceContext));
+	return viewCount > 0 && viewIndex + 1 == viewCount;
 }
 
 void evan::Renderer::setShaderBlendMode(uint32_t shaderID, BlendMode blendMode)
@@ -763,16 +770,6 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 		return;
 	}
 	this->getLogger().info() << "Descriptor pool created successfully.";
-}
-
-void evan::Renderer::resetCommandBuffers()
-{
-	this->getLogger().info()
-		<< "Resetting command buffers for current frame index: "
-		<< _currentFrameIndex;
-	for (std::size_t viewSlot = 0; viewSlot < MAX_SWAPCHAINS; ++viewSlot) {
-		_frames[_currentFrameIndex]->resetCommandBuffer(viewSlot);
-	}
 }
 
 void evan::Renderer::updateUniformBuffer(const utility::graphic::ViewF &view,
