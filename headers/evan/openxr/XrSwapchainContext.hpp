@@ -264,16 +264,16 @@ namespace evan
 
 		private:
 		/**
-		 * @brief Selects the effective MSAA sample count and resolve strategy
-		 * from the OpenXR runtime's recommended swapchain sample count.
+		 * @brief Selects the effective MSAA sample count and the color
+		 * attachment mode.
 		 *
-		 * When the runtime recommends a one-sample swapchain, the engine keeps
-		 * resolving a multisampled color image into the swapchain. When the
-		 * runtime recommends multisampled swapchain images, rendering targets
-		 * the swapchain image directly and no resolve attachment is used.
+		 * The application-selected sample count (one by default) is honored
+		 * unless the runtime only hands out multisampled swapchain images, in
+		 * which case those images are rendered into directly because the
+		 * runtime owns them and their sample count is not negotiable.
 		 *
-		 * @param deviceContext The device context providing the engine-selected
-		 * sample count fallback.
+		 * @param deviceContext The device context providing the
+		 * application-selected sample count.
 		 */
 		void selectMsaaSamples(const DeviceContext &deviceContext);
 
@@ -284,16 +284,20 @@ namespace evan
 		ViewSet _viewSet;
 
 		/**
-		 * @brief MSAA sample count resolved for this swapchain context from
-		 * the OpenXR runtime's recommended swapchain sample count.
+		 * @brief MSAA sample count used by the render pass, framebuffers and
+		 * graphics pipelines of this swapchain context.
 		 */
 		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		/**
-		 * @brief Whether rendering resolves a multisampled color image into
-		 * the swapchain image (true) or renders directly into it (false).
+		 * @brief How the render pass obtains its single-sampled color
+		 * attachment. ColorAttachmentMode::ResolveToSwapchain when a
+		 * multisampled color image owned by the engine is resolved into the
+		 * swapchain image, ColorAttachmentMode::SwapchainImageAttachment when
+		 * rendering targets the runtime-owned swapchain image directly.
 		 */
-		bool _resolveToSwapchain = true;
+		ColorAttachmentMode _colorAttachmentMode =
+			ColorAttachmentMode::SwapchainImageAttachment;
 
 		/**
 		 * Vector of XrCompositionLayerProjectionView structures for each

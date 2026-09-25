@@ -16,6 +16,7 @@
 
 #include "evan/ADeviceBackend.hpp"
 #include "evan/DeviceContext.hpp"
+#include "evan/RenderSettings.hpp"
 
 #include "GPUTexture.hpp"
 
@@ -169,6 +170,21 @@ namespace evan
 		uint32_t getShaderID() const;
 
 		/**
+		 * @brief Retrieves the blend mode this material has to be drawn with.
+		 *
+		 * Derived from the alpha semantics declared by the material (see
+		 * utility::graphic::Material::getAlphaMode). AlphaMode::Mask is
+		 * projected onto the alpha pipeline for now: a masked texel whose alpha
+		 * is close to zero contributes nothing once blended, which keeps
+		 * alpha-tested content visually correct until shaders can discard below
+		 * the cutoff.
+		 *
+		 * @return BlendMode::Alpha for Mask and Blend materials,
+		 * BlendMode::Opaque otherwise.
+		 */
+		[[nodiscard]] BlendMode getBlendMode() const;
+
+		/**
 		 * @brief Retrieves the version number of the uploaded material.
 		 *
 		 * This method returns the version number of the material that was
@@ -249,6 +265,15 @@ namespace evan
 		 * The unique ID associated with the shader used by this material.
 		 */
 		uint32_t _shaderID;
+
+		/**
+		 * The alpha semantics declared by the material this object uploads.
+		 *
+		 * Kept so the renderer can pick the opaque or the alpha-blended
+		 * pipeline variant without reaching back into the CPU-side material.
+		 */
+		utility::graphic::AlphaMode _alphaMode =
+			utility::graphic::AlphaMode::Opaque;
 
 		/**
 		 * Vector of Vulkan descriptor sets associated with the material.

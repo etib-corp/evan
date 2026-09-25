@@ -21,6 +21,8 @@ evan::GPUMaterial::GPUMaterial(std::shared_ptr<DeviceContext> deviceContext,
 	this->getLogger().info()
 		<< "Initializing GPUMaterial with shader ID: " << shaderID << "...";
 
+	_alphaMode = material.getAlphaMode();
+
 	auto deviceBackend = deviceContext->getDeviceBackend();
 	auto textures	   = material.getTextures();
 	for (const auto &texture: textures) {
@@ -89,10 +91,14 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 							   const utility::graphic::Material &material,
 							   uint32_t shaderID)
 {
+	// The renderer reads the blend mode every frame, so keep it current even
+	// when the textures did not change and the update is skipped.
+	_alphaMode = material.getAlphaMode();
+
 	if (material.getVersion() == _uploadedVersion) {
 		this->getLogger().debug()
-			<< "No update needed for GPUMaterial with shader ID: "
-			<< shaderID << " and material version: " << material.getVersion()
+			<< "No update needed for GPUMaterial with shader ID: " << shaderID
+			<< " and material version: " << material.getVersion()
 			<< ". Material version is unchanged.";
 		return;
 	}
@@ -155,8 +161,7 @@ void evan::GPUMaterial::update(std::shared_ptr<DeviceContext> deviceContext,
 // Getters //
 /////////////
 
-const std::vector<VkDescriptorSet> &
-evan::GPUMaterial::getDescriptorSets() const
+const std::vector<VkDescriptorSet> &evan::GPUMaterial::getDescriptorSets() const
 {
 	return _descriptorSets;
 }
@@ -164,6 +169,12 @@ evan::GPUMaterial::getDescriptorSets() const
 uint32_t evan::GPUMaterial::getShaderID() const
 {
 	return _shaderID;
+}
+
+evan::BlendMode evan::GPUMaterial::getBlendMode() const
+{
+	return _alphaMode == utility::graphic::AlphaMode::Opaque ? BlendMode::Opaque
+															 : BlendMode::Alpha;
 }
 
 uint32_t evan::GPUMaterial::getUploadedVersion() const

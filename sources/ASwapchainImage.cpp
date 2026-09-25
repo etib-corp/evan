@@ -199,7 +199,7 @@ void evan::ASwapchainImage::createDepthResources(
 
 void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 											   VkRenderPass renderPass,
-											   bool resolveToSwapchain)
+											   ColorAttachmentMode mode)
 {
 	this->getLogger().info() << "Creating framebuffers for swapchain images...";
 
@@ -216,7 +216,7 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 			<< ", image view: " << (uintptr_t)_imageViews[i];
 
 		std::vector<VkImageView> attachments;
-		if (resolveToSwapchain) {
+		if (mode == ColorAttachmentMode::ResolveToSwapchain) {
 			attachments = { _colorView, _depthView, _imageViews[i] };
 		} else {
 			attachments = { _imageViews[i], _depthView };
