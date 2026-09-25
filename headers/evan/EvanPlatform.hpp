@@ -31,6 +31,7 @@
 #include <glm/gtx/hash.hpp>
 
 #include <array>
+#include <cstddef>
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -69,6 +70,38 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
  *
  */
 const int MAX_SWAPCHAINS = 8;
+
+/**
+ * @brief Number of per-frame slots to allocate for a backend.
+ *
+ * Per-frame resources (command buffers, image-available/render-finished
+ * semaphores and uniform/instance/indirect buffer slots) are sized from the
+ * real number of view and swapchain slots the backend needs, instead of
+ * always allocating MAX_SWAPCHAINS of them. Both counts are considered so
+ * that command buffers (indexed by view slot) and semaphores (indexed by
+ * swapchain slot) stay in range, including the future case where several
+ * views share a single swapchain.
+ *
+ * MAX_SWAPCHAINS remains the hard upper bound; at least one slot is always
+ * allocated so a frame stays usable if a backend reports no view yet.
+ *
+ * @param viewCount Number of views to render.
+ * @param swapchainCount Number of swapchain image sets.
+ * @return The clamped per-frame slot count, in [1, MAX_SWAPCHAINS].
+ */
+constexpr std::size_t frameSlotCount(std::size_t viewCount,
+									 std::size_t swapchainCount)
+{
+	const std::size_t requested =
+		viewCount > swapchainCount ? viewCount : swapchainCount;
+
+	if (requested == 0) {
+		return 1;
+	}
+	return requested > static_cast<std::size_t>(MAX_SWAPCHAINS)
+		? static_cast<std::size_t>(MAX_SWAPCHAINS)
+		: requested;
+}
 
 /*
  * @brief Maximum number of per-instance transforms per view slot.
