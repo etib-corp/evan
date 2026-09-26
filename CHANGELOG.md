@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Engine: implement `utility::Engine::getDeltaTime()` (exposes the existing
+  per-frame `_deltaTime`) and the scissor API — `Engine::setScissor()` /
+  `clearScissor()` forward to `Renderer`, which applies the clamped rectangle
+  through the dynamic Vulkan scissor when recording frames.
 - Standard open-source documentation: `CHANGELOG.md`, `CODE_OF_CONDUCT.md`,
   `CONTRIBUTING.md`, `SECURITY.md`, `AUTHORS.md`, and `LICENSE`.
 - Packaging & consumability: `install()`/`export()`, a CMake package config
