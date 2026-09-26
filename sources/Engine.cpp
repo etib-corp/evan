@@ -178,20 +178,21 @@ evan::Engine::~Engine()
 ////////////////////
 
 size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
-							const std::string &materialName,
-							const std::string &shader)
+							 const std::string &materialName,
+							 const std::string &shader)
 {
 	auto material_id = _ressourceProvider->getMaterialID(materialName);
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	rawObjects.emplace(material_id, mesh);
-	std::shared_ptr<RenderObject> renderObject = std::make_shared<RenderObject>(
-		_deviceContext, rawObjects, shader);
+	std::shared_ptr<RenderObject> renderObject =
+		std::make_shared<RenderObject>(_deviceContext, rawObjects, shader);
 	auto objectID = _renderer->addObject(renderObject);
 	_ressourceManager->sync();
 	return objectID;
 }
 
-size_t evan::Engine::createObject(std::shared_ptr<utility::graphic::Renderable> object)
+size_t evan::Engine::createObject(
+	std::shared_ptr<utility::graphic::Renderable> object)
 {
 	if (!object || object->getMeshes().empty()) {
 		this->getLogger().warning()
@@ -199,11 +200,11 @@ size_t evan::Engine::createObject(std::shared_ptr<utility::graphic::Renderable> 
 		return 0;
 	}
 
-	this->getLogger().info()
-		<< "Creating renderable object with " << object->getMeshes().size()
-		<< " meshes.";
+	this->getLogger().info() << "Creating renderable object with "
+							 << object->getMeshes().size() << " meshes.";
 
-	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
+	auto material_id =
+		_ressourceProvider->getMaterialID(object->getMaterialName());
 
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	for (const auto &mesh: object->getMeshes()) {
@@ -217,7 +218,8 @@ size_t evan::Engine::createObject(std::shared_ptr<utility::graphic::Renderable> 
 	return objectID;
 }
 
-bool evan::Engine::updateObject(std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
+bool evan::Engine::updateObject(
+	std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
 {
 	if (!object || object->getMeshes().empty()) {
 		this->getLogger().warning()
@@ -227,13 +229,13 @@ bool evan::Engine::updateObject(std::shared_ptr<utility::graphic::Renderable> ob
 
 	auto existing = _renderer->getObject(objectID);
 	if (!existing) {
-		this->getLogger().warning()
-			<< "Renderable object with ID " << objectID
-			<< " not found. Update failed.";
+		this->getLogger().warning() << "Renderable object with ID " << objectID
+									<< " not found. Update failed.";
 		return false;
 	}
 
-	auto material_id = _ressourceProvider->getMaterialID(object->getMaterialName());
+	auto material_id =
+		_ressourceProvider->getMaterialID(object->getMaterialName());
 
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	for (const auto &mesh: object->getMeshes()) {
@@ -258,7 +260,8 @@ bool evan::Engine::updateObject(std::shared_ptr<utility::graphic::Renderable> ob
 	return updated;
 }
 
-bool evan::Engine::removeObject( std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
+bool evan::Engine::removeObject(
+	std::shared_ptr<utility::graphic::Renderable> object, size_t objectID)
 {
 	this->getLogger().info() << "Removing renderable object with ID "
 							 << objectID << " from engine...";
@@ -743,4 +746,18 @@ void evan::Engine::updateDeltaTime(void)
 float evan::Engine::getDeltaTime(void) const
 {
 	return _deltaTime;
+}
+
+void evan::Engine::setScissor(const utility::graphic::ScissorRect &rect)
+{
+	if (_renderer) {
+		_renderer->setScissor(rect);
+	}
+}
+
+void evan::Engine::clearScissor(void)
+{
+	if (_renderer) {
+		_renderer->clearScissor();
+	}
 }

@@ -302,6 +302,27 @@ namespace evan
 		Error render();	   // For rendering the render objects.
 
 		/**
+		 * @brief Get the delta time from the last frame in seconds.
+		 * @return Delta time in seconds.
+		 */
+		float getDeltaTime(void) const override;
+
+		/**
+		 * @brief Set the scissor (clip) rectangle, in framebuffer pixels.
+		 *
+		 * The rectangle is applied when recording each view's command buffer
+		 * and clamped to the swapchain extent.
+		 *
+		 * @param rect The scissor rectangle to apply.
+		 */
+		void setScissor(const utility::graphic::ScissorRect &rect) override;
+
+		/**
+		 * @brief Clear the active scissor rectangle (restore full extent).
+		 */
+		void clearScissor(void) override;
+
+		/**
 		 * @brief Returns the last error recorded by the platform.
 		 *
 		 * Platforms record a sticky error while polling events (e.g.
@@ -660,12 +681,6 @@ namespace evan
 		 * paced by the presentation mechanism.
 		 */
 		float _targetFps { 0.0f };
-
-		/**
-		 * @brief Get the delta time from the last frame in seconds.
-		 * @return Delta time in seconds.
-		 */
-		float getDeltaTime(void) const;
 
 		/**
 		 * @brief Update the delta time based on current time.

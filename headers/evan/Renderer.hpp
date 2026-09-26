@@ -22,6 +22,7 @@
 
 #include "evan/RenderObject.hpp"
 
+#include <utility/graphic/scissor.hpp>
 #include <utility/graphic/view.hpp>
 
 #include <utility/logging/loggable.hpp>
@@ -31,6 +32,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -143,7 +145,8 @@ namespace evan
 		 * @param objectID The unique object ID of the render object to update.
 		 * @return True if the update was successful, false otherwise.
 		 */
-		bool updateObject(std::shared_ptr<RenderObject> object, size_t objectID);
+		bool updateObject(std::shared_ptr<RenderObject> object,
+						  size_t objectID);
 
 		/**
 		 * @brief Removes a render object from the renderer's registry.
@@ -194,6 +197,36 @@ namespace evan
 		 */
 		Error drawFrame(const DeviceContext &deviceContext,
 						ASwapchainContext &swapchainContext);
+
+		/**
+		 * @brief Set the scissor (clip) rectangle applied when recording.
+		 *
+		 * The rectangle is expressed in framebuffer pixels and clamped to the
+		 * swapchain extent when a frame is recorded. It applies to every view
+		 * recorded in a frame.
+		 *
+		 * @param rect The scissor rectangle to apply.
+		 */
+		void setScissor(const utility::graphic::ScissorRect &rect);
+
+		/**
+		 * @brief Clear the active scissor rectangle (restore the full extent).
+		 */
+		void clearScissor(void);
+
+		/**
+		 * @brief Clamp a scissor rectangle to a render target extent.
+		 *
+		 * Exposed so the clamping can be covered by a unit test without a
+		 * device.
+		 *
+		 * @param rect The requested scissor rectangle, in pixels.
+		 * @param extent The render target extent, in pixels.
+		 * @return The clamped Vulkan scissor rectangle.
+		 */
+		[[nodiscard]] static VkRect2D
+			clampScissor(const utility::graphic::ScissorRect &rect,
+						 VkExtent2D extent);
 
 		/**
 		 * @brief Whether the view at @p viewIndex carries the in-flight fence
@@ -538,6 +571,14 @@ namespace evan
 		 */
 		size_t _nextObjectID = 1;
 
+		/**
+		 * @brief The active scissor rectangle, in framebuffer pixels.
+		 *
+		 * When set, it is clamped to the swapchain extent and applied to every
+		 * view recorded in a frame instead of the full-extent default.
+		 */
+		std::optional<utility::graphic::ScissorRect> _scissor;
+
 		private:
 		/**
 		 * @brief Updates the uniform buffer with scene data for the current
@@ -560,10 +601,10 @@ namespace evan
 		 * necessary commands to render a frame based on the provided render
 		 * pass, framebuffer, swap chain extent, and mesh list. It takes
 		 * references to the render pass, framebuffer, swap chain extent, and
-		 * mesh list as parameters to access the relevant resources and data needed
-		 * for recording the command buffer. Implement this method to ensure
-		 * that the command buffer contains the correct commands for rendering
-		 * the scene in each frame.
+		 * mesh list as parameters to access the relevant resources and data
+		 * needed for recording the command buffer. Implement this method to
+		 * ensure that the command buffer contains the correct commands for
+		 * rendering the scene in each frame.
 		 *
 		 * @param view The view state used to build the culling frustum.
 		 */

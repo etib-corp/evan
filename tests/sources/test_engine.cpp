@@ -22,6 +22,9 @@
 
 #include "test_engine.hpp"
 
+#include <evan/Renderer.hpp>
+#include <utility/graphic/scissor.hpp>
+
 namespace xider::tests
 {
 	void TestEngine::SetUp(void)
@@ -37,6 +40,55 @@ namespace xider::tests
 		// This is a sample test case. Replace it with actual tests for the
 		// Engine class.
 		EXPECT_TRUE(true);
+	}
+
+	TEST_F(TestEngine, ClampScissorKeepsRectInsideExtent)
+	{
+		const VkExtent2D extent { 100, 50 };
+		const VkRect2D result = evan::Renderer::clampScissor(
+			utility::graphic::ScissorRect { 10.0f, 5.0f, 20.0f, 10.0f },
+			extent);
+
+		EXPECT_EQ(result.offset.x, 10);
+		EXPECT_EQ(result.offset.y, 5);
+		EXPECT_EQ(result.extent.width, 20u);
+		EXPECT_EQ(result.extent.height, 10u);
+	}
+
+	TEST_F(TestEngine, ClampScissorClampsNegativeOrigin)
+	{
+		const VkExtent2D extent { 100, 50 };
+		const VkRect2D result = evan::Renderer::clampScissor(
+			utility::graphic::ScissorRect { -10.0f, -10.0f, 40.0f, 40.0f },
+			extent);
+
+		EXPECT_EQ(result.offset.x, 0);
+		EXPECT_EQ(result.offset.y, 0);
+		EXPECT_EQ(result.extent.width, 30u);
+		EXPECT_EQ(result.extent.height, 30u);
+	}
+
+	TEST_F(TestEngine, ClampScissorClampsOverflow)
+	{
+		const VkExtent2D extent { 100, 50 };
+		const VkRect2D result = evan::Renderer::clampScissor(
+			utility::graphic::ScissorRect { 90.0f, 40.0f, 50.0f, 50.0f },
+			extent);
+
+		EXPECT_EQ(result.offset.x, 90);
+		EXPECT_EQ(result.offset.y, 40);
+		EXPECT_EQ(result.extent.width, 10u);
+		EXPECT_EQ(result.extent.height, 10u);
+	}
+
+	TEST_F(TestEngine, ClampScissorHandlesNonPositiveSize)
+	{
+		const VkExtent2D extent { 100, 50 };
+		const VkRect2D result = evan::Renderer::clampScissor(
+			utility::graphic::ScissorRect { 0.0f, 0.0f, -5.0f, -5.0f }, extent);
+
+		EXPECT_EQ(result.extent.width, 0u);
+		EXPECT_EQ(result.extent.height, 0u);
 	}
 
 }	 // namespace xider::tests

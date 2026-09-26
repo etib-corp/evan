@@ -179,15 +179,15 @@ size_t evan::Renderer::addObject(std::shared_ptr<RenderObject> object)
 	return objectID;
 }
 
-bool evan::Renderer::updateObject(std::shared_ptr<RenderObject> object, size_t objectID)
+bool evan::Renderer::updateObject(std::shared_ptr<RenderObject> object,
+								  size_t objectID)
 {
-	this->getLogger().info() << "Updating render object with ID " << objectID
-							 << " in Renderer...";
+	this->getLogger().info()
+		<< "Updating render object with ID " << objectID << " in Renderer...";
 	auto it = _objects.find(objectID);
 	if (it == _objects.end()) {
-		this->getLogger().warning()
-			<< "Render object with ID " << objectID
-			<< " not found in Renderer. Update failed.";
+		this->getLogger().warning() << "Render object with ID " << objectID
+									<< " not found in Renderer. Update failed.";
 		return false;
 	}
 	it->second = object;
@@ -789,6 +789,36 @@ void evan::Renderer::updateUniformBuffer(const utility::graphic::ViewF &view,
 	this->getLogger().info() << "Uniform buffer updated successfully.";
 }
 
+void evan::Renderer::setScissor(const utility::graphic::ScissorRect &rect)
+{
+	_scissor = rect;
+}
+
+void evan::Renderer::clearScissor(void)
+{
+	_scissor.reset();
+}
+
+VkRect2D evan::Renderer::clampScissor(const utility::graphic::ScissorRect &rect,
+									  VkExtent2D extent)
+{
+	const float maxWidth  = static_cast<float>(extent.width);
+	const float maxHeight = static_cast<float>(extent.height);
+
+	const float x0 = std::clamp(rect.x, 0.0f, maxWidth);
+	const float y0 = std::clamp(rect.y, 0.0f, maxHeight);
+	const float x1 =
+		std::clamp(rect.x + std::max(0.0f, rect.width), 0.0f, maxWidth);
+	const float y1 =
+		std::clamp(rect.y + std::max(0.0f, rect.height), 0.0f, maxHeight);
+
+	VkRect2D result {};
+	result.offset = { static_cast<int32_t>(x0), static_cast<int32_t>(y0) };
+	result.extent = { static_cast<uint32_t>(std::max(0.0f, x1 - x0)),
+					  static_cast<uint32_t>(std::max(0.0f, y1 - y0)) };
+	return result;
+}
+
 void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 										 VkFramebuffer swapChainFramebuffer,
 										 VkExtent2D swapChainExtent,
@@ -853,8 +883,12 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	}
 
 	VkRect2D scissor {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;
+	if (_scissor.has_value()) {
+		scissor = clampScissor(_scissor.value(), swapChainExtent);
+	} else {
+		scissor.offset = { 0, 0 };
+		scissor.extent = swapChainExtent;
+	}
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 	if (isDrawLogEnabled()) {
