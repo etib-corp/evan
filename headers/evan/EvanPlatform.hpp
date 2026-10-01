@@ -32,6 +32,7 @@
 
 #include <array>
 #include <cstddef>
+#include <limits>
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -104,13 +105,45 @@ constexpr std::size_t frameSlotCount(std::size_t viewCount,
 }
 
 /*
- * @brief Maximum number of per-instance transforms per view slot.
+ * @brief Initial number of per-instance transforms per view slot.
  *
- * Bounds the instancing vertex buffer: each frame keeps one slot per view,
- * each slot holding up to this many 4x4 model matrices fed to the vertex
- * shader as per-instance attributes.
+ * Floor and initial allocation of the instancing vertex buffer: each frame
+ * keeps one slot per view, each slot holding 4x4 model matrices fed to the
+ * vertex shader as per-instance attributes. The buffer grows past this bound
+ * on demand (see nextInstanceCapacity) so the constant is not a hard cap and
+ * no mesh is ever dropped for lack of a transform slot.
  */
 const int MAX_INSTANCES_PER_VIEW = 1024;
+
+/**
+ * @brief Computes the instance-buffer capacity to use for a request.
+ *
+ * Keeps @p current when it already covers @p required, and otherwise grows
+ * geometrically from the larger of @p current and MAX_INSTANCES_PER_VIEW, so
+ * the buffer is reallocated rarely instead of on every frame that gains a few
+ * visible meshes. The result is never smaller than MAX_INSTANCES_PER_VIEW.
+ *
+ * @param required Number of transform slots the frame needs.
+ * @param current Capacity the buffer currently has (0 when none exists yet).
+ * @return The capacity to allocate, in
+ * [MAX_INSTANCES_PER_VIEW, max(size_t)] and at least @p required.
+ */
+constexpr std::size_t nextInstanceCapacity(std::size_t required,
+										   std::size_t current)
+{
+	const std::size_t minimum =
+		static_cast<std::size_t>(MAX_INSTANCES_PER_VIEW);
+	std::size_t capacity = current > minimum ? current : minimum;
+
+	while (capacity < required) {
+		// Saturate instead of overflowing when a request is absurdly large.
+		if (capacity > std::numeric_limits<std::size_t>::max() / 2) {
+			return required;
+		}
+		capacity *= 2;
+	}
+	return capacity;
+}
 
 /*
  * @brief Maximum number of indirect draw commands per view slot.
