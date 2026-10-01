@@ -25,7 +25,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <limits>
+#include <vector>
 
 namespace xider::tests
 {
@@ -119,5 +121,99 @@ namespace xider::tests
 		EXPECT_TRUE(firstAlpha < secondOpaque);
 		EXPECT_FALSE(firstOpaque < firstOpaque);
 		EXPECT_FALSE(secondOpaque < firstAlpha);
+	}
+
+	TEST(TestRenderSettings, OpaqueDrawsSortBeforeAlphaDraws)
+	{
+		evan::DrawSortKey opaque;
+		opaque.depthBucket = 9;
+		evan::DrawSortKey alpha;
+		alpha.blendMode = evan::BlendMode::Alpha;
+		alpha.depth		= 1.0f;
+
+		// The partition is decided before any depth: an opaque draw is never
+		// recorded after a blended one, whatever their distances are.
+		EXPECT_TRUE(evan::drawSortKeyLess(opaque, alpha));
+		EXPECT_FALSE(evan::drawSortKeyLess(alpha, opaque));
+	}
+
+	TEST(TestRenderSettings, OpaqueDrawsSortFrontToBackInsideStateGroups)
+	{
+		evan::DrawSortKey nearDraw;
+		nearDraw.depthBucket = 1;
+		evan::DrawSortKey farDraw;
+		farDraw.depthBucket = 4;
+
+		EXPECT_TRUE(evan::drawSortKeyLess(nearDraw, farDraw));
+		EXPECT_FALSE(evan::drawSortKeyLess(farDraw, nearDraw));
+
+		// Same bucket: pipeline, material and geometry decide, so identical
+		// geometry stays contiguous and keeps merging into a batch.
+		evan::DrawSortKey lowPipeline;
+		lowPipeline.depthBucket = 4;
+		lowPipeline.pipelineKey = 3;
+		evan::DrawSortKey highPipeline;
+		highPipeline.depthBucket = 4;
+		highPipeline.pipelineKey = 7;
+
+		EXPECT_TRUE(evan::drawSortKeyLess(lowPipeline, highPipeline));
+		EXPECT_FALSE(evan::drawSortKeyLess(highPipeline, lowPipeline));
+	}
+
+	TEST(TestRenderSettings, AlphaDrawsSortBackToFrontByDepthFirst)
+	{
+		evan::DrawSortKey nearDraw;
+		nearDraw.blendMode	 = evan::BlendMode::Alpha;
+		nearDraw.depth		 = 2.0f;
+		nearDraw.pipelineKey = 1;
+		evan::DrawSortKey farDraw;
+		farDraw.blendMode	= evan::BlendMode::Alpha;
+		farDraw.depth		= 40.0f;
+		farDraw.pipelineKey = 9;
+
+		// Distance wins over state: grouping by pipeline first would composite
+		// the two materials in the wrong order.
+		EXPECT_TRUE(evan::drawSortKeyLess(farDraw, nearDraw));
+		EXPECT_FALSE(evan::drawSortKeyLess(nearDraw, farDraw));
+	}
+
+	TEST(TestRenderSettings, DrawSortKeyIsATotalOrder)
+	{
+		evan::DrawSortKey first;
+		first.sequence = 1;
+		evan::DrawSortKey second;
+		second.sequence = 2;
+
+		// Every field but the sequence is equal. The sequence still orders
+		// them, which makes the order total instead of leaving equal draws to
+		// std::sort's discretion.
+		EXPECT_TRUE(evan::drawSortKeyLess(first, second));
+		EXPECT_FALSE(evan::drawSortKeyLess(second, first));
+		EXPECT_FALSE(evan::drawSortKeyLess(first, first));
+	}
+
+	TEST(TestRenderSettings, SortingIsReproducible)
+	{
+		std::vector<evan::DrawSortKey> ascending(4);
+		for (std::size_t i = 0; i < ascending.size(); ++i) {
+			ascending[i].sequence = static_cast<uint32_t>(i);
+		}
+
+		// Same draws in the opposite order: a total order has to produce the
+		// same sequence, otherwise recordings are not reproducible run to run.
+		std::vector<evan::DrawSortKey> descending = ascending;
+		std::reverse(descending.begin(), descending.end());
+
+		const auto less = [](const evan::DrawSortKey &lhs,
+							 const evan::DrawSortKey &rhs) {
+			return evan::drawSortKeyLess(lhs, rhs);
+		};
+		std::sort(ascending.begin(), ascending.end(), less);
+		std::sort(descending.begin(), descending.end(), less);
+
+		for (std::size_t i = 0; i < ascending.size(); ++i) {
+			EXPECT_EQ(ascending[i].sequence, i);
+			EXPECT_EQ(descending[i].sequence, i);
+		}
 	}
 }	 // namespace xider::tests
