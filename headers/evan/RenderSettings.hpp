@@ -144,6 +144,84 @@ namespace evan
 	}
 
 	/**
+	 * @brief Key that decides in which order a frame's draws are recorded.
+	 *
+	 * Resolved once per draw before sorting, so that ordering is a plain key
+	 * comparison instead of work repeated inside the comparator. It carries, in
+	 * decreasing priority:
+	 *
+	 * - the blend mode, which partitions opaque draws before blended ones;
+	 * - for opaque draws, the depth bucket, ascending (front-to-back), so that
+	 *   early depth testing can reject occluded fragments; for blended draws,
+	 *   the exact distance, descending (back-to-front), so that compositing
+	 *   stays correct;
+	 * - the state identifying a batch: pipeline, material and geometry;
+	 * - a unique sequence number, which makes the order total and therefore
+	 *   reproducible whatever std::sort does with equal elements.
+	 */
+	struct DrawSortKey {
+		BlendMode blendMode	  = BlendMode::Opaque;
+		uint32_t depthBucket  = 0;
+		float depth			  = 0.0f;
+		uint32_t pipelineKey  = 0;
+		uint32_t materialID	  = 0;
+		VkBuffer vertexBuffer = VK_NULL_HANDLE;
+		VkBuffer indexBuffer  = VK_NULL_HANDLE;
+		uint32_t sequence	  = 0;
+	};
+
+	/**
+	 * @brief Strict total order over DrawSortKey.
+	 *
+	 * Opaque draws come first and are ordered front-to-back by depth bucket.
+	 * Blended draws follow and are ordered back-to-front by exact distance,
+	 * because their state must not be grouped ahead of their depth. Inside a
+	 * bucket (opaque) or a distance (alpha), state groups stay contiguous so
+	 * that the run merging used by instanced and indirect drawing still
+	 * applies. The unique sequence number breaks the remaining ties.
+	 *
+	 * @param lhs Left key.
+	 * @param rhs Right key.
+	 * @return True when @p lhs must be recorded before @p rhs.
+	 */
+	[[nodiscard]] inline bool drawSortKeyLess(const DrawSortKey &lhs,
+											  const DrawSortKey &rhs) noexcept
+	{
+		if (lhs.blendMode != rhs.blendMode) {
+			return static_cast<int>(lhs.blendMode)
+				< static_cast<int>(rhs.blendMode);
+		}
+
+		if (lhs.blendMode == BlendMode::Alpha) {
+			// Blended geometry is composited back-to-front. Depth decides
+			// before state: grouping materials by pipeline first would blend
+			// them in the wrong order.
+			if (lhs.depth != rhs.depth) {
+				return lhs.depth > rhs.depth;
+			}
+		} else if (lhs.depthBucket != rhs.depthBucket) {
+			// Opaque geometry goes front-to-back. The bucket, not the exact
+			// distance, so that draws of the same bucket keep their state
+			// ordering and still merge into batching.
+			return lhs.depthBucket < rhs.depthBucket;
+		}
+
+		if (lhs.pipelineKey != rhs.pipelineKey) {
+			return lhs.pipelineKey < rhs.pipelineKey;
+		}
+		if (lhs.materialID != rhs.materialID) {
+			return lhs.materialID < rhs.materialID;
+		}
+		if (lhs.vertexBuffer != rhs.vertexBuffer) {
+			return lhs.vertexBuffer < rhs.vertexBuffer;
+		}
+		if (lhs.indexBuffer != rhs.indexBuffer) {
+			return lhs.indexBuffer < rhs.indexBuffer;
+		}
+		return lhs.sequence < rhs.sequence;
+	}
+
+	/**
 	 * @brief Application-facing rendering configuration.
 	 *
 	 * Passed to the Engine, which applies it before the swapchain and its

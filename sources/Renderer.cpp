@@ -54,6 +54,9 @@ namespace
 		///< draws front-to-back and alpha-blended draws back-to-front.
 		float depth			= 0.0f;
 		glm::mat4 transform = glm::mat4(1.0f);
+		///< Sort key resolved once per frame before ordering: opaque/alpha
+		///< partition, depth order, batching state and a unique tiebreak.
+		evan::DrawSortKey key {};
 	};
 
 	/**
@@ -1069,42 +1072,36 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	const bool frontToBack =
 		_opaqueSortMode == OpaqueSortMode::FrontToBack && depthSpan > 0.0f;
 
-	const auto depthBucketOf = [nearestDepth, depthSpan](float depth) {
-		return opaqueDepthBucket(depth, nearestDepth, depthSpan,
-								 kOpaqueDepthBucketCount);
-	};
+	// Finalize the sort key once per draw. The depth bucket depends on the
+	// whole list (it is normalized against the visible range), so it is
+	// resolved here rather than while the list is built; the sort then compares
+	// keys and never recomputes anything.
+	for (std::size_t i = 0; i < drawList.size(); ++i) {
+		DrawItem &item = drawList[i];
+
+		item.key.blendMode	  = item.blendMode;
+		item.key.depth		  = item.depth;
+		item.key.pipelineKey  = item.pipelineKey;
+		item.key.materialID	  = item.materialID;
+		item.key.vertexBuffer = item.vertexBuffer;
+		item.key.indexBuffer  = item.indexBuffer;
+		// A disabled front-to-back ordering collapses every opaque draw into
+		// the same bucket, which leaves the state ordering in charge.
+		item.key.depthBucket = frontToBack
+			? opaqueDepthBucket(item.depth, nearestDepth, depthSpan,
+								kOpaqueDepthBucketCount)
+			: 0u;
+		// Unique draw-list position: the last key field, so the order is total
+		// and reproducible instead of depending on std::sort's tie-breaking.
+		item.key.sequence = static_cast<uint32_t>(i);
+	}
 
 	// Opaque draws come first, so the recording pass can walk two contiguous
 	// ranges. Inside a group, consecutive draws sharing pipeline, material and
 	// geometry stay adjacent for batching.
 	std::sort(drawList.begin(), drawList.end(),
-			  [frontToBack, &depthBucketOf](const DrawItem &lhs,
-											const DrawItem &rhs) {
-				  if (lhs.blendMode != rhs.blendMode) {
-					  return lhs.blendMode == BlendMode::Opaque;
-				  }
-				  if (lhs.blendMode == BlendMode::Alpha) {
-					  // Blended draws are composited in draw order.
-					  if (lhs.depth != rhs.depth) {
-						  return lhs.depth > rhs.depth;
-					  }
-				  } else if (frontToBack) {
-					  const uint32_t lhsBucket = depthBucketOf(lhs.depth);
-					  const uint32_t rhsBucket = depthBucketOf(rhs.depth);
-					  if (lhsBucket != rhsBucket) {
-						  return lhsBucket < rhsBucket;
-					  }
-				  }
-				  if (lhs.pipelineKey != rhs.pipelineKey) {
-					  return lhs.pipelineKey < rhs.pipelineKey;
-				  }
-				  if (lhs.materialID != rhs.materialID) {
-					  return lhs.materialID < rhs.materialID;
-				  }
-				  if (lhs.vertexBuffer != rhs.vertexBuffer) {
-					  return lhs.vertexBuffer < rhs.vertexBuffer;
-				  }
-				  return lhs.indexBuffer < rhs.indexBuffer;
+			  [](const DrawItem &lhs, const DrawItem &rhs) {
+				  return drawSortKeyLess(lhs.key, rhs.key);
 			  });
 
 	// Record the sorted draw list, re-binding state only when it changes.
