@@ -181,13 +181,14 @@ namespace evan
 		[[nodiscard]] const utility::math::AabbF &getBounds() const;
 
 		/**
-		 * @brief Sets the per-instance model transform of this mesh.
+		 * @brief Sets the model transform of this mesh.
 		 *
-		 * Used only when renderer instancing is enabled: the transform is
-		 * written into the per-frame instance buffer and applied by the
-		 * vertex shader instead of baking it into the vertex positions.
+		 * This is the single source of truth for the pose of the mesh: the
+		 * transform is written into the frame's instance buffer and applied by
+		 * the vertex shader, so moving or scaling the mesh never touches its
+		 * vertex data. The stored vertices are local-space.
 		 *
-		 * @param transform The 4x4 model matrix of this mesh instance.
+		 * @param transform The 4x4 model matrix of this mesh.
 		 */
 		void setTransform(const glm::mat4 &transform);
 
