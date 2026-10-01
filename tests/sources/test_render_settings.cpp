@@ -139,13 +139,13 @@ namespace xider::tests
 
 	TEST(TestRenderSettings, OpaqueDrawsSortFrontToBackInsideStateGroups)
 	{
-		evan::DrawSortKey near;
-		near.depthBucket = 1;
-		evan::DrawSortKey far;
-		far.depthBucket = 4;
+		evan::DrawSortKey nearDraw;
+		nearDraw.depthBucket = 1;
+		evan::DrawSortKey farDraw;
+		farDraw.depthBucket = 4;
 
-		EXPECT_TRUE(evan::drawSortKeyLess(near, far));
-		EXPECT_FALSE(evan::drawSortKeyLess(far, near));
+		EXPECT_TRUE(evan::drawSortKeyLess(nearDraw, farDraw));
+		EXPECT_FALSE(evan::drawSortKeyLess(farDraw, nearDraw));
 
 		// Same bucket: pipeline, material and geometry decide, so identical
 		// geometry stays contiguous and keeps merging into a batch.
@@ -162,19 +162,19 @@ namespace xider::tests
 
 	TEST(TestRenderSettings, AlphaDrawsSortBackToFrontByDepthFirst)
 	{
-		evan::DrawSortKey near;
-		near.blendMode	 = evan::BlendMode::Alpha;
-		near.depth		 = 2.0f;
-		near.pipelineKey = 1;
-		evan::DrawSortKey far;
-		far.blendMode	= evan::BlendMode::Alpha;
-		far.depth		= 40.0f;
-		far.pipelineKey = 9;
+		evan::DrawSortKey nearDraw;
+		nearDraw.blendMode	 = evan::BlendMode::Alpha;
+		nearDraw.depth		 = 2.0f;
+		nearDraw.pipelineKey = 1;
+		evan::DrawSortKey farDraw;
+		farDraw.blendMode	= evan::BlendMode::Alpha;
+		farDraw.depth		= 40.0f;
+		farDraw.pipelineKey = 9;
 
 		// Distance wins over state: grouping by pipeline first would composite
 		// the two materials in the wrong order.
-		EXPECT_TRUE(evan::drawSortKeyLess(far, near));
-		EXPECT_FALSE(evan::drawSortKeyLess(near, far));
+		EXPECT_TRUE(evan::drawSortKeyLess(farDraw, nearDraw));
+		EXPECT_FALSE(evan::drawSortKeyLess(nearDraw, farDraw));
 	}
 
 	TEST(TestRenderSettings, DrawSortKeyIsATotalOrder)
