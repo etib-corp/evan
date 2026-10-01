@@ -165,9 +165,12 @@ namespace evan
 		/**
 		 * @brief Gets the Vulkan instance buffer associated with this frame.
 		 *
-		 * This buffer holds one slot per view, each slot storing up to
-		 * MAX_INSTANCES_PER_VIEW model matrices consumed by the vertex
-		 * shader when instancing is enabled.
+		 * This buffer holds one slot per view, each slot storing the model
+		 * matrices consumed by the vertex shader as per-instance attributes.
+		 * One matrix is stored per drawn mesh, so every draw addresses its
+		 * transform with firstInstance and the engine never bakes a transform
+		 * into vertex data. The slot capacity grows on demand; see
+		 * ensureInstanceCapacity().
 		 *
 		 * @return The Vulkan buffer for this frame.
 		 */
@@ -189,6 +192,32 @@ namespace evan
 		 * minUniformBufferOffsetAlignment.
 		 */
 		VkDeviceSize getInstanceBufferAlignedSize() const;
+
+		/**
+		 * @brief Gets the number of model matrices one instance slot holds.
+		 *
+		 * @return The per-view transform capacity.
+		 */
+		std::size_t getInstanceCapacity() const;
+
+		/**
+		 * @brief Makes sure one instance slot can hold @p transforms matrices.
+		 *
+		 * Grows the instance buffer on demand instead of dropping meshes past a
+		 * fixed bound. If the current capacity already covers the request this
+		 * is a no-op. Otherwise the buffer and its memory are released and
+		 * reallocated at the capacity returned by nextInstanceCapacity(), which
+		 * grows geometrically so reallocation happens rarely.
+		 *
+		 * The caller must not hold a mapped pointer across this call, and must
+		 * not call it while a recorded command buffer of this frame still
+		 * references the previous buffer: the handle changes. The renderer
+		 * therefore calls it once per frame, before recording any view.
+		 *
+		 * @param transforms Number of model matrices the frame needs per view.
+		 * @return True when the buffer was reallocated.
+		 */
+		bool ensureInstanceCapacity(std::size_t transforms);
 
 		/**
 		 * @brief Gets the Vulkan indirect draw buffer associated with this
@@ -310,7 +339,9 @@ namespace evan
 		 * @brief Creates the instance buffer for this frame.
 		 *
 		 * This buffer stores per-instance model matrices for instanced
-		 * rendering, with one aligned slot per view.
+		 * rendering, with one aligned slot per view. Each slot holds
+		 * _instanceCapacity matrices; ensureInstanceCapacity() is the only
+		 * caller and sets that capacity before allocating.
 		 *
 		 * @param deviceBackend A reference to the device backend used to
 		 * create the buffer and allocate memory.
@@ -374,6 +405,12 @@ namespace evan
 		 * @brief Aligned byte size of one view's instance buffer slot.
 		 */
 		VkDeviceSize _instanceBufferAlignedSize = 0;
+
+		/**
+		 * @brief Number of model matrices one instance buffer slot currently
+		 * holds. Grown on demand by ensureInstanceCapacity().
+		 */
+		std::size_t _instanceCapacity = 0;
 
 		/**
 		 * @brief Vulkan buffer storing indirect draw commands.

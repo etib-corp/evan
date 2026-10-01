@@ -7,6 +7,7 @@
 
 #include "evan/Renderer.hpp"
 
+#include "evan/Bounds.hpp"
 #include "evan/Frustum.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -264,6 +265,13 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			<< "Failed to wait for in-flight fence. Aborting frame rendering.";
 		return mapVkResult(fenceResult);
 	}
+
+	// Every drawn mesh consumes one transform slot per view. Grow the instance
+	// buffer before recording any view: reallocating it while a recorded
+	// command buffer of this frame still referenced the old handle would be
+	// invalid, and the wait above guarantees the previous frame using this slot
+	// has finished with the current buffer.
+	frame.ensureInstanceCapacity(this->getMeshes().size());
 
 	// 2. Acquire exactly one image per swapchain image set.
 	std::vector<uint32_t> acquiredImage(swapchainCount, 0);
@@ -920,8 +928,13 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	drawList.reserve(meshes.size());
 
 	for (const auto &mesh: meshes) {
+		// Geometry is local-space and the model matrix carries the pose, so
+		// culling and depth sorting must use the transformed bounds: the local
+		// box of every mesh of a kind sits at the same place.
+		const utility::math::AabbF bounds =
+			transformedBounds(mesh->getBounds(), mesh->getTransform());
+
 		if (_cullingEnabled) {
-			const auto &bounds = mesh->getBounds();
 			if (!bounds.isEmpty()) {
 				if (_maxDrawDistance > 0.0f) {
 					const glm::vec3 center(bounds.center().x, bounds.center().y,
@@ -1024,8 +1037,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		// opaque geometry so early depth testing rejects occluded fragments,
 		// back-to-front for blended geometry so compositing is correct. Meshes
 		// without usable bounds are treated as infinitely far away.
-		float depth		   = kUnknownDepth;
-		const auto &bounds = mesh->getBounds();
+		float depth = kUnknownDepth;
 		if (!bounds.isEmpty()) {
 			const glm::vec3 center(bounds.center().x, bounds.center().y,
 								   bounds.center().z);
@@ -1108,10 +1120,12 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 
 	const VkDeviceSize instanceBufferOffset =
 		viewSlot * frame.getInstanceBufferAlignedSize();
-	GPUInstance *instanceData = _instancingEnabled
-		? static_cast<GPUInstance *>(frame.getInstanceBufferMapped(viewSlot))
-		: nullptr;
-	uint32_t instanceCursor	  = 0;
+	// Every mesh owns one transform slot, so the mapped pointer is always
+	// valid: the model matrix of a mesh is uploaded at its own slot and
+	// selected at draw time through firstInstance.
+	GPUInstance *instanceData =
+		static_cast<GPUInstance *>(frame.getInstanceBufferMapped(viewSlot));
+	uint32_t instanceCursor = 0;
 
 	const VkDeviceSize indirectBufferOffset =
 		viewSlot * frame.getIndirectBufferAlignedSize();
@@ -1167,14 +1181,20 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 		hasBoundInstanceBuffer = false;
 
 		for (std::size_t i = begin; i < end;) {
-			// Merge consecutive items sharing pipeline, material and geometry.
+			// Consecutive items sharing pipeline, material and geometry are
+			// merged into a single instanced draw when batching is enabled;
+			// each mesh keeps its own transform slot either way.
 			std::size_t runEnd = i + 1;
-			while (runEnd < end
-				   && drawList[runEnd].pipelineKey == drawList[i].pipelineKey
-				   && drawList[runEnd].materialID == drawList[i].materialID
-				   && drawList[runEnd].vertexBuffer == drawList[i].vertexBuffer
-				   && drawList[runEnd].indexBuffer == drawList[i].indexBuffer) {
-				++runEnd;
+			if (_mergeIdenticalRuns) {
+				while (
+					runEnd < end
+					&& drawList[runEnd].pipelineKey == drawList[i].pipelineKey
+					&& drawList[runEnd].materialID == drawList[i].materialID
+					&& drawList[runEnd].vertexBuffer == drawList[i].vertexBuffer
+					&& drawList[runEnd].indexBuffer
+						== drawList[i].indexBuffer) {
+					++runEnd;
+				}
 			}
 			const std::size_t runSize = runEnd - i;
 			const DrawItem &item	  = drawList[i];
@@ -1185,8 +1205,7 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 				|| boundIndexBuffer != item.indexBuffer
 				|| boundDescriptorSet != item.descriptorSet
 				|| boundPipelineLayout != item.pipelineLayout
-				|| boundDynamicOffset != dynamicOffset
-				|| (_instancingEnabled && !hasBoundInstanceBuffer);
+				|| boundDynamicOffset != dynamicOffset;
 
 			if (stateChanged) {
 				flushIndirect();
@@ -1245,9 +1264,8 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 				++stats.descriptorBinds;
 			}
 
-			if (_instancingEnabled
-				&& (!hasBoundInstanceBuffer
-					|| boundInstanceBuffer != frame.getInstanceBuffer())) {
+			if (!hasBoundInstanceBuffer
+				|| boundInstanceBuffer != frame.getInstanceBuffer()) {
 				VkBuffer instanceBuffer		   = frame.getInstanceBuffer();
 				VkDeviceSize instanceOffsets[] = { instanceBufferOffset };
 				vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer,
@@ -1256,44 +1274,34 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 				hasBoundInstanceBuffer = true;
 			}
 
-			if (_instancingEnabled) {
-				if (instanceCursor + runSize
-					> static_cast<std::size_t>(MAX_INSTANCES_PER_VIEW)) {
-					this->getLogger().warning()
-						<< "Instance buffer capacity exceeded ("
-						<< MAX_INSTANCES_PER_VIEW << " per view). Skipping "
-						<< runSize << " meshes.";
-					stats.skippedMeshes += runSize;
-					i			  = runEnd;
-					hasBoundState = true;
-					continue;
-				}
-				for (std::size_t j = 0; j < runSize; ++j) {
-					instanceData[instanceCursor + j].model =
-						drawList[i + j].transform;
-				}
-				if (isDrawLogEnabled()) {
-					this->getLogger().debug()
-						<< "Drawing indexed mesh with index count: "
-						<< item.indexCount
-						<< " and instance count: " << runSize;
-				}
-				emitDraw(item.indexCount, static_cast<uint32_t>(runSize),
-						 instanceCursor);
-				if (runSize > 1) {
-					++stats.instancedDraws;
-				}
-				instanceCursor += static_cast<uint32_t>(runSize);
-			} else {
-				for (std::size_t j = i; j < runEnd; ++j) {
-					if (isDrawLogEnabled()) {
-						this->getLogger().debug()
-							<< "Drawing indexed mesh with index count: "
-							<< drawList[j].indexCount;
-					}
-					emitDraw(drawList[j].indexCount, 1, 0);
-				}
+			// The frame sized the buffer for every registered mesh before
+			// recording, so this guard only catches a caller that grew the
+			// scene behind the renderer's back.
+			if (instanceCursor + runSize > frame.getInstanceCapacity()) {
+				this->getLogger().error()
+					<< "Instance buffer capacity exceeded ("
+					<< frame.getInstanceCapacity() << " per view). Skipping "
+					<< runSize << " meshes.";
+				stats.skippedMeshes += runSize;
+				i			  = runEnd;
+				hasBoundState = true;
+				continue;
 			}
+			for (std::size_t j = 0; j < runSize; ++j) {
+				instanceData[instanceCursor + j].model =
+					drawList[i + j].transform;
+			}
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Drawing indexed mesh with index count: "
+					<< item.indexCount << " and instance count: " << runSize;
+			}
+			emitDraw(item.indexCount, static_cast<uint32_t>(runSize),
+					 instanceCursor);
+			if (runSize > 1) {
+				++stats.instancedDraws;
+			}
+			instanceCursor += static_cast<uint32_t>(runSize);
 
 			i			  = runEnd;
 			hasBoundState = true;

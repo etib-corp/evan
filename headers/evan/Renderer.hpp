@@ -348,31 +348,36 @@ namespace evan
 		}
 
 		/**
-		 * @brief Enables or disables instanced rendering.
+		 * @brief Enables or disables merging of identical meshes.
 		 *
-		 * When enabled, consecutive meshes sharing the same geometry
+		 * The per-object transform always reaches the GPU: every mesh is drawn
+		 * with the model matrix of its own slot in the per-view instance
+		 * buffer, whether or not this flag is set. This flag only controls
+		 * batching: when enabled, consecutive meshes sharing the same geometry
 		 * (pipeline, material, vertex and index buffers) are merged into a
-		 * single vkCmdDrawIndexed with instanceCount > 1, and each mesh's
-		 * transform is fed to the vertex shader from the per-frame instance
-		 * buffer. The application must use per-instance transforms and a
-		 * vertex shader that consumes the instance matrix for this to render
-		 * correctly. Disabled by default.
+		 * single vkCmdDrawIndexed with instanceCount > 1.
 		 *
-		 * @param enabled True to batch identical meshes into instanced draws.
+		 * Merging is only correct with a vertex shader that consumes the
+		 * per-instance matrix (locations 3 to 6): such a shader places each
+		 * instance at its own transform, while a shader ignoring the instance
+		 * data would draw every instance of the run at the same place. Disabled
+		 * by default.
+		 *
+		 * @param enabled True to merge identical meshes into instanced draws.
 		 */
 		void setInstancingEnabled(bool enabled)
 		{
-			_instancingEnabled = enabled;
+			_mergeIdenticalRuns = enabled;
 		}
 
 		/**
-		 * @brief Checks whether instanced rendering is enabled.
+		 * @brief Checks whether identical meshes are merged into one draw.
 		 *
-		 * @return True when instancing is enabled.
+		 * @return True when consecutive identical meshes are merged.
 		 */
 		[[nodiscard]] bool isInstancingEnabled() const
 		{
-			return _instancingEnabled;
+			return _mergeIdenticalRuns;
 		}
 
 		/**
@@ -710,9 +715,11 @@ namespace evan
 		float _maxDrawDistance = 0.0f;
 
 		/**
-		 * @brief Whether identical meshes are merged into instanced draws.
+		 * @brief Whether consecutive identical meshes are merged into a single
+		 * instanced draw. The per-object transform is uploaded to the GPU
+		 * whether or not this is set; see setInstancingEnabled.
 		 */
-		bool _instancingEnabled = false;
+		bool _mergeIdenticalRuns = false;
 
 		/**
 		 * @brief Whether draws are batched through an indirect draw buffer.

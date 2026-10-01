@@ -81,10 +81,11 @@ namespace evan
 		void destroy(VkDevice device);
 
 		/**
-		 * @brief Sets the per-instance transform on every mesh of this object.
+		 * @brief Sets the model transform on every mesh of this object.
 		 *
 		 * Applies the same model matrix to each GPUMesh owned by this object.
-		 * Only consumed when renderer instancing is enabled.
+		 * The renderer uploads it on every frame, so the transform reaches the
+		 * vertex shader without touching the vertex data.
 		 *
 		 * @param transform The 4x4 model matrix applied to every mesh.
 		 */

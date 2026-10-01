@@ -131,10 +131,14 @@ namespace evan
 		/**
 		 * @brief Sets the model transform of an object in the current scene.
 		 *
-		 * The transform is stored per mesh and applied by the vertex shader
-		 * only when renderer instancing is enabled (see
-		 * Renderer::setInstancingEnabled). Before that, object transforms
-		 * continue to be baked into the uploaded vertex data.
+		 * The transform is stored per mesh and is always applied on the GPU:
+		 * the engine writes it into the frame's instance buffer and every draw
+		 * addresses it through firstInstance, so the vertex shader applies it
+		 * for every object, whether or not batching is enabled.
+		 *
+		 * Geometry is therefore expected in local space. World-baked geometry
+		 * still renders, but its pose can only change by rebuilding the vertex
+		 * buffer, which is exactly what per-object transforms remove.
 		 *
 		 * @param objectID The identifier returned by addText/addMesh/addObject.
 		 * @param transform The 4x4 model matrix to apply to the object.
@@ -143,22 +147,23 @@ namespace evan
 		bool setObjectTransform(size_t objectID, const glm::mat4 &transform);
 
 		/**
-		 * @brief Enables or disables instanced rendering.
+		 * @brief Enables or disables merging of identical meshes.
 		 *
 		 * Forwards to the underlying Renderer. See
-		 * Renderer::setInstancingEnabled for details: the application must
-		 * use local-space geometry, per-object transforms and a vertex
-		 * shader that consumes the per-instance matrix for this to render
-		 * correctly.
+		 * Renderer::setInstancingEnabled: this only controls batching of
+		 * consecutive identical meshes, it is never what routes an object
+		 * transform to the GPU, which happens unconditionally. The application
+		 * must provide local-space geometry, and the vertex shader must consume
+		 * the per-instance matrix, for merging to render correctly.
 		 *
 		 * @param enabled True to merge identical meshes into instanced draws.
 		 */
 		void setInstancingEnabled(bool enabled);
 
 		/**
-		 * @brief Checks whether instanced rendering is enabled.
+		 * @brief Checks whether identical meshes are merged into one draw.
 		 *
-		 * @return True when instancing is enabled.
+		 * @return True when consecutive identical meshes are merged.
 		 */
 		[[nodiscard]] bool isInstancingEnabled() const;
 

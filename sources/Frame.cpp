@@ -25,7 +25,8 @@ evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext,
 	this->createCommandBuffer(deviceBackend->getDevice(), commandPool);
 	this->createSyncObjects(deviceBackend->getDevice());
 	this->createUniformBuffer(*deviceBackend);
-	this->createInstanceBuffer(*deviceBackend);
+	// Allocates the initial slab; the buffer grows on demand from drawFrame().
+	this->ensureInstanceCapacity(0);
 	this->createIndirectBuffer(*deviceBackend);
 
 	this->getLogger().info() << "Frame created successfully.";
@@ -45,6 +46,47 @@ void evan::Frame::destroy(VkDevice device)
 {
 	(void)device;
 	this->cleanup();
+}
+
+bool evan::Frame::ensureInstanceCapacity(std::size_t transforms)
+{
+	const std::size_t capacity =
+		nextInstanceCapacity(transforms, _instanceCapacity);
+
+	if (_instanceBuffer != VK_NULL_HANDLE && capacity <= _instanceCapacity) {
+		return false;
+	}
+
+	if (!_deviceContext || !_deviceContext->getDeviceBackend()) {
+		this->getLogger().warning()
+			<< "Cannot size the instance buffer: backend unavailable.";
+		return false;
+	}
+
+	auto &deviceBackend = *_deviceContext->getDeviceBackend();
+	VkDevice device		= deviceBackend.getDevice();
+
+	if (_instanceBufferMapped != nullptr
+		&& _instanceBufferMemory != VK_NULL_HANDLE) {
+		vkUnmapMemory(device, _instanceBufferMemory);
+	}
+	_instanceBufferMapped = nullptr;
+
+	if (_instanceBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(device, _instanceBuffer, nullptr);
+		_instanceBuffer = VK_NULL_HANDLE;
+	}
+	if (_instanceBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, _instanceBufferMemory, nullptr);
+		_instanceBufferMemory = VK_NULL_HANDLE;
+	}
+
+	this->getLogger().info()
+		<< "Instance buffer holds " << capacity << " transform(s) per view.";
+
+	_instanceCapacity = capacity;
+	this->createInstanceBuffer(deviceBackend);
+	return true;
 }
 
 /////////////////////
@@ -167,6 +209,11 @@ void *evan::Frame::getInstanceBufferMapped(std::size_t viewSlot) const
 VkDeviceSize evan::Frame::getInstanceBufferAlignedSize() const
 {
 	return _instanceBufferAlignedSize;
+}
+
+std::size_t evan::Frame::getInstanceCapacity() const
+{
+	return _instanceCapacity;
 }
 
 VkBuffer evan::Frame::getIndirectBuffer() const
@@ -310,7 +357,7 @@ void evan::Frame::createInstanceBuffer(const ADeviceBackend &deviceBackend)
 	};
 	const VkDeviceSize instanceStride = sizeof(glm::mat4);
 	_instanceBufferAlignedSize =
-		alignUp(instanceStride * MAX_INSTANCES_PER_VIEW, minAlignment);
+		alignUp(instanceStride * _instanceCapacity, minAlignment);
 	const VkDeviceSize bufferSize =
 		_instanceBufferAlignedSize * _perFrameSlotCount;
 
