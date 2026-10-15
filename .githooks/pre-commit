@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hh' '*.hpp')
+
+[ -z "$files" ] && exit 0
+
+changed=0
+for file in $files; do
+  clang-format -i "$file"
+
+  if ! git diff --quiet -- "$file"; then
+    git add -- "$file"
+    changed=1
+  fi
+done
+
+if [ "$changed" -eq 1 ]; then
+  echo "clang-format updated staged files; they have been added to the commit."
+fi
