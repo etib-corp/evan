@@ -32,16 +32,16 @@ namespace xider::tests
 	static_assert(
 		std::is_same_v<
 			decltype(std::declval<evan::RenderObject &>().updateMeshes(
-				std::declval<const std::map<uint32_t,
-											 utility::graphic::Mesh> &>())),
+				std::declval<
+					const std::map<uint32_t, utility::graphic::Mesh> &>())),
 			bool>,
 		"RenderObject::updateMeshes() must return bool so callers can fall "
 		"back to a rebuild when the topology changed");
 
 	static_assert(
-		std::is_same_v<decltype(std::declval<const evan::GPUMesh &>()
-									.getVertexCount()),
-					   size_t>,
+		std::is_same_v<
+			decltype(std::declval<const evan::GPUMesh &>().getVertexCount()),
+			size_t>,
 		"GPUMesh::getVertexCount() must expose the allocated vertex count as "
 		"size_t so updateMeshes() can validate in-place updates");
 

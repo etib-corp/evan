@@ -30,7 +30,7 @@ namespace evan
 		TransferManager() = default;
 		~TransferManager();
 
-		TransferManager(const TransferManager &) = delete;
+		TransferManager(const TransferManager &)			= delete;
 		TransferManager &operator=(const TransferManager &) = delete;
 
 		/**
@@ -64,16 +64,14 @@ namespace evan
 		 * vkCmdCopyBufferToImage from the ring slot into dst.
 		 */
 		void uploadBufferToImage(const void *data, VkDeviceSize size,
-								 VkImage dst,
-								 const VkBufferImageCopy &region);
+								 VkImage dst, const VkBufferImageCopy &region);
 
 		/**
 		 * @brief Records an image layout transition into the current batch.
 		 */
 		void transitionImageLayout(VkImage image, VkFormat format,
 								   VkImageLayout oldLayout,
-								   VkImageLayout newLayout,
-								   uint32_t mipLevels);
+								   VkImageLayout newLayout, uint32_t mipLevels);
 
 		/**
 		 * @brief Records a mipmap generation chain into the current batch.
@@ -94,7 +92,7 @@ namespace evan
 
 		private:
 		struct PendingBatch {
-			VkFence fence = VK_NULL_HANDLE;
+			VkFence fence				  = VK_NULL_HANDLE;
 			VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 		};
 
@@ -102,20 +100,20 @@ namespace evan
 		void recycle();
 		void createStagingBuffer(VkDeviceSize size);
 
-		VkDevice _device = VK_NULL_HANDLE;
+		VkDevice _device				 = VK_NULL_HANDLE;
 		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
-		VkQueue _transferQueue = VK_NULL_HANDLE;
-		uint32_t _transferFamily = 0;
-		VkCommandPool _commandPool = VK_NULL_HANDLE;
-		VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
-		bool _recording = false;
-		bool _dirty = false;
+		VkQueue _transferQueue			 = VK_NULL_HANDLE;
+		uint32_t _transferFamily		 = 0;
+		VkCommandPool _commandPool		 = VK_NULL_HANDLE;
+		VkCommandBuffer _commandBuffer	 = VK_NULL_HANDLE;
+		bool _recording					 = false;
+		bool _dirty						 = false;
 
-		VkBuffer _stagingBuffer = VK_NULL_HANDLE;
+		VkBuffer _stagingBuffer		  = VK_NULL_HANDLE;
 		VkDeviceMemory _stagingMemory = VK_NULL_HANDLE;
-		void *_stagingMapped = nullptr;
-		VkDeviceSize _stagingSize = 0;
-		VkDeviceSize _stagingOffset = 0;
+		void *_stagingMapped		  = nullptr;
+		VkDeviceSize _stagingSize	  = 0;
+		VkDeviceSize _stagingOffset	  = 0;
 
 		std::vector<PendingBatch> _pending;
 	};

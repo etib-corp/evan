@@ -12,7 +12,7 @@
 namespace
 {
 	constexpr VkDeviceSize kDefaultStagingSize = 64u * 1024u * 1024u;
-	constexpr VkDeviceSize kStagingAlignment = 256u;
+	constexpr VkDeviceSize kStagingAlignment   = 256u;
 
 	VkDeviceSize alignUp(VkDeviceSize value, VkDeviceSize alignment)
 	{
@@ -43,18 +43,17 @@ evan::TransferManager::~TransferManager()
 
 void evan::TransferManager::init(VkDevice device,
 								 VkPhysicalDevice physicalDevice,
-								 VkQueue graphicsQueue,
-								 uint32_t graphicsFamily)
+								 VkQueue graphicsQueue, uint32_t graphicsFamily)
 {
-	_device = device;
+	_device			= device;
 	_physicalDevice = physicalDevice;
-	_transferQueue = graphicsQueue;
+	_transferQueue	= graphicsQueue;
 	_transferFamily = graphicsFamily;
 
 	VkCommandPoolCreateInfo poolInfo {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.sType			  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = _transferFamily;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.flags			  = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool);
 
 	this->createStagingBuffer(kDefaultStagingSize);
@@ -82,9 +81,9 @@ void evan::TransferManager::destroy()
 		_commandPool = VK_NULL_HANDLE;
 	}
 
-	_device = VK_NULL_HANDLE;
+	_device			= VK_NULL_HANDLE;
 	_physicalDevice = VK_NULL_HANDLE;
-	_transferQueue = VK_NULL_HANDLE;
+	_transferQueue	= VK_NULL_HANDLE;
 }
 
 void evan::TransferManager::ensureBegan()
@@ -96,8 +95,8 @@ void evan::TransferManager::ensureBegan()
 	this->recycle();
 
 	VkCommandBufferAllocateInfo allocInfo {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.sType		  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level		  = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandPool = _commandPool;
 	allocInfo.commandBufferCount = 1;
 	vkAllocateCommandBuffers(_device, &allocInfo, &_commandBuffer);
@@ -108,7 +107,7 @@ void evan::TransferManager::ensureBegan()
 	vkBeginCommandBuffer(_commandBuffer, &beginInfo);
 
 	_recording = true;
-	_dirty = false;
+	_dirty	   = false;
 }
 
 void evan::TransferManager::recycle()
@@ -117,8 +116,7 @@ void evan::TransferManager::recycle()
 		VkResult status = vkGetFenceStatus(_device, it->fence);
 		if (status == VK_SUCCESS) {
 			vkDestroyFence(_device, it->fence, nullptr);
-			vkFreeCommandBuffers(_device, _commandPool, 1,
-								 &it->commandBuffer);
+			vkFreeCommandBuffers(_device, _commandPool, 1, &it->commandBuffer);
 			it = _pending.erase(it);
 		} else {
 			++it;
@@ -138,9 +136,9 @@ void evan::TransferManager::createStagingBuffer(VkDeviceSize size)
 	}
 
 	VkBufferCreateInfo bufferInfo {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	bufferInfo.sType	   = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size		   = size;
+	bufferInfo.usage	   = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkCreateBuffer(_device, &bufferInfo, nullptr, &_stagingBuffer);
 
@@ -148,18 +146,18 @@ void evan::TransferManager::createStagingBuffer(VkDeviceSize size)
 	vkGetBufferMemoryRequirements(_device, _stagingBuffer, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.sType			 = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(
-		_physicalDevice, memRequirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-			| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	allocInfo.memoryTypeIndex =
+		findMemoryType(_physicalDevice, memRequirements.memoryTypeBits,
+					   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+						   | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	vkAllocateMemory(_device, &allocInfo, nullptr, &_stagingMemory);
 	vkBindBufferMemory(_device, _stagingBuffer, _stagingMemory, 0);
 
 	vkMapMemory(_device, _stagingMemory, 0, size, 0, &_stagingMapped);
 
-	_stagingSize = size;
+	_stagingSize   = size;
 	_stagingOffset = 0;
 }
 
@@ -171,8 +169,7 @@ void evan::TransferManager::uploadBuffer(const void *data, VkDeviceSize size,
 	}
 
 	VkDeviceSize aligned = alignUp(size, kStagingAlignment);
-	if (aligned > _stagingSize
-		|| _stagingOffset + aligned > _stagingSize) {
+	if (aligned > _stagingSize || _stagingOffset + aligned > _stagingSize) {
 		this->waitIdle();
 		if (aligned > _stagingSize) {
 			this->createStagingBuffer(aligned);
@@ -189,22 +186,21 @@ void evan::TransferManager::uploadBuffer(const void *data, VkDeviceSize size,
 	VkBufferCopy copyRegion {};
 	copyRegion.srcOffset = offset;
 	copyRegion.dstOffset = dstOffset;
-	copyRegion.size = size;
+	copyRegion.size		 = size;
 	vkCmdCopyBuffer(_commandBuffer, _stagingBuffer, dst, 1, &copyRegion);
 	_dirty = true;
 }
 
-void evan::TransferManager::uploadBufferToImage(
-	const void *data, VkDeviceSize size, VkImage dst,
-	const VkBufferImageCopy &region)
+void evan::TransferManager::uploadBufferToImage(const void *data,
+												VkDeviceSize size, VkImage dst,
+												const VkBufferImageCopy &region)
 {
 	if (_device == VK_NULL_HANDLE || size == 0) {
 		return;
 	}
 
 	VkDeviceSize aligned = alignUp(size, kStagingAlignment);
-	if (aligned > _stagingSize
-		|| _stagingOffset + aligned > _stagingSize) {
+	if (aligned > _stagingSize || _stagingOffset + aligned > _stagingSize) {
 		this->waitIdle();
 		if (aligned > _stagingSize) {
 			this->createStagingBuffer(aligned);
@@ -219,16 +215,18 @@ void evan::TransferManager::uploadBufferToImage(
 	_stagingOffset += aligned;
 
 	VkBufferImageCopy copyRegion = region;
-	copyRegion.bufferOffset = offset;
+	copyRegion.bufferOffset		 = offset;
 	vkCmdCopyBufferToImage(_commandBuffer, _stagingBuffer, dst,
 						   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 						   &copyRegion);
 	_dirty = true;
 }
 
-void evan::TransferManager::transitionImageLayout(
-	VkImage image, VkFormat format, VkImageLayout oldLayout,
-	VkImageLayout newLayout, uint32_t mipLevels)
+void evan::TransferManager::transitionImageLayout(VkImage image,
+												  VkFormat format,
+												  VkImageLayout oldLayout,
+												  VkImageLayout newLayout,
+												  uint32_t mipLevels)
 {
 	if (_device == VK_NULL_HANDLE) {
 		return;
@@ -237,17 +235,17 @@ void evan::TransferManager::transitionImageLayout(
 	this->ensureBegan();
 
 	VkImageMemoryBarrier barrier {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = oldLayout;
-	barrier.newLayout = newLayout;
+	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout			= oldLayout;
+	barrier.newLayout			= newLayout;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = image;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = mipLevels;
+	barrier.image				= image;
+	barrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel	= 0;
+	barrier.subresourceRange.levelCount		= mipLevels;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.layerCount		= 1;
 
 	VkPipelineStageFlags sourceStage;
 	VkPipelineStageFlags destinationStage;
@@ -256,21 +254,21 @@ void evan::TransferManager::transitionImageLayout(
 		&& newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		sourceStage			  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage	  = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	} else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 			   && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		sourceStage			  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage	  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 	} else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
 			   && newLayout
 				   == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
 			| VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		sourceStage		 = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	} else {
 		return;
@@ -303,22 +301,22 @@ void evan::TransferManager::generateMipmaps(VkImage image, VkFormat format,
 	this->ensureBegan();
 
 	VkImageMemoryBarrier barrier {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.image = image;
+	barrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.image				= image;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.layerCount		= 1;
+	barrier.subresourceRange.levelCount		= 1;
 
-	int32_t mipWidth = static_cast<int32_t>(width);
+	int32_t mipWidth  = static_cast<int32_t>(width);
 	int32_t mipHeight = static_cast<int32_t>(height);
 
 	for (uint32_t i = 1; i < mipLevels; ++i) {
 		barrier.subresourceRange.baseMipLevel = i - 1;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
@@ -327,27 +325,26 @@ void evan::TransferManager::generateMipmaps(VkImage image, VkFormat format,
 							 nullptr, 1, &barrier);
 
 		VkImageBlit blit {};
-		blit.srcOffsets[0] = { 0, 0, 0 };
-		blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-		blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.srcSubresource.mipLevel = i - 1;
+		blit.srcOffsets[0]				   = { 0, 0, 0 };
+		blit.srcOffsets[1]				   = { mipWidth, mipHeight, 1 };
+		blit.srcSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.srcSubresource.mipLevel	   = i - 1;
 		blit.srcSubresource.baseArrayLayer = 0;
-		blit.srcSubresource.layerCount = 1;
-		blit.dstOffsets[0] = { 0, 0, 0 };
+		blit.srcSubresource.layerCount	   = 1;
+		blit.dstOffsets[0]				   = { 0, 0, 0 };
 		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1,
 							   mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-		blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blit.dstSubresource.mipLevel = i;
+		blit.dstSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.dstSubresource.mipLevel	   = i;
 		blit.dstSubresource.baseArrayLayer = 0;
-		blit.dstSubresource.layerCount = 1;
+		blit.dstSubresource.layerCount	   = 1;
 
-		vkCmdBlitImage(_commandBuffer, image,
-					   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
-					   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
-					   VK_FILTER_LINEAR);
+		vkCmdBlitImage(
+			_commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -364,8 +361,8 @@ void evan::TransferManager::generateMipmaps(VkImage image, VkFormat format,
 	}
 
 	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout	  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -385,7 +382,7 @@ void evan::TransferManager::flush()
 		vkEndCommandBuffer(_commandBuffer);
 		vkFreeCommandBuffers(_device, _commandPool, 1, &_commandBuffer);
 		_commandBuffer = VK_NULL_HANDLE;
-		_recording = false;
+		_recording	   = false;
 		return;
 	}
 
@@ -393,19 +390,19 @@ void evan::TransferManager::flush()
 
 	VkFenceCreateInfo fenceInfo {};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	VkFence fence = VK_NULL_HANDLE;
+	VkFence fence	= VK_NULL_HANDLE;
 	vkCreateFence(_device, &fenceInfo, nullptr, &fence);
 
 	VkSubmitInfo submitInfo {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &_commandBuffer;
+	submitInfo.pCommandBuffers	  = &_commandBuffer;
 	vkQueueSubmit(_transferQueue, 1, &submitInfo, fence);
 
 	_pending.push_back({ fence, _commandBuffer });
 	_commandBuffer = VK_NULL_HANDLE;
-	_recording = false;
-	_dirty = false;
+	_recording	   = false;
+	_dirty		   = false;
 }
 
 void evan::TransferManager::waitIdle()

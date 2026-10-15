@@ -16,8 +16,7 @@ namespace
 	/**
 	 * @brief Size of the header carried by every pipeline cache blob.
 	 */
-	constexpr std::size_t kHeaderSize =
-		sizeof(VkPipelineCacheHeaderVersionOne);
+	constexpr std::size_t kHeaderSize = sizeof(VkPipelineCacheHeaderVersionOne);
 
 	/**
 	 * @brief Suffix of the temporary file used to write the blob atomically.
@@ -136,8 +135,7 @@ bool evan::PipelineCache::writeBlob(const std::filesystem::path &path,
 	return true;
 }
 
-void evan::PipelineCache::init(VkDevice device,
-							   VkPhysicalDevice physicalDevice,
+void evan::PipelineCache::init(VkDevice device, VkPhysicalDevice physicalDevice,
 							   const std::filesystem::path &path)
 {
 	_device = device;

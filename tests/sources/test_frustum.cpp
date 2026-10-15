@@ -93,8 +93,7 @@ namespace xider::tests
 	{
 		const auto frustum = makeFrustum(makeView());
 
-		EXPECT_FALSE(
-			frustum.intersects(makeBox(0.0f, 0.0f, -0.01f, 0.001f)));
+		EXPECT_FALSE(frustum.intersects(makeBox(0.0f, 0.0f, -0.01f, 0.001f)));
 	}
 
 	TEST(FrustumTest, BoxFarToTheRightIsCulled)

@@ -67,8 +67,7 @@ VkSurfaceKHR
 // Protected Methods //
 ///////////////////////
 
-std::filesystem::path
-	evan::WindowsDesktopPlatform::getDefaultCacheRoot() const
+std::filesystem::path evan::WindowsDesktopPlatform::getDefaultCacheRoot() const
 {
 	const char *localAppData = std::getenv("LOCALAPPDATA");
 	if (localAppData == nullptr || localAppData[0] == '\0') {

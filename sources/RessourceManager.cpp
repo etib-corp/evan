@@ -91,7 +91,7 @@ void evan::RessourceManager::sync(bool refresh)
 
 	VkDevice device = _deviceContext->getDeviceBackend()->getDevice();
 
-	const auto &shaders   = _ressourceProvider->getShaders();
+	const auto &shaders	  = _ressourceProvider->getShaders();
 	const auto &materials = _ressourceProvider->getMaterials();
 	const auto &textures  = _ressourceProvider->getTextures();
 
