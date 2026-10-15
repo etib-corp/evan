@@ -313,6 +313,19 @@ namespace evan
 		float getDeltaTime(void) const override;
 
 		/**
+		 * @brief Gets the renderer's frame statistics window.
+		 *
+		 * CPU phase timings and per-frame counters, filled while frames are
+		 * drawn when EVAN_STATS is enabled; GPU pass times are included when
+		 * timestamp queries are available. An application may render these
+		 * values in its own debug overlay; the engine itself only emits one
+		 * aggregated log record every EVAN_STATS_INTERVAL frames.
+		 *
+		 * @return The current frame statistics of the renderer.
+		 */
+		[[nodiscard]] const FrameStats &getFrameStats() const;
+
+		/**
 		 * @brief Set the scissor (clip) rectangle, in framebuffer pixels.
 		 *
 		 * The rectangle is applied when recording each view's command buffer

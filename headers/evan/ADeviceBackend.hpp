@@ -603,6 +603,41 @@ namespace evan
 			return _multiviewSupported;
 		}
 
+		/**
+		 * @brief Indicates whether GPU timestamp queries can be used.
+		 *
+		 * True when the physical device reports graphics-capable timestamps
+		 * (VkPhysicalDeviceLimits::timestampComputeAndGraphics) with at
+		 * least one valid bit and a known tick period. The frame statistics
+		 * use this to decide whether per-pass GPU timings can be collected;
+		 * the CPU instrumentation works regardless.
+		 *
+		 * @return True when timestamp queries are supported.
+		 */
+		[[nodiscard]] bool supportsTimestampQueries();
+
+		/**
+		 * @brief Nanoseconds per timestamp tick.
+		 *
+		 * VkPhysicalDeviceLimits::timestampPeriod; may be fractional (e.g.
+		 * 2 ns on some devices). Only meaningful when
+		 * supportsTimestampQueries() is true.
+		 *
+		 * @return The tick period in nanoseconds.
+		 */
+		[[nodiscard]] float getTimestampPeriod() const;
+
+		/**
+		 * @brief Number of valid bits in a timestamp value.
+		 *
+		 * The high bits are undefined when the device reports fewer than 64
+		 * valid bits. Only meaningful when supportsTimestampQueries() is
+		 * true.
+		 *
+		 * @return The number of valid bits, up to 64.
+		 */
+		[[nodiscard]] uint32_t getTimestampValidBits();
+
 		protected:
 		/**
 		 * The physical device, which represents a

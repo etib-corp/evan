@@ -13,7 +13,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <iomanip>
+#include <sstream>
 
 namespace
 {
@@ -90,6 +93,23 @@ namespace
 		}();
 		return disabled;
 	}
+
+	/**
+	 * @brief Formats a phase average as milliseconds, or "--" when empty.
+	 *
+	 * Building strings only happens in the report path: one aggregated log
+	 * record per window, never on the per-frame hot path.
+	 */
+	std::string formatPhaseMs(const evan::PhaseStats &phase)
+	{
+		if (phase.samples == 0) {
+			return "--";
+		}
+		std::ostringstream stream;
+		stream << std::fixed << std::setprecision(2)
+			   << static_cast<double>(phase.averageNs()) / 1000000.0;
+		return stream.str();
+	}
 }	 // namespace
 
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
@@ -126,6 +146,27 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 			std::make_shared<Frame>(deviceContext, perFrameSlotCount));
 	}
 	this->getLogger().info() << "Frames created successfully.";
+
+	_stats.enabled = statsEnabled();
+	if (_stats.enabled) {
+		// GPU timings need a timestamp query pool on every frame slot, i.e.
+		// EVAN_STATS_GPU on and a device that supports timestamp queries.
+		_stats.gpuAvailable = !_frames.empty();
+		for (const auto &frame: _frames) {
+			_stats.gpuAvailable =
+				_stats.gpuAvailable && frame->hasTimestampQueries();
+		}
+		if (_stats.gpuAvailable) {
+			_timestampPeriod =
+				deviceContext->getDeviceBackend()->getTimestampPeriod();
+			_timestampValidBits =
+				deviceContext->getDeviceBackend()->getTimestampValidBits();
+		}
+		this->getLogger().info()
+			<< "Frame statistics enabled: interval=" << statsLogInterval()
+			<< " frame(s), gpu timestamps="
+			<< (_stats.gpuAvailable ? "on" : "off") << ".";
+	}
 }
 
 evan::Renderer::~Renderer()
@@ -224,10 +265,17 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 	// Submit any pending uploads so the draw command buffers recorded below are
 	// ordered after them on the graphics queue.
-	_deviceContext->getTransferManager().flush();
+	{
+		evan::ScopedTimer timer = _stats.timer(_stats.transferFlush);
+		_deviceContext->getTransferManager().flush();
+	}
 
-	Error preprocessError =
-		deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
+	Error preprocessError;
+	{
+		evan::ScopedTimer timer = _stats.timer(_stats.preprocess);
+		preprocessError =
+			deviceContext.getDeviceBackend()->preprocessFrame(swapchainContext);
+	}
 	if (preprocessError != Error::Ok) {
 		this->getLogger().warning()
 			<< "Preprocessing frame failed. Skipping frame rendering.";
@@ -261,13 +309,21 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// (e.g. swapchain recreation) leave it signaled and the next call does
 	// not deadlock.
 	this->getLogger().info() << "Waiting for in-flight fence...";
-	VkResult fenceResult =
-		vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+	VkResult fenceResult;
+	{
+		evan::ScopedTimer timer = _stats.timer(_stats.inFlightWait);
+		fenceResult =
+			vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+	}
 	if (fenceResult != VK_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to wait for in-flight fence. Aborting frame rendering.";
 		return mapVkResult(fenceResult);
 	}
+
+	// The submissions that wrote this frame slot's timestamp queries have
+	// completed now; fold them into the statistics without blocking.
+	this->readGpuTimestamps(frame);
 
 	// Every drawn mesh consumes one transform slot per view. Grow the instance
 	// buffer before recording any view: reallocating it while a recorded
@@ -278,29 +334,32 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 	// 2. Acquire exactly one image per swapchain image set.
 	std::vector<uint32_t> acquiredImage(swapchainCount, 0);
-	for (std::size_t s = 0; s < swapchainCount; ++s) {
-		this->getLogger().info()
-			<< "Acquiring swapchain image for swapchain " << s << "...";
-		VkResult result = swapchainContext.aquireImage(
-			static_cast<uint32_t>(s), device, frame._imageAvailable[s],
-			VK_NULL_HANDLE, acquiredImage[s]);
+	{
+		evan::ScopedTimer acquireTimer = _stats.timer(_stats.acquire);
+		for (std::size_t s = 0; s < swapchainCount; ++s) {
+			this->getLogger().info()
+				<< "Acquiring swapchain image for swapchain " << s << "...";
+			VkResult result = swapchainContext.aquireImage(
+				static_cast<uint32_t>(s), device, frame._imageAvailable[s],
+				VK_NULL_HANDLE, acquiredImage[s]);
 
-		swapchainContext.waitForImage(static_cast<uint32_t>(s));
+			swapchainContext.waitForImage(static_cast<uint32_t>(s));
 
-		Error acquireError = mapVkResult(result);
-		if (acquireError == Error::SwapchainOutOfDate
-			|| acquireError == Error::Suboptimal) {
-			this->getLogger().warning()
-				<< "Swapchain " << s
-				<< " is out of date. Recreating swapchain.";
-			swapchainContext.recreateSwapchain(
-				deviceContext, swapchainContext.getRenderPass());
-			return acquireError;
-		} else if (acquireError != Error::Ok) {
-			this->getLogger().error()
-				<< "Failed to acquire swapchain image for swapchain " << s
-				<< ". Aborting frame rendering.";
-			return acquireError;
+			Error acquireError = mapVkResult(result);
+			if (acquireError == Error::SwapchainOutOfDate
+				|| acquireError == Error::Suboptimal) {
+				this->getLogger().warning()
+					<< "Swapchain " << s
+					<< " is out of date. Recreating swapchain.";
+				swapchainContext.recreateSwapchain(
+					deviceContext, swapchainContext.getRenderPass());
+				return acquireError;
+			} else if (acquireError != Error::Ok) {
+				this->getLogger().error()
+					<< "Failed to acquire swapchain image for swapchain " << s
+					<< ". Aborting frame rendering.";
+				return acquireError;
+			}
 		}
 	}
 
@@ -362,11 +421,20 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			views.push_back(viewSet[v].view);
 		}
 
-		this->updateMultiviewUniformBuffer(views, 0);
-		frame.resetCommandBuffer(0);
-		this->recordCommandBuffer(swapchainContext.getRenderPass(),
-								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), 0, views);
+		{
+			evan::ScopedTimer timer = _stats.timer(_stats.updateUniform);
+			evan::ScopedTimer slotTimer =
+				_stats.timer(_stats.updateUniformView[0]);
+			this->updateMultiviewUniformBuffer(views, 0);
+		}
+		{
+			evan::ScopedTimer timer		= _stats.timer(_stats.record);
+			evan::ScopedTimer slotTimer = _stats.timer(_stats.recordView[0]);
+			frame.resetCommandBuffer(0);
+			this->recordCommandBuffer(swapchainContext.getRenderPass(),
+									  imageSet.getFramebuffer(acquiredImage[s]),
+									  imageSet.getExtent(), 0, views);
+		}
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -383,8 +451,13 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		submitInfo.pSignalSemaphores =
 			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
-		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
-											  1, &submitInfo, frame._inFlight);
+		VkResult submitResult;
+		{
+			evan::ScopedTimer timer		= _stats.timer(_stats.submit);
+			evan::ScopedTimer slotTimer = _stats.timer(_stats.submitView[0]);
+			submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(), 1,
+										 &submitInfo, frame._inFlight);
+		}
 		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to submit the multiview draw command buffer. "
@@ -399,12 +472,23 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 
 			auto &imageSet = *swapchainContext._swapchainImages[s];
 
-			this->updateUniformBuffer(view.view, i);
-			frame.resetCommandBuffer(i);
-			this->recordCommandBuffer(
-				swapchainContext.getRenderPass(),
-				imageSet.getFramebuffer(acquiredImage[s]), imageSet.getExtent(),
-				i, std::span<const utility::graphic::ViewF>(&view.view, 1));
+			{
+				evan::ScopedTimer timer = _stats.timer(_stats.updateUniform);
+				evan::ScopedTimer slotTimer =
+					_stats.timer(_stats.updateUniformView[i]);
+				this->updateUniformBuffer(view.view, i);
+			}
+			{
+				evan::ScopedTimer timer = _stats.timer(_stats.record);
+				evan::ScopedTimer slotTimer =
+					_stats.timer(_stats.recordView[i]);
+				frame.resetCommandBuffer(i);
+				this->recordCommandBuffer(
+					swapchainContext.getRenderPass(),
+					imageSet.getFramebuffer(acquiredImage[s]),
+					imageSet.getExtent(), i,
+					std::span<const utility::graphic::ViewF>(&view.view, 1));
+			}
 
 			VkPipelineStageFlags waitStages[] = {
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -428,8 +512,14 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				? frame._inFlight
 				: VK_NULL_HANDLE;
 
-			VkResult submitResult = vkQueueSubmit(
-				deviceContext.getGraphicsQueue(), 1, &submitInfo, submitFence);
+			VkResult submitResult;
+			{
+				evan::ScopedTimer timer = _stats.timer(_stats.submit);
+				evan::ScopedTimer slotTimer =
+					_stats.timer(_stats.submitView[i]);
+				submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
+											 1, &submitInfo, submitFence);
+			}
 			if (submitResult != VK_SUCCESS) {
 				this->getLogger().error()
 					<< "Failed to submit draw command buffer for view " << v
@@ -445,8 +535,12 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// end-of-frame synchronization point covering all views, instead of one
 	// wait between the eyes plus another before release.
 	if (!waitOnImageAvailable && !renderableViews.empty()) {
-		VkResult renderWaitResult =
-			vkWaitForFences(device, 1, &frame._inFlight, VK_TRUE, UINT64_MAX);
+		VkResult renderWaitResult;
+		{
+			evan::ScopedTimer timer = _stats.timer(_stats.renderWait);
+			renderWaitResult = vkWaitForFences(device, 1, &frame._inFlight,
+											   VK_TRUE, UINT64_MAX);
+		}
 		if (renderWaitResult != VK_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to wait for render completion. Aborting frame "
@@ -456,30 +550,33 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	}
 
 	// 4. Present each swapchain once, with the image acquired for it.
-	for (std::size_t s = 0; s < swapchainCount; ++s) {
-		VkPresentInfoKHR presentInfo {};
-		presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
-		presentInfo.pWaitSemaphores =
-			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
+	{
+		evan::ScopedTimer presentTimer = _stats.timer(_stats.present);
+		for (std::size_t s = 0; s < swapchainCount; ++s) {
+			VkPresentInfoKHR presentInfo {};
+			presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+			presentInfo.waitSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+			presentInfo.pWaitSemaphores =
+				waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
-		swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
-		presentInfo.pImageIndices = &acquiredImage[s];
+			swapchainContext._swapchainImages[s]->fillPresentInfo(presentInfo);
+			presentInfo.pImageIndices = &acquiredImage[s];
 
-		Error presentError = deviceContext.getDeviceBackend()->processFrame(
-			presentInfo, *swapchainContext._swapchainImages[s]);
-		if (presentError == Error::SwapchainOutOfDate
-			|| presentError == Error::Suboptimal) {
-			this->getLogger().warning()
-				<< "Swapchain " << s
-				<< " is out of date. Recreating swapchain.";
-			swapchainContext.recreateSwapchain(
-				deviceContext, swapchainContext.getRenderPass());
-			return presentError;
-		} else if (presentError != Error::Ok) {
-			this->getLogger().error()
-				<< "Failed to present swapchain " << s << ".";
-			return presentError;
+			Error presentError = deviceContext.getDeviceBackend()->processFrame(
+				presentInfo, *swapchainContext._swapchainImages[s]);
+			if (presentError == Error::SwapchainOutOfDate
+				|| presentError == Error::Suboptimal) {
+				this->getLogger().warning()
+					<< "Swapchain " << s
+					<< " is out of date. Recreating swapchain.";
+				swapchainContext.recreateSwapchain(
+					deviceContext, swapchainContext.getRenderPass());
+				return presentError;
+			} else if (presentError != Error::Ok) {
+				this->getLogger().error()
+					<< "Failed to present swapchain " << s << ".";
+				return presentError;
+			}
 		}
 	}
 
@@ -489,10 +586,20 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	this->getLogger().info() << "Next frame index: " << _currentFrameIndex;
 
 	this->getLogger().info() << "Post-processing frame...";
-	Error postprocessError =
-		deviceContext.getDeviceBackend()->postprocessFrame(swapchainContext);
+	Error postprocessError;
+	{
+		evan::ScopedTimer timer = _stats.timer(_stats.postprocess);
+		postprocessError = deviceContext.getDeviceBackend()->postprocessFrame(
+			swapchainContext);
+	}
 	if (postprocessError != Error::Ok) {
 		return postprocessError;
+	}
+
+	if (_stats.enabled) {
+		++_stats.frames;
+		evan::stats::takeGlobalDeltas(_stats);
+		this->reportStatsIfDue();
 	}
 
 	return Error::Ok;
@@ -959,6 +1066,18 @@ void evan::Renderer::recordCommandBuffer(
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues	   = clearValues.data();
 
+	// GPU timings: reset this view slot's query pair and write the begin
+	// timestamp just before the render pass starts executing. The reset is
+	// recorded, so it is queue-ordered after the previous frame that used
+	// this slot (whose completion the in-flight fence already guarantees).
+	if (frame.hasTimestampQueries()) {
+		const uint32_t beginQuery = static_cast<uint32_t>(2 * viewSlot);
+		vkCmdResetQueryPool(commandBuffer, frame.getTimestampQueryPool(),
+							beginQuery, 2);
+		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+							frame.getTimestampQueryPool(), beginQuery);
+	}
+
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug() << "Beginning render pass...";
 	}
@@ -1424,6 +1543,19 @@ void evan::Renderer::recordCommandBuffer(
 
 	flushIndirect();
 
+	// Fold the per-view draw counters into the statistics window; the
+	// EVAN_DEBUG_DRAW_LOG block below keeps reading the local values.
+	if (_stats.enabled) {
+		_stats.totalMeshes += stats.totalMeshes;
+		_stats.visibleMeshes += stats.visibleMeshes;
+		_stats.culledMeshes += stats.culledMeshes;
+		_stats.skippedMeshes += stats.skippedMeshes;
+		_stats.drawCalls += stats.drawCalls;
+		_stats.instancedDraws += stats.instancedDraws;
+		_stats.pipelineBinds += stats.pipelineBinds;
+		_stats.descriptorBinds += stats.descriptorBinds;
+	}
+
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
 			<< "Draw stats: totalMeshes=" << stats.totalMeshes
@@ -1440,9 +1572,101 @@ void evan::Renderer::recordCommandBuffer(
 
 	vkCmdEndRenderPass(commandBuffer);
 
+	if (frame.hasTimestampQueries()) {
+		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+							frame.getTimestampQueryPool(),
+							static_cast<uint32_t>(2 * viewSlot + 1));
+	}
+
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		this->getLogger().error() << "Failed to record command buffer!";
 		return;
+	}
+}
+
+void evan::Renderer::reportStatsIfDue()
+{
+	if (!_stats.enabled || _stats.frames < statsLogInterval()) {
+		return;
+	}
+
+	auto log = this->getLogger().info();
+
+	log << "evan stats: frames=" << _stats.frames << " | cpu_ms(avg):"
+		<< " flush=" << formatPhaseMs(_stats.transferFlush)
+		<< " pre=" << formatPhaseMs(_stats.preprocess)
+		<< " acq=" << formatPhaseMs(_stats.acquire)
+		<< " wait=" << formatPhaseMs(_stats.inFlightWait)
+		<< " ubo=" << formatPhaseMs(_stats.updateUniform)
+		<< " rec=" << formatPhaseMs(_stats.record)
+		<< " submit=" << formatPhaseMs(_stats.submit)
+		<< " renderwait=" << formatPhaseMs(_stats.renderWait)
+		<< " pres=" << formatPhaseMs(_stats.present)
+		<< " post=" << formatPhaseMs(_stats.postprocess) << " | gpu_ms(avg):";
+
+	bool anyGpuSample = false;
+	for (std::size_t slot = 0; slot < static_cast<std::size_t>(MAX_SWAPCHAINS);
+		 ++slot) {
+		if (_stats.gpuPass[slot].samples == 0) {
+			continue;
+		}
+		anyGpuSample = true;
+		log << " pass" << slot << "=" << formatPhaseMs(_stats.gpuPass[slot]);
+	}
+	if (!anyGpuSample) {
+		log << " --";
+	}
+
+	log << " | meshes: total=" << _stats.totalMeshes
+		<< " vis=" << _stats.visibleMeshes << " culled=" << _stats.culledMeshes
+		<< " skip=" << _stats.skippedMeshes
+		<< " | draws: calls=" << _stats.drawCalls
+		<< " inst=" << _stats.instancedDraws << " pso=" << _stats.pipelineBinds
+		<< " ds=" << _stats.descriptorBinds
+		<< " | sync: calls=" << _stats.syncCalls << " skip=" << _stats.syncSkips
+		<< " | mesh_churn: +" << _stats.meshCreations << "/-"
+		<< _stats.meshDestructions << " | uploadwaits=" << _stats.uploadWaits;
+
+	_stats.resetWindow();
+}
+
+void evan::Renderer::readGpuTimestamps(const Frame &frame)
+{
+	if (!_stats.gpuAvailable || !frame.hasTimestampQueries()) {
+		return;
+	}
+
+	auto device = _deviceContext->getDeviceBackend()->getDevice();
+
+	// The per-frame slot count is clamped to [1, MAX_SWAPCHAINS], so the
+	// gpuPass indices below are always in range.
+	for (std::size_t slot = 0; slot < frame.getPerFrameSlotCount(); ++slot) {
+		// One result plus its availability flag per query, 64-bit each.
+		uint64_t values[4]	  = { 0, 0, 0, 0 };
+		const VkResult result = vkGetQueryPoolResults(
+			device, frame.getTimestampQueryPool(),
+			static_cast<uint32_t>(2 * slot), 2, sizeof(values), values,
+			static_cast<VkDeviceSize>(2 * sizeof(uint64_t)),
+			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+
+		if (result != VK_SUCCESS || values[1] == 0 || values[3] == 0) {
+			// VK_NOT_READY: the queries of this slot were not written yet
+			// (first use of the frame slot, skipped frame). Never block on a
+			// query result.
+			continue;
+		}
+
+		const uint64_t begin =
+			evan::stats::maskTimestamp(values[0], _timestampValidBits);
+		const uint64_t end =
+			evan::stats::maskTimestamp(values[2], _timestampValidBits);
+
+		uint64_t deltaNs = 0;
+		if (!evan::stats::timestampDeltaNs(begin, end, _timestampPeriod,
+										   deltaNs)) {
+			continue;
+		}
+		_stats.gpuPass[slot].add(deltaNs);
 	}
 }
 

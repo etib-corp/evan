@@ -748,6 +748,11 @@ float evan::Engine::getDeltaTime(void) const
 	return _deltaTime;
 }
 
+const evan::FrameStats &evan::Engine::getFrameStats() const
+{
+	return _renderer->getStats();
+}
+
 void evan::Engine::setScissor(const utility::graphic::ScissorRect &rect)
 {
 	if (_renderer) {

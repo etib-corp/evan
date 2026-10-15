@@ -127,6 +127,99 @@ inline MultiviewMode multiviewMode()
 }
 
 /**
+ * @brief Parses a boolean EVAN_* flag value.
+ *
+ * A missing, empty, or "0"-leading value disables the flag; any other value
+ * enables it, matching the EVAN_DEBUG_DRAW_LOG / EVAN_DEBUG_DISABLE_CULLING
+ * convention.
+ *
+ * @param value Environment value to parse (may be null).
+ * @return True when the value enables the flag.
+ */
+inline bool statsFlagEnabled(const char *value)
+{
+	return value != nullptr && value[0] != '\0' && value[0] != '0';
+}
+
+/**
+ * @brief Parses the EVAN_STATS_INTERVAL frame count.
+ *
+ * Accepts a positive decimal count; missing, zero, negative, non-numeric or
+ * absurdly large values fall back to the default report window of 120 frames
+ * (about two seconds at 60 Hz).
+ *
+ * @param value Environment value to parse (may be null).
+ * @return The report window, in frames.
+ */
+inline unsigned statsIntervalFromValue(const char *value)
+{
+	constexpr unsigned defaultInterval	= 120u;
+	constexpr unsigned long maxInterval = 1000000ul;
+
+	if (value == nullptr || value[0] == '\0') {
+		return defaultInterval;
+	}
+
+	char *end				   = nullptr;
+	const unsigned long parsed = std::strtoul(value, &end, 10);
+	if (end == value || parsed == 0 || parsed > maxInterval) {
+		return defaultInterval;
+	}
+	return static_cast<unsigned>(parsed);
+}
+
+/**
+ * @brief Whether frame statistics (EVAN_STATS) are enabled for this process.
+ *
+ * Off by default: the timers and counters collapse to a single predictable
+ * branch at every hook, and no frame data is ever logged. The value is read
+ * once per process.
+ *
+ * @return True when EVAN_STATS is set to an enabling value.
+ */
+inline bool statsEnabled()
+{
+	static const bool enabled = statsFlagEnabled(std::getenv("EVAN_STATS"));
+	return enabled;
+}
+
+/**
+ * @brief Number of frames per statistics report window.
+ *
+ * Driven by EVAN_STATS_INTERVAL; defaults to 120 frames. The value is read
+ * once per process.
+ *
+ * @return The report window, in frames.
+ */
+inline unsigned statsLogInterval()
+{
+	static const unsigned interval =
+		statsIntervalFromValue(std::getenv("EVAN_STATS_INTERVAL"));
+	return interval;
+}
+
+/**
+ * @brief Whether GPU timestamp queries may be created (EVAN_STATS_GPU).
+ *
+ * On with EVAN_STATS by default; set EVAN_STATS_GPU=0 to keep the CPU
+ * instrumentation without creating query pools, for example to attribute the
+ * enabled cost of the GPU path. The value is read once per process.
+ *
+ * @return True when GPU timestamps are allowed.
+ */
+inline bool statsGpuEnabled()
+{
+	static const bool enabled = [] {
+		const char *value = std::getenv("EVAN_STATS_GPU");
+		if (value == nullptr || value[0] == '\0') {
+			return true;
+		}
+		return value[0] != '0';
+	}();
+	return enabled;
+}
+
+/**
  * @brief Builds the render-pass view mask for a view count.
  *
  * Multiview is only used for stereo today: at least two views are required for

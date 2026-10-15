@@ -13,6 +13,8 @@
 
 #include "evan/Frame.hpp"
 
+#include "evan/FrameStats.hpp"
+
 #include "evan/RenderSettings.hpp"
 #include "evan/RessourceManager.hpp"
 
@@ -249,6 +251,37 @@ namespace evan
 		[[nodiscard]] static bool
 			viewOwnsInFlightFence(std::size_t viewIndex,
 								  std::size_t viewCount) noexcept;
+
+		/**
+		 * @brief Retrieves the frame statistics of this renderer.
+		 *
+		 * Returns the live report window: CPU phase timings, per-view GPU pass
+		 * times (when timestamp queries are available) and per-frame counters.
+		 * The data accumulates in memory and is never logged per frame; the
+		 * renderer itself emits one aggregated log record every
+		 * EVAN_STATS_INTERVAL frames when EVAN_STATS is set. An application may
+		 * read this accessor to draw its own debug overlay.
+		 *
+		 * The window is reset after each aggregated log record and by
+		 * resetStats().
+		 *
+		 * @return The current frame statistics.
+		 */
+		[[nodiscard]] const FrameStats &getStats() const noexcept
+		{
+			return _stats;
+		}
+
+		/**
+		 * @brief Starts a new statistics window.
+		 *
+		 * Clears the accumulated phase samples, counters and frame count; keeps
+		 * the enabled/available flags.
+		 */
+		void resetStats() noexcept
+		{
+			_stats.resetWindow();
+		}
 
 		/**
 		 * @brief Retrieves the Vulkan descriptor pool associated with the
@@ -536,6 +569,26 @@ namespace evan
 		uint32_t _currentFrameIndex;
 
 		/**
+		 * @brief Frame statistics window (CPU phases, counters, GPU passes).
+		 *
+		 * Disabled by default through EVAN_STATS; see FrameStats. The renderer
+		 * fills the phases while drawing and emits one aggregated record every
+		 * EVAN_STATS_INTERVAL frames.
+		 */
+		FrameStats _stats;
+
+		/**
+		 * @brief Nanoseconds per GPU timestamp tick, cached at construction.
+		 */
+		float _timestampPeriod = 0.0f;
+
+		/**
+		 * @brief Number of valid bits in a GPU timestamp, cached at
+		 * construction.
+		 */
+		uint32_t _timestampValidBits = 0;
+
+		/**
 		 * @brief Vulkan descriptor set layout used for rendering operations.
 		 *
 		 * This member variable holds the Vulkan descriptor set layout that
@@ -633,6 +686,29 @@ namespace evan
 			VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
 			VkExtent2D swapChainExtent, std::size_t viewSlot,
 			std::span<const utility::graphic::ViewF> views);
+
+		/**
+		 * @brief Emits the aggregated statistics record when a window is due.
+		 *
+		 * Called once per drawn frame. When the frame count reaches
+		 * statsLogInterval(), one info() record with the window averages and
+		 * counters is emitted and the window is reset. Never called per mesh
+		 * and never flushes explicitly.
+		 */
+		void reportStatsIfDue();
+
+		/**
+		 * @brief Folds completed GPU timestamp queries into the statistics.
+		 *
+		 * Called at the start of a frame, right after the frame slot's
+		 * in-flight fence signalled: the submissions that wrote the queries of
+		 * that slot have completed at that point. Reads with
+		 * VK_QUERY_RESULT_WITH_AVAILABILITY_BIT and skips unavailable queries
+		 * instead of blocking.
+		 *
+		 * @param frame The frame whose query pool is read.
+		 */
+		void readGpuTimestamps(const Frame &frame);
 
 		/**
 		 * @brief Finds the graphics pipeline of a (shader, blend mode) pair.

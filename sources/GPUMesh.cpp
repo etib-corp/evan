@@ -7,11 +7,15 @@
 
 #include "evan/GPUMesh.hpp"
 
+#include "evan/FrameStats.hpp"
+
 evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 					   std::vector<GPUVertex> vertices,
 					   std::vector<uint32_t> indices, uint32_t materialID)
 	: _deviceContext(deviceContext)
 {
+	evan::stats::countMeshCreation();
+
 	this->getLogger().info()
 		<< "Initializing GPUMesh with material ID: " << materialID << "...";
 
@@ -58,6 +62,7 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 
 evan::GPUMesh::~GPUMesh()
 {
+	evan::stats::countMeshDestruction();
 	this->getLogger().info() << "Destroying GPUMesh...";
 	this->cleanup();
 }
