@@ -15,6 +15,8 @@
 
 #include <map>
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace evan
 {
@@ -227,6 +229,18 @@ namespace evan
 		VkSampleCountFlagBits getMsaaSamples() const override;
 
 		/**
+		 * @brief Indicates whether all views render into one layered swapchain.
+		 *
+		 * True when the device supports multiview and the runtime accepted a
+		 * swapchain with one array layer per view, so the renderer records a
+		 * single pass covering every eye. False keeps the two-pass fallback
+		 * (one swapchain per view).
+		 *
+		 * @return True when the renderer must record a single multiview pass.
+		 */
+		bool usesMultiview() const override;
+
+		/**
 		 * @brief Rebuilds the ViewSet from the latest OpenXR view state.
 		 *
 		 * Must be called after xrLocateViews (done in preprocessFrame) so the
@@ -278,8 +292,71 @@ namespace evan
 		void selectMsaaSamples(const DeviceContext &deviceContext);
 
 		/**
-		 * The set of views rendered by this swapchain context. Each view maps
-		 * to one eye and targets its own swapchain image set.
+		 * @brief A runtime swapchain handle with the create info that made it.
+		 *
+		 * Keeping the create info around lets image construction happen after
+		 * the render pass exists, whose view mask depends on whether the
+		 * layered swapchain creation succeeded.
+		 */
+		struct SwapchainHandle {
+			XrSwapchain swapchain = XR_NULL_HANDLE;
+			XrSwapchainCreateInfo createInfo {};
+		};
+
+		/**
+		 * @brief Creates one layered swapchain shared by every view.
+		 *
+		 * Only attempted when the device, the application mode and the view
+		 * configurations allow multiview. Returns an empty optional when the
+		 * runtime rejects the layered swapchain, which makes the caller fall
+		 * back to one swapchain per view.
+		 *
+		 * @param deviceContext The device context providing the backend.
+		 * @param swapchainFormat The selected swapchain format.
+		 * @return The created handle, or std::nullopt when unsupported.
+		 */
+		std::optional<SwapchainHandle>
+			createMultiviewSwapchain(const DeviceContext &deviceContext,
+									 VkFormat swapchainFormat);
+
+		/**
+		 * @brief Creates one swapchain per view configuration (fallback).
+		 *
+		 * @param deviceContext The device context providing the backend.
+		 * @param swapchainFormat The selected swapchain format.
+		 * @return The handles that could be created.
+		 */
+		std::vector<SwapchainHandle>
+			createPerViewSwapchains(const DeviceContext &deviceContext,
+									VkFormat swapchainFormat);
+
+		/**
+		 * @brief Builds the XrSwapchainImage wrappers for created handles.
+		 *
+		 * Must run after the render pass exists: the images build image views
+		 * and framebuffers against it.
+		 *
+		 * @param deviceContext The device context providing the backend.
+		 * @param handles The swapchain handles to wrap.
+		 */
+		void buildSwapchainImages(const DeviceContext &deviceContext,
+								  const std::vector<SwapchainHandle> &handles);
+
+		/**
+		 * @brief Whether all view configurations share one image layout.
+		 *
+		 * A single layered swapchain can only serve views whose recommended
+		 * width, height and sample count match; otherwise the constructor
+		 * keeps one swapchain per view.
+		 *
+		 * @return True when every view configuration is compatible.
+		 */
+		bool viewConfigurationsShareLayout() const;
+
+		/**
+		 * The set of views rendered by this swapchain context. In multiview
+		 * mode every view references the single layered swapchain image set;
+		 * otherwise each view targets its own.
 		 */
 		ViewSet _viewSet;
 
@@ -288,6 +365,16 @@ namespace evan
 		 * graphics pipelines of this swapchain context.
 		 */
 		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		/**
+		 * @brief Whether every view renders into one layered swapchain.
+		 *
+		 * Decided once at construction (and never changed: the render pass and
+		 * the pipelines are compiled against its view mask) after both the
+		 * device capability and the runtime's acceptance of the layered
+		 * swapchain are known.
+		 */
+		bool _multiviewEnabled = false;
 
 		/**
 		 * @brief How the render pass obtains its single-sampled color

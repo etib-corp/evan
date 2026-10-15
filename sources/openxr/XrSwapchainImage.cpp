@@ -24,6 +24,12 @@ evan::XrSwapchainImage::XrSwapchainImage(
 	_format = static_cast<VkFormat>(properties.createInfo.format);
 	_extent = { properties.createInfo.width, properties.createInfo.height };
 
+	// A multiview swapchain hands out one array layer per view; the image
+	// views, color, depth and framebuffer resources must cover them all.
+	_arrayLayers = properties.createInfo.arraySize > 0
+		? properties.createInfo.arraySize
+		: 1;
+
 	_swapchainImages.resize(swapchainImageCount,
 							{ XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR });
 	_imageViews.resize(swapchainImageCount);
@@ -42,7 +48,7 @@ evan::XrSwapchainImage::XrSwapchainImage(
 		_imageViews[i] =
 			properties.deviceContext.getDeviceBackend()
 				->createImageView(_swapchainImages[i].image, _format,
-								  VK_IMAGE_ASPECT_COLOR_BIT, 1)
+								  VK_IMAGE_ASPECT_COLOR_BIT, 1, _arrayLayers)
 				.value;
 	}
 

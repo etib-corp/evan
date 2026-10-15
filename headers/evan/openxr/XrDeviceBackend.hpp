@@ -561,6 +561,16 @@ namespace evan
 			XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 		/**
+		 * @brief The Vulkan API version the OpenXR Vulkan instance was
+		 * actually created with.
+		 *
+		 * Normally the runtime's maximum supported version, or its minimum
+		 * when the maximum is unavailable. Decides whether the core 1.1
+		 * feature queries (and multiview) can be used.
+		 */
+		uint32_t _vulkanApiVersion = VK_API_VERSION_1_0;
+
+		/**
 		 * A copy of the user-configurable OpenXR options taken from the
 		 * platform when the backend is constructed.
 		 */

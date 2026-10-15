@@ -406,6 +406,15 @@ namespace evan
 		VkFormat _format = VK_FORMAT_UNDEFINED;
 
 		/**
+		 * @brief The number of array layers of the swapchain and attachment
+		 * images.
+		 *
+		 * 1 for plain 2D images. Multiview swapchains have one layer per view,
+		 * and their image views, color, depth and framebuffer resources all
+		 * cover the same layer count.
+		 */
+		uint32_t _arrayLayers = 1;
+		/**
 		 * A vector of Vulkan images that represent the
 		 * swapchain images. These images are created as part
 		 * of the swapchain and are used as the targets for

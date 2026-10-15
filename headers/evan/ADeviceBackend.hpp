@@ -228,6 +228,13 @@ namespace evan
 			 * allocated for the image.
 			 */
 			VkDeviceMemory &_imageMemory;
+			/**
+			 * @brief The number of array layers of the image.
+			 *
+			 * Defaults to 1: plain 2D images. Multiview attachments use one
+			 * layer per view so that a single framebuffer covers all views.
+			 */
+			uint32_t _arrayLayers = 1;
 		};
 
 		/**
@@ -531,12 +538,16 @@ namespace evan
 		 * images).
 		 * @param mipLevels The number of mipmap levels in the image, which
 		 * determines the range of mip levels included in the image view.
+		 * @param layerCount The number of array layers included in the view.
+		 * A value greater than one creates a VK_IMAGE_VIEW_TYPE_2D_ARRAY view,
+		 * used by multiview attachments; the default keeps plain 2D views.
 		 *
 		 * @return A Result holding the created image view, or a mapped error.
 		 */
 		Result<VkImageView> createImageView(VkImage image, VkFormat format,
 											VkImageAspectFlags aspectFlags,
-											uint32_t mipLevels) const;
+											uint32_t mipLevels,
+											uint32_t layerCount = 1) const;
 
 		/**
 		 * @brief Retrieves the Vulkan logical device handle.
@@ -574,6 +585,24 @@ namespace evan
 			return _physicalDevice;
 		}
 
+		/**
+		 * @brief Indicates whether multiview rendering is available.
+		 *
+		 * True when the physical device supports
+		 * VkPhysicalDeviceMultiviewFeatures::multiview with at least two views
+		 * and the backend enabled the feature on its logical device. The
+		 * swapchain contexts only use a non-zero render-pass view mask when
+		 * this is true, because the ViewIndex shader input requires the
+		 * feature; renderers may use the same signal to pick multiview
+		 * shaders.
+		 *
+		 * @return True when multiview may be used.
+		 */
+		bool supportsMultiview() const
+		{
+			return _multiviewSupported;
+		}
+
 		protected:
 		/**
 		 * The physical device, which represents a
@@ -597,6 +626,16 @@ namespace evan
 		 * resources and to query the capabilities of the Vulkan implementation.
 		 */
 		VkInstance _VkInstance = VK_NULL_HANDLE;
+
+		/**
+		 * @brief Whether the multiview feature was enabled on the logical
+		 * device created by this backend.
+		 *
+		 * Set by the concrete backends during device creation through
+		 * queryMultiviewSupport(); exposed through supportsMultiview().
+		 */
+		bool _multiviewSupported = false;
+
 		/**
 		 * @brief Creates a Vulkan instance and initializes the device backend.
 		 *
@@ -660,6 +699,22 @@ namespace evan
 		 * device selection.
 		 */
 		virtual void pickPhysicalDevice() = 0;
+
+		/**
+		 * @brief Queries whether a physical device can run multiview passes.
+		 *
+		 * Checks VkPhysicalDeviceMultiviewFeatures::multiview and requires at
+		 * least two supported views (maxMultiviewViewCount). The feature
+		 * queries are core Vulkan 1.1 commands, so an instance API version
+		 * below 1.1 reports unsupported.
+		 *
+		 * @param physicalDevice The physical device to query.
+		 * @param apiVersion The Vulkan API version of the instance the device
+		 * belongs to.
+		 * @return True when multiview is supported and can be enabled.
+		 */
+		static bool queryMultiviewSupport(VkPhysicalDevice physicalDevice,
+										  uint32_t apiVersion);
 
 		/**
 		 * @brief Retrieves the available Vulkan layers on the system.

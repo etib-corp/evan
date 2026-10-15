@@ -363,7 +363,11 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 	appInfo.applicationVersion = appVersion.to_uint32_t();
 	appInfo.pEngineName		   = "evan";
 	appInfo.engineVersion	   = VK_MAKE_VERSION(0, 1, 0);
-	appInfo.apiVersion		   = graphicsRequirements.minApiVersionSupported;
+	// Ask for the newest API version the runtime supports: the core 1.1
+	// feature queries and the multiview feature struct require an effective
+	// 1.1 instance. If the loader cannot provide it, retry at the runtime's
+	// minimum below.
+	appInfo.apiVersion = graphicsRequirements.maxApiVersionSupported;
 
 	if (enableValidationLayers) {
 		this->getLogger().info()
@@ -393,13 +397,33 @@ void evan::XrDeviceBackend::createInstance(const IPlatform &platform,
 	VkResult result = VK_SUCCESS;
 	createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance,
 							&result);
+	if (result != VK_SUCCESS
+		&& graphicsRequirements.maxApiVersionSupported
+			!= graphicsRequirements.minApiVersionSupported) {
+		this->getLogger().warning()
+			<< "Failed to create the Vulkan instance at the runtime's maximum "
+			   "API version "
+			<< VK_VERSION_MAJOR(graphicsRequirements.maxApiVersionSupported)
+			<< "."
+			<< VK_VERSION_MINOR(graphicsRequirements.maxApiVersionSupported)
+			<< " (VkResult: " << result
+			<< "). Retrying at the minimum supported version...";
+		appInfo.apiVersion = graphicsRequirements.minApiVersionSupported;
+		result			   = VK_SUCCESS;
+		createVulkanInstanceKHR(_XrInstance, &vulkanCreateInfoKHR, &_VkInstance,
+								&result);
+	}
 	if (result != VK_SUCCESS) {
 		this->getLogger().error()
 			<< "Failed to create Vulkan instance through OpenXR.";
 		return;
 	}
+	_vulkanApiVersion = appInfo.apiVersion;
 	this->getLogger().info()
-		<< "Successfully created Vulkan instance through OpenXR";
+		<< "Successfully created Vulkan instance through OpenXR with API "
+		   "version "
+		<< VK_VERSION_MAJOR(_vulkanApiVersion) << "."
+		<< VK_VERSION_MINOR(_vulkanApiVersion) << ".";
 }
 
 void evan::XrDeviceBackend::createLogicalDevice()
@@ -442,11 +466,35 @@ void evan::XrDeviceBackend::createLogicalDevice()
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
 #endif
 
+	// Multiview is opt-in: enable it only when the device and the application
+	// mode allow it, and keep the two-pass path as the fallback otherwise.
+	// The feature must be enabled whenever the installed shaders use the
+	// ViewIndex input, even for single-view render passes, because the SPIR-V
+	// MultiView capability requires it.
+	VkPhysicalDeviceMultiviewFeatures multiviewFeatures {};
+	multiviewFeatures.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+
+	const bool multiviewAvailable = multiviewMode() != MultiviewMode::Off
+		&& queryMultiviewSupport(_physicalDevice, _vulkanApiVersion);
+	if (multiviewAvailable) {
+		multiviewFeatures.multiview = VK_TRUE;
+		_multiviewSupported			= true;
+		this->getLogger().info()
+			<< "Enabling the multiview feature on the Vulkan device.";
+	} else if (multiviewMode() == MultiviewMode::On) {
+		this->getLogger().error()
+			<< "EVAN_MULTIVIEW=on but the device does not support the "
+			   "multiview feature (or the instance is older than Vulkan "
+			   "1.1). Continuing without multiview.";
+	}
+
 	VkDeviceCreateInfo createInfo {};
 	createInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	createInfo.pQueueCreateInfos	= &queueCreateInfo;
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pEnabledFeatures		= &deviceFeatures;
+	createInfo.pNext = _multiviewSupported ? &multiviewFeatures : nullptr;
 
 	XrVulkanDeviceCreateInfoKHR vulkanDeviceCreateInfoKHR {};
 	vulkanDeviceCreateInfoKHR.type	   = XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR;

@@ -60,42 +60,133 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 	_views.resize(_viewsConfigurations.size(), { XR_TYPE_VIEW });
 
 	_viewSet.resize(_viewsConfigurations.size());
-	for (std::size_t i = 0; i < _viewsConfigurations.size(); ++i) {
-		_viewSet[i].swapchainIndex = i;
-	}
 
 	selectMsaaSamples(deviceContext);
 
-	createRenderPass(deviceContext.getDeviceBackend(), _msaaSamples,
-					 _colorAttachmentMode);
+	// Multiview needs the device feature, a stereo view count and one image
+	// layout every eye agrees on. Whether the runtime actually accepts the
+	// layered swapchain is only known once xrCreateSwapchain returns, so the
+	// tentative mode is confirmed by the creation below and falls back to one
+	// swapchain per view.
+	const bool multiviewWanted = backend.supportsMultiview()
+		&& multiviewMode() != MultiviewMode::Off
+		&& _viewsConfigurations.size() >= 2
+		&& _viewsConfigurations.size()
+			<= static_cast<std::size_t>(MAX_MULTIVIEW_VIEWS)
+		&& viewConfigurationsShareLayout();
 
 	auto swapchainFormat = selectSwapchainFormat(
 		deviceContext.getDeviceBackend()->getPhysicalDevice(),
 		swapchainFormats);
 
+	std::vector<SwapchainHandle> handles;
+	if (multiviewWanted) {
+		auto handle = createMultiviewSwapchain(deviceContext, swapchainFormat);
+		if (handle.has_value()) {
+			_multiviewEnabled = true;
+			handles.push_back(handle.value());
+			this->getLogger().info()
+				<< "Using a single layered swapchain with "
+				<< handles.back().createInfo.arraySize
+				<< " array layers to render all views in one pass.";
+		} else {
+			this->getLogger().warning()
+				<< "The runtime did not provide a layered swapchain; falling "
+				   "back to one swapchain per view.";
+		}
+	}
+	if (!_multiviewEnabled) {
+		handles = createPerViewSwapchains(deviceContext, swapchainFormat);
+	}
+	if (multiviewMode() == MultiviewMode::On && !_multiviewEnabled) {
+		this->getLogger().error()
+			<< "EVAN_MULTIVIEW=on but multiview could not be enabled; "
+			   "falling back to the two-pass path.";
+	}
+
+	// Every view targets the single layered image set in multiview mode, and
+	// its own swapchain otherwise. syncViewSet() re-applies this mapping every
+	// frame, so both have to agree.
+	for (std::size_t i = 0; i < _viewSet.size(); ++i) {
+		_viewSet[i].swapchainIndex = _multiviewEnabled ? 0 : i;
+	}
+
+	createRenderPass(
+		deviceContext.getDeviceBackend(), _msaaSamples, _colorAttachmentMode,
+		_multiviewEnabled ? multiviewViewMask(_viewSet.size()) : 0u);
+
+	buildSwapchainImages(deviceContext, handles);
+}
+
+std::optional<evan::XrSwapchainContext::SwapchainHandle>
+	evan::XrSwapchainContext::createMultiviewSwapchain(
+		const DeviceContext &deviceContext, VkFormat swapchainFormat)
+{
+	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
+		*deviceContext.getDeviceBackend());
+
+	// viewConfigurationsShareLayout() guarantees the first configuration is
+	// representative of every eye.
+	const auto &viewConfig = _viewsConfigurations.front();
+
+	SwapchainHandle handle {};
+	handle.createInfo.type		= XR_TYPE_SWAPCHAIN_CREATE_INFO;
+	handle.createInfo.arraySize = static_cast<uint32_t>(_viewSet.size());
+	handle.createInfo.format	= swapchainFormat;
+	handle.createInfo.width		= viewConfig.recommendedImageRectWidth;
+	handle.createInfo.height	= viewConfig.recommendedImageRectHeight;
+	handle.createInfo.mipCount	= 1;
+	handle.createInfo.faceCount = 1;
+	// The render pass and framebuffers are built for this sample count (see
+	// selectMsaaSamples), so it must stay the runtime's recommended value
+	// rather than the application one.
+	handle.createInfo.sampleCount = viewConfig.recommendedSwapchainSampleCount;
+	handle.createInfo.usageFlags =
+		backend.getOpenXrOptions().swapchainUsageFlags;
+
+	this->getLogger().info()
+		<< "Creating layered swapchain for multiview rendering...";
+
+	XrResult result = xrCreateSwapchain(backend.getSession(),
+										&handle.createInfo, &handle.swapchain);
+	if (result != XR_SUCCESS) {
+		this->getLogger().warning()
+			<< "Failed to create a swapchain with arraySize "
+			<< handle.createInfo.arraySize << " with error code: " << result;
+		return std::nullopt;
+	}
+	return handle;
+}
+
+std::vector<evan::XrSwapchainContext::SwapchainHandle>
+	evan::XrSwapchainContext::createPerViewSwapchains(
+		const DeviceContext &deviceContext, VkFormat swapchainFormat)
+{
+	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
+		*deviceContext.getDeviceBackend());
+
+	std::vector<SwapchainHandle> handles;
 	for (const auto &viewConfig: _viewsConfigurations) {
 		this->getLogger().info() << "Creating swapchain for view configuration";
 
-		XrSwapchainCreateInfo swapchainCreateInfo {};
-		swapchainCreateInfo.type	  = XR_TYPE_SWAPCHAIN_CREATE_INFO;
-		swapchainCreateInfo.arraySize = 1;
-		swapchainCreateInfo.format	  = swapchainFormat;
-		swapchainCreateInfo.width	  = viewConfig.recommendedImageRectWidth;
-		swapchainCreateInfo.height	  = viewConfig.recommendedImageRectHeight;
-		swapchainCreateInfo.mipCount  = 1;
-		swapchainCreateInfo.faceCount = 1;
+		SwapchainHandle handle {};
+		handle.createInfo.type		= XR_TYPE_SWAPCHAIN_CREATE_INFO;
+		handle.createInfo.arraySize = 1;
+		handle.createInfo.format	= swapchainFormat;
+		handle.createInfo.width		= viewConfig.recommendedImageRectWidth;
+		handle.createInfo.height	= viewConfig.recommendedImageRectHeight;
+		handle.createInfo.mipCount	= 1;
+		handle.createInfo.faceCount = 1;
 		// The render pass and framebuffers are built for this sample count
 		// (see selectMsaaSamples), so it must stay the runtime's recommended
 		// value rather than the application one.
-		swapchainCreateInfo.sampleCount =
+		handle.createInfo.sampleCount =
 			viewConfig.recommendedSwapchainSampleCount;
-		swapchainCreateInfo.usageFlags =
+		handle.createInfo.usageFlags =
 			backend.getOpenXrOptions().swapchainUsageFlags;
 
-		XrSwapchain swapchain;
-		auto session = backend.getSession();
-		XrResult result =
-			xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain);
+		XrResult result = xrCreateSwapchain(
+			backend.getSession(), &handle.createInfo, &handle.swapchain);
 		if (result != XR_SUCCESS) {
 			this->getLogger().error()
 				<< "Failed to create swapchain for view configuration "
@@ -103,9 +194,19 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 				<< result;
 			continue;
 		}
+		handles.push_back(handle);
+	}
+	return handles;
+}
+
+void evan::XrSwapchainContext::buildSwapchainImages(
+	const DeviceContext &deviceContext,
+	const std::vector<SwapchainHandle> &handles)
+{
+	for (const auto &handle: handles) {
 		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain			 = swapchain,
-			.createInfo			 = swapchainCreateInfo,
+			.swapchain			 = handle.swapchain,
+			.createInfo			 = handle.createInfo,
 			.renderPass			 = _renderPass,
 			.deviceContext		 = deviceContext,
 			.msaaSamples		 = _msaaSamples,
@@ -114,6 +215,26 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 		_swapchainImages.push_back(
 			std::make_shared<XrSwapchainImage>(properties));
 	}
+}
+
+bool evan::XrSwapchainContext::viewConfigurationsShareLayout() const
+{
+	if (_viewsConfigurations.empty()) {
+		return false;
+	}
+
+	const auto &reference = _viewsConfigurations.front();
+	for (const auto &viewConfig: _viewsConfigurations) {
+		if (viewConfig.recommendedImageRectWidth
+				!= reference.recommendedImageRectWidth
+			|| viewConfig.recommendedImageRectHeight
+				!= reference.recommendedImageRectHeight
+			|| viewConfig.recommendedSwapchainSampleCount
+				!= reference.recommendedSwapchainSampleCount) {
+			return false;
+		}
+	}
+	return true;
 }
 
 void evan::XrSwapchainContext::selectMsaaSamples(
@@ -195,11 +316,9 @@ void evan::XrSwapchainContext::destroy(VkDevice device)
 void evan::XrSwapchainContext::recreateSwapchain(
 	const DeviceContext &deviceContext, VkRenderPass renderpass)
 {
+	(void)renderpass;
 	this->getLogger().info() << "Recreating swapchain and associated resources "
 								"for XrSwapchainContext";
-
-	auto &backend = evan::checkedCast<evan::XrDeviceBackend>(
-		*deviceContext.getDeviceBackend());
 
 	for (const auto &swapchainImage: _swapchainImages) {
 		this->getLogger().info()
@@ -208,50 +327,30 @@ void evan::XrSwapchainContext::recreateSwapchain(
 	}
 	_swapchainImages.clear();
 
-	for (const auto &viewConfig: _viewsConfigurations) {
-		this->getLogger().info() << "Creating swapchain for view configuration";
+	auto swapchainFormat = selectSwapchainFormat(
+		deviceContext.getDeviceBackend()->getPhysicalDevice(),
+		deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
+			deviceContext.getDeviceBackend()->countSwapchainFormats()));
 
-		XrSwapchainCreateInfo swapchainCreateInfo {};
-		swapchainCreateInfo.type	  = XR_TYPE_SWAPCHAIN_CREATE_INFO;
-		swapchainCreateInfo.arraySize = 1;
-		swapchainCreateInfo.format	  = selectSwapchainFormat(
-			   deviceContext.getDeviceBackend()->getPhysicalDevice(),
-			   deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
-				   deviceContext.getDeviceBackend()->countSwapchainFormats()));
-		swapchainCreateInfo.width	  = viewConfig.recommendedImageRectWidth;
-		swapchainCreateInfo.height	  = viewConfig.recommendedImageRectHeight;
-		swapchainCreateInfo.mipCount  = 1;
-		swapchainCreateInfo.faceCount = 1;
-		// The render pass and framebuffers are built for this sample count
-		// (see selectMsaaSamples), so it must stay the runtime's recommended
-		// value rather than the application one.
-		swapchainCreateInfo.sampleCount =
-			viewConfig.recommendedSwapchainSampleCount;
-		swapchainCreateInfo.usageFlags =
-			backend.getOpenXrOptions().swapchainUsageFlags;
-
-		XrSwapchain swapchain;
-		auto session = backend.getSession();
-		XrResult result =
-			xrCreateSwapchain(session, &swapchainCreateInfo, &swapchain);
-		if (result != XR_SUCCESS) {
+	// The render pass (and therefore the view mask and the pipeline
+	// compatibility) is fixed for the session, so recreation has to reuse the
+	// mode that was established at construction.
+	std::vector<SwapchainHandle> handles;
+	if (_multiviewEnabled) {
+		auto handle = createMultiviewSwapchain(deviceContext, swapchainFormat);
+		if (handle.has_value()) {
+			handles.push_back(handle.value());
+		} else {
 			this->getLogger().error()
-				<< "Failed to create swapchain for view configuration "
-				   "with error code: "
-				<< result;
-			continue;
+				<< "Failed to recreate the layered swapchain; leaving the "
+				   "context without swapchain images.";
 		}
-		evan::XrSwapchainImage::CreateXrSwapchainImageProperties properties {
-			.swapchain			 = swapchain,
-			.createInfo			 = swapchainCreateInfo,
-			.renderPass			 = _renderPass,
-			.deviceContext		 = deviceContext,
-			.msaaSamples		 = _msaaSamples,
-			.colorAttachmentMode = _colorAttachmentMode
-		};
-		_swapchainImages.push_back(
-			std::make_shared<XrSwapchainImage>(properties));
+	} else {
+		handles = createPerViewSwapchains(deviceContext, swapchainFormat);
 	}
+
+	buildSwapchainImages(deviceContext, handles);
+
 	this->getLogger().info() << "Finished recreating swapchain and associated "
 								"resources for XrSwapchainContext";
 }
@@ -302,14 +401,23 @@ void evan::XrSwapchainContext::updateProjectionLayerViews()
 		<< "Updating projection layer views based on current swapchain images "
 		   "and view configurations";
 
-	const size_t count = std::min(_views.size(), _swapchainImages.size());
-
-	_projectionLayerViews.resize(count);
-	for (size_t i = 0; i < count; ++i) {
+	_projectionLayerViews.resize(_views.size());
+	for (size_t i = 0; i < _views.size(); ++i) {
 		this->getLogger().info()
 			<< "Updating projection layer view for index: " << i;
-		auto *viewSwapchain =
-			dynamic_cast<XrSwapchainImage *>(_swapchainImages[i].get());
+
+		// Each view reaches its image set through the ViewSet mapping: in
+		// multiview mode every eye points at the single layered swapchain,
+		// otherwise at its own.
+		if (i >= _viewSet.size()) {
+			continue;
+		}
+		const std::size_t swapchainIndex = _viewSet[i].swapchainIndex;
+		if (swapchainIndex >= _swapchainImages.size()) {
+			continue;
+		}
+		auto *viewSwapchain = dynamic_cast<XrSwapchainImage *>(
+			_swapchainImages[swapchainIndex].get());
 
 		if (viewSwapchain == nullptr) {
 			continue;
@@ -321,6 +429,11 @@ void evan::XrSwapchainContext::updateProjectionLayerViews()
 		_projectionLayerViews[i].pose				= _views[i].pose;
 		_projectionLayerViews[i].fov				= _views[i].fov;
 		_projectionLayerViews[i].subImage.swapchain = viewSwapchain->_swapchain;
+		// In multiview mode both eyes share the layered swapchain and select
+		// their own array layer; in the fallback every swapchain has a single
+		// layer, so the index stays zero.
+		_projectionLayerViews[i].subImage.imageArrayIndex =
+			_multiviewEnabled ? static_cast<uint32_t>(i) : 0u;
 		_projectionLayerViews[i].subImage.imageRect.offset = { 0, 0 };
 		_projectionLayerViews[i].subImage.imageRect.extent = {
 			static_cast<int32_t>(viewSwapchain->_width),
@@ -353,6 +466,11 @@ const evan::ViewSet &evan::XrSwapchainContext::getViewSet() const
 VkSampleCountFlagBits evan::XrSwapchainContext::getMsaaSamples() const
 {
 	return _msaaSamples;
+}
+
+bool evan::XrSwapchainContext::usesMultiview() const
+{
+	return _multiviewEnabled;
 }
 
 void evan::XrSwapchainContext::syncViewSet()
@@ -404,7 +522,10 @@ void evan::XrSwapchainContext::syncViewSet()
 								   offsetPose.getZ());
 
 	for (std::size_t i = 0; i < _views.size(); ++i) {
-		_viewSet[i].swapchainIndex = i;
+		// Multiview renders every eye from the single layered swapchain; the
+		// fallback keeps one image set per view. Re-applying the same mapping
+		// the constructor chose keeps syncViewSet and recreation consistent.
+		_viewSet[i].swapchainIndex = _multiviewEnabled ? 0 : i;
 
 		utility::graphic::ViewF view;
 		const auto &xrPose = _views[i].pose;

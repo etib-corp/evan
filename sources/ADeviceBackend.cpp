@@ -228,7 +228,7 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 
 	VkFenceCreateInfo fenceInfo {};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	VkFence fence = VK_NULL_HANDLE;
+	VkFence fence	= VK_NULL_HANDLE;
 	vkCreateFence(_device, &fenceInfo, nullptr, &fence);
 
 	vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence);
@@ -267,7 +267,7 @@ evan::Error evan::ADeviceBackend::createImage(
 	imageInfo.extent.height = properties._height;
 	imageInfo.extent.depth	= 1;
 	imageInfo.mipLevels		= 1;
-	imageInfo.arrayLayers	= 1;
+	imageInfo.arrayLayers	= properties._arrayLayers;
 	imageInfo.format		= properties._format;
 	imageInfo.tiling		= properties._tiling;
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -401,25 +401,26 @@ evan::Error evan::ADeviceBackend::copyBuffer(
 	return Error::Ok;
 }
 
-evan::Result<VkImageView>
-	evan::ADeviceBackend::createImageView(VkImage image, VkFormat format,
-										  VkImageAspectFlags aspectFlags,
-										  uint32_t mipLevels) const
+evan::Result<VkImageView> evan::ADeviceBackend::createImageView(
+	VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
+	uint32_t mipLevels, uint32_t layerCount) const
 {
-	this->getLogger().info() << "Creating image view with format: " << format
-							 << ", aspect flags: " << aspectFlags
-							 << ", and mip levels: " << mipLevels;
+	this->getLogger().info()
+		<< "Creating image view with format: " << format
+		<< ", aspect flags: " << aspectFlags << ", mip levels: " << mipLevels
+		<< ", and array layers: " << layerCount;
 
 	VkImageViewCreateInfo viewInfo {};
-	viewInfo.sType	  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	viewInfo.image	  = image;
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	viewInfo.format	  = format;
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = image;
+	viewInfo.viewType =
+		layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format							 = format;
 	viewInfo.subresourceRange.aspectMask	 = aspectFlags;
 	viewInfo.subresourceRange.baseMipLevel	 = 0;
 	viewInfo.subresourceRange.levelCount	 = 1;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount	 = 1;
+	viewInfo.subresourceRange.layerCount	 = layerCount;
 	viewInfo.subresourceRange.levelCount	 = mipLevels;
 	VkImageView imageView;
 
@@ -446,6 +447,46 @@ evan::Result<VkImageView>
 ///////////////////////
 // Protected methods //
 ///////////////////////
+
+bool evan::ADeviceBackend::queryMultiviewSupport(
+	VkPhysicalDevice physicalDevice, uint32_t apiVersion)
+{
+	if (physicalDevice == VK_NULL_HANDLE) {
+		return false;
+	}
+	// The multiview feature struct and the get-features-2 query are core
+	// Vulkan 1.1. Older instances would need the extension-based path, which
+	// no current target requires.
+	if (apiVersion < VK_API_VERSION_1_1) {
+		return false;
+	}
+
+	VkPhysicalDeviceMultiviewFeatures multiviewFeatures {};
+	multiviewFeatures.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+
+	VkPhysicalDeviceFeatures2 features2 {};
+	features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	features2.pNext = &multiviewFeatures;
+	vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
+
+	if (multiviewFeatures.multiview != VK_TRUE) {
+		return false;
+	}
+
+	// Stereo needs two layers, and the implementation must be able to address
+	// the second view index.
+	VkPhysicalDeviceMultiviewProperties multiviewProperties {};
+	multiviewProperties.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES;
+
+	VkPhysicalDeviceProperties2 properties2 {};
+	properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	properties2.pNext = &multiviewProperties;
+	vkGetPhysicalDeviceProperties2(physicalDevice, &properties2);
+
+	return multiviewProperties.maxMultiviewViewCount >= MAX_MULTIVIEW_VIEWS;
+}
 
 std::vector<VkLayerProperties> evan::ADeviceBackend::getAvailableLayers()
 {

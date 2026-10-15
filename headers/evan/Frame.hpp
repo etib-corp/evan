@@ -43,11 +43,35 @@ namespace evan
 	{
 		public:
 		/**
+		 * @brief Per-view matrices consumed by the vertex shader.
+		 *
+		 * Matches the std140 layout of the GLSL uniform block: two 64-byte
+		 * column-major matrices. The vertex shader selects the entry with
+		 * gl_ViewIndex in multiview passes.
+		 */
+		struct ViewUniform {
+			/**
+			 * @brief View matrix transforming world space to camera space.
+			 */
+			glm::mat4 view;
+
+			/**
+			 * @brief Projection matrix transforming camera space to clip
+			 * space.
+			 */
+			glm::mat4 proj;
+		};
+
+		/**
 		 * @brief Uniform buffer object structure.
 		 *
 		 * This structure represents the data that will be passed to the
-		 * vertex shader as a uniform buffer. It contains the model, view,
-		 * and projection matrices used for rendering.
+		 * vertex shader as a uniform buffer. Each dynamic slot holds the
+		 * model matrix and the per-view matrices read by the shader. A
+		 * fallback two-pass renderer binds one slot per eye and the shader
+		 * reads entry 0 (ViewIndex is zero outside multiview passes), while
+		 * multiview rendering writes every eye into one slot and the shader
+		 * indexes the array with gl_ViewIndex.
 		 *
 		 */
 		struct UniformBufferObject {
@@ -59,18 +83,10 @@ namespace evan
 			glm::mat4 model;
 
 			/**
-			 * @brief View matrix representing the camera's position and
-			 * orientation in the scene. It is used to transform world
-			 * coordinates into camera space for rendering.
+			 * @brief Per-view view/projection matrices, indexed by
+			 * gl_ViewIndex.
 			 */
-			glm::mat4 view;
-
-			/**
-			 * @brief Projection matrix representing the perspective or
-			 * orthographic projection used for rendering. It is used to
-			 * transform camera space coordinates into clip space for rendering.
-			 */
-			glm::mat4 proj;	   // Projection matrix
+			ViewUniform views[MAX_MULTIVIEW_VIEWS];
 		};
 
 		/**

@@ -12,7 +12,8 @@
 
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend,
-	VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode)
+	VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode,
+	uint32_t viewMask)
 {
 	this->getLogger().info() << "Creating render pass for swapchain context...";
 
@@ -170,6 +171,25 @@ void evan::ASwapchainContext::createRenderPass(
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies   = &dependency;
 
+	// Multiview is enabled per render pass: when the subpass carries a
+	// non-zero view mask, draws and clears broadcast to the framebuffer
+	// layers selected by the mask. The mask must be zero when the device
+	// feature is not enabled, which is why the caller decides it.
+	VkRenderPassMultiviewCreateInfo multiviewInfo {};
+	if (viewMask != 0) {
+		multiviewInfo.sType =
+			VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+		multiviewInfo.subpassCount = 1;
+		multiviewInfo.pViewMasks   = &viewMask;
+		// A hint only: the views of a stereo pair are spatially close, so an
+		// implementation (tiler) may render them together more cheaply.
+		multiviewInfo.correlationMaskCount = 1;
+		multiviewInfo.pCorrelationMasks	   = &viewMask;
+		renderPassInfo.pNext			   = &multiviewInfo;
+		this->getLogger().info()
+			<< "Configuring render pass multiview view mask: " << viewMask;
+	}
+
 	this->getLogger().info()
 		<< "Creating render pass with " << renderPassInfo.attachmentCount
 		<< " attachments, " << renderPassInfo.subpassCount << " subpass, and "
@@ -198,6 +218,11 @@ std::size_t evan::ASwapchainContext::getSwapchainCount() const
 }
 
 bool evan::ASwapchainContext::usesImageAvailableSemaphore() const
+{
+	return false;
+}
+
+bool evan::ASwapchainContext::usesMultiview() const
 {
 	return false;
 }

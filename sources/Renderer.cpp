@@ -304,14 +304,16 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		}
 	}
 
-	// 3. Render each view into the acquired image of its swapchain. Each view
-	// owns a command buffer and a uniform buffer slot, so all views can be
-	// recorded and submitted back-to-back without waiting for the GPU between
-	// them. The in-flight fence is signaled only by the last submission: the
-	// graphics queue executes submissions in order, so its completion implies
-	// every earlier view has completed as well. viewOwnsInFlightFence() below
-	// encodes that decision and is covered by a unit test; do not attach the
-	// fence to every view, that reintroduces the P0-03 inter-eye stall.
+	// 3. Render the frame. In multiview mode every view renders from the
+	// single layered swapchain in one pass with one submission. Otherwise each
+	// view owns a command buffer and a uniform buffer slot, so all views can
+	// be recorded and submitted back-to-back without waiting for the GPU
+	// between them. The in-flight fence is signaled only by the last
+	// submission (the only one in multiview mode): the graphics queue executes
+	// submissions in order, so its completion implies every earlier view has
+	// completed as well. viewOwnsInFlightFence() below encodes that decision
+	// and is covered by a unit test; do not attach the fence to every view,
+	// that reintroduces the P0-03 inter-eye stall.
 	std::vector<std::size_t> renderableViews;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const std::size_t s = viewSet[v].swapchainIndex;
@@ -336,18 +338,35 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		vkResetFences(device, 1, &frame._inFlight);
 	}
 
-	for (std::size_t i = 0; i < renderableViews.size(); ++i) {
-		const std::size_t v		  = renderableViews[i];
-		const ViewSet::View &view = viewSet[v];
-		const std::size_t s		  = view.swapchainIndex;
+	if (!renderableViews.empty() && swapchainContext.usesMultiview()) {
+		// Multiview: every view renders from the single layered swapchain in
+		// one pass. Record one command buffer and submit it once; that single
+		// submission owns the in-flight fence, so the P0-03 end-of-frame
+		// contract (one GPU wait before the images are released) is kept.
+		if (renderableViews.size()
+			> static_cast<std::size_t>(MAX_MULTIVIEW_VIEWS)) {
+			this->getLogger().error()
+				<< "Multiview frame has " << renderableViews.size()
+				<< " views, but only " << MAX_MULTIVIEW_VIEWS
+				<< " per-view uniform slots are available. Aborting frame "
+				   "rendering.";
+			return Error::RuntimeError;
+		}
 
-		auto &imageSet = *swapchainContext._swapchainImages[s];
+		const std::size_t s = viewSet[renderableViews.front()].swapchainIndex;
+		auto &imageSet		= *swapchainContext._swapchainImages[s];
 
-		this->updateUniformBuffer(view.view, i);
-		frame.resetCommandBuffer(i);
+		std::vector<utility::graphic::ViewF> views;
+		views.reserve(renderableViews.size());
+		for (const std::size_t v: renderableViews) {
+			views.push_back(viewSet[v].view);
+		}
+
+		this->updateMultiviewUniformBuffer(views, 0);
+		frame.resetCommandBuffer(0);
 		this->recordCommandBuffer(swapchainContext.getRenderPass(),
 								  imageSet.getFramebuffer(acquiredImage[s]),
-								  imageSet.getExtent(), i, view.view);
+								  imageSet.getExtent(), 0, views);
 
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -359,24 +378,64 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			waitOnImageAvailable ? &frame._imageAvailable[s] : nullptr;
 		submitInfo.pWaitDstStageMask	= waitStages;
 		submitInfo.commandBufferCount	= 1;
-		submitInfo.pCommandBuffers		= &frame._commandBuffers[i];
+		submitInfo.pCommandBuffers		= &frame._commandBuffers[0];
 		submitInfo.signalSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
 		submitInfo.pSignalSemaphores =
 			waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
 
-		// Only the final view carries the in-flight fence (see the step 3
-		// comment above and viewOwnsInFlightFence()).
-		VkFence submitFence = viewOwnsInFlightFence(i, renderableViews.size())
-			? frame._inFlight
-			: VK_NULL_HANDLE;
-
 		VkResult submitResult = vkQueueSubmit(deviceContext.getGraphicsQueue(),
-											  1, &submitInfo, submitFence);
+											  1, &submitInfo, frame._inFlight);
 		if (submitResult != VK_SUCCESS) {
 			this->getLogger().error()
-				<< "Failed to submit draw command buffer for view " << v
-				<< ". Aborting frame rendering.";
+				<< "Failed to submit the multiview draw command buffer. "
+				   "Aborting frame rendering.";
 			return mapVkResult(submitResult);
+		}
+	} else {
+		for (std::size_t i = 0; i < renderableViews.size(); ++i) {
+			const std::size_t v		  = renderableViews[i];
+			const ViewSet::View &view = viewSet[v];
+			const std::size_t s		  = view.swapchainIndex;
+
+			auto &imageSet = *swapchainContext._swapchainImages[s];
+
+			this->updateUniformBuffer(view.view, i);
+			frame.resetCommandBuffer(i);
+			this->recordCommandBuffer(
+				swapchainContext.getRenderPass(),
+				imageSet.getFramebuffer(acquiredImage[s]), imageSet.getExtent(),
+				i, std::span<const utility::graphic::ViewF>(&view.view, 1));
+
+			VkPipelineStageFlags waitStages[] = {
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+			};
+			VkSubmitInfo submitInfo {};
+			submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.waitSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+			submitInfo.pWaitSemaphores =
+				waitOnImageAvailable ? &frame._imageAvailable[s] : nullptr;
+			submitInfo.pWaitDstStageMask	= waitStages;
+			submitInfo.commandBufferCount	= 1;
+			submitInfo.pCommandBuffers		= &frame._commandBuffers[i];
+			submitInfo.signalSemaphoreCount = waitOnImageAvailable ? 1u : 0u;
+			submitInfo.pSignalSemaphores =
+				waitOnImageAvailable ? &frame._renderFinished[s] : nullptr;
+
+			// Only the final view carries the in-flight fence (see the step 3
+			// comment above and viewOwnsInFlightFence()).
+			VkFence submitFence =
+				viewOwnsInFlightFence(i, renderableViews.size())
+				? frame._inFlight
+				: VK_NULL_HANDLE;
+
+			VkResult submitResult = vkQueueSubmit(
+				deviceContext.getGraphicsQueue(), 1, &submitInfo, submitFence);
+			if (submitResult != VK_SUCCESS) {
+				this->getLogger().error()
+					<< "Failed to submit draw command buffer for view " << v
+					<< ". Aborting frame rendering.";
+				return mapVkResult(submitResult);
+			}
 		}
 	}
 
@@ -790,14 +849,43 @@ void evan::Renderer::updateUniformBuffer(const utility::graphic::ViewF &view,
 		<< "Updating uniform buffer for current frame index: "
 		<< _currentFrameIndex << ", view slot: " << viewSlot;
 
+	// Two-pass fallback: each eye owns its slot and the vertex shader reads
+	// entry 0 of the bound slot (ViewIndex is zero outside multiview passes).
 	Frame::UniformBufferObject ubo {};
-	ubo.model = glm::mat4(1.0f);
-	ubo.view  = view.toViewMatrix();
-	ubo.proj  = view.getProjectionMatrix();
+	ubo.model		  = glm::mat4(1.0f);
+	ubo.views[0].view = view.toViewMatrix();
+	ubo.views[0].proj = view.getProjectionMatrix();
 
 	memcpy(_frames[_currentFrameIndex]->getUniformBufferMapped(viewSlot), &ubo,
 		   sizeof(ubo));
 	this->getLogger().info() << "Uniform buffer updated successfully.";
+}
+
+void evan::Renderer::updateMultiviewUniformBuffer(
+	const std::vector<utility::graphic::ViewF> &views, std::size_t viewSlot)
+{
+	this->getLogger().info()
+		<< "Updating multiview uniform buffer for current frame index: "
+		<< _currentFrameIndex << ", view slot: " << viewSlot
+		<< ", views: " << views.size();
+
+	// Multiview: one slot holds every eye and the vertex shader selects the
+	// entry through gl_ViewIndex.
+	Frame::UniformBufferObject ubo {};
+	ubo.model = glm::mat4(1.0f);
+
+	const std::size_t count = views.size() < MAX_MULTIVIEW_VIEWS
+		? views.size()
+		: static_cast<std::size_t>(MAX_MULTIVIEW_VIEWS);
+	for (std::size_t i = 0; i < count; ++i) {
+		ubo.views[i].view = views[i].toViewMatrix();
+		ubo.views[i].proj = views[i].getProjectionMatrix();
+	}
+
+	memcpy(_frames[_currentFrameIndex]->getUniformBufferMapped(viewSlot), &ubo,
+		   sizeof(ubo));
+	this->getLogger().info()
+		<< "Multiview uniform buffer updated successfully.";
 }
 
 void evan::Renderer::setScissor(const utility::graphic::ScissorRect &rect)
@@ -830,11 +918,10 @@ VkRect2D evan::Renderer::clampScissor(const utility::graphic::ScissorRect &rect,
 	return result;
 }
 
-void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
-										 VkFramebuffer swapChainFramebuffer,
-										 VkExtent2D swapChainExtent,
-										 std::size_t viewSlot,
-										 const utility::graphic::ViewF &view)
+void evan::Renderer::recordCommandBuffer(
+	VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
+	VkExtent2D swapChainExtent, std::size_t viewSlot,
+	std::span<const utility::graphic::ViewF> views)
 {
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
@@ -913,14 +1000,24 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 	DrawStats stats {};
 	stats.totalMeshes = meshes.size();
 
-	const glm::mat4 projection = view.getProjectionMatrix();
-	const glm::mat4 viewMatrix = view.toViewMatrix();
-	const Frustum frustum =
-		Frustum::fromViewProjection(projection * viewMatrix);
+	// A pass covers one view in the fallback path and every eye in multiview
+	// mode. Culling must keep a mesh visible for any covered view, and the
+	// depth order is measured from the eye midpoint (a heuristic; the depth
+	// buckets make the exact reference point non-critical).
+	std::vector<Frustum> frustums;
+	frustums.reserve(views.size());
+	glm::vec3 cameraPos(0.0f);
+	for (const auto &view: views) {
+		frustums.push_back(Frustum::fromViewProjection(
+			view.getProjectionMatrix() * view.toViewMatrix()));
 
-	const auto cameraPosition = view.getPose().getPosition();
-	const glm::vec3 cameraPos(cameraPosition.x, cameraPosition.y,
-							  cameraPosition.z);
+		const auto cameraPosition = view.getPose().getPosition();
+		cameraPos +=
+			glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+	}
+	if (!views.empty()) {
+		cameraPos /= static_cast<float>(views.size());
+	}
 
 	const uint32_t dynamicOffset =
 		static_cast<uint32_t>(viewSlot * frame.getUniformBufferAlignedSize());
@@ -948,7 +1045,16 @@ void evan::Renderer::recordCommandBuffer(VkRenderPass renderPass,
 						continue;
 					}
 				}
-				if (!frustum.intersects(bounds)) {
+				// Conservative across the covered views: keeping a mesh that
+				// only one eye sees is correct, dropping it would not be.
+				bool intersectsAnyView = frustums.empty();
+				for (const auto &frustum: frustums) {
+					if (frustum.intersects(bounds)) {
+						intersectsAnyView = true;
+						break;
+					}
+				}
+				if (!intersectsAnyView) {
 					++stats.culledMeshes;
 					continue;
 				}
