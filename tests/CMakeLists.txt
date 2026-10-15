@@ -22,6 +22,7 @@ set(TEST_SOURCES
     sources/test_render_object.cpp
     sources/test_frame_slots.cpp
     sources/test_instance_transforms.cpp
+    sources/test_multiview.cpp
 )
 
 # Fetch GoogleTest

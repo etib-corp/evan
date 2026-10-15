@@ -270,6 +270,21 @@ namespace evan
 		virtual bool needsSwapchainRecreation() const;
 
 		/**
+		 * @brief Indicates whether the frame renders every view in one pass.
+		 *
+		 * True when this context uses a single layered swapchain with a
+		 * non-zero render-pass view mask, so all views share one framebuffer
+		 * and one draw submission. The renderer records one command buffer for
+		 * the whole frame instead of one per view, and the vertex shader picks
+		 * the per-view matrices through gl_ViewIndex. Contexts that keep the
+		 * two-pass path (desktop, or runtime without layered swapchain
+		 * support) report false.
+		 *
+		 * @return True when the renderer must record a single multiview pass.
+		 */
+		virtual bool usesMultiview() const;
+
+		/**
 		 * @brief Retrieves the view matrix for the specified view index.
 		 *
 		 * This is a convenience accessor delegating to the ViewSet. The view
@@ -425,11 +440,19 @@ namespace evan
 		 * requirements of the rendering system and the swapchain configuration,
 		 * including support for multisampling if necessary.
 		 *
+		 * @param viewMask Multiview mask for the render pass subpass. A value
+		 * of 0 keeps a regular single-view render pass; a non-zero mask (for
+		 * example 0b11 for stereo) chains a VkRenderPassMultiviewCreateInfo
+		 * and requires the device multiview feature to be enabled and the
+		 * attachments to have one array layer per view. The default keeps
+		 * every existing call site on the single-view path.
+		 *
 		 * @see VkRenderPass, ADeviceBackend
 		 */
 		void createRenderPass(
 			const std::shared_ptr<ADeviceBackend> &deviceBackend,
-			VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode);
+			VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode,
+			uint32_t viewMask = 0);
 
 		/**
 		 * @brief Selects the appropriate swapchain format from the available

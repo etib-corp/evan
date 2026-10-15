@@ -82,10 +82,11 @@ void evan::ASwapchainImage::createImageViews(
 		this->getLogger().info()
 			<< "Creating image view for swapchain image " << i
 			<< " with image handle: " << (uintptr_t)_images[i];
-		_imageViews[i] = deviceBackend
-							 .createImageView(_images[i], _format,
-											  VK_IMAGE_ASPECT_COLOR_BIT, 1)
-							 .value;
+		_imageViews[i] =
+			deviceBackend
+				.createImageView(_images[i], _format, VK_IMAGE_ASPECT_COLOR_BIT,
+								 1, _arrayLayers)
+				.value;
 	}
 }
 
@@ -108,7 +109,8 @@ void evan::ASwapchainImage::createColorResources(
 			| VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		._properties  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		._image		  = _colorImage,
-		._imageMemory = _colorMemory
+		._imageMemory = _colorMemory,
+		._arrayLayers = _arrayLayers
 	};
 
 	this->getLogger().info()
@@ -121,10 +123,11 @@ void evan::ASwapchainImage::createColorResources(
 		<< "\n properties: " << VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	deviceBackend.createImage(imageProperties);
-	_colorView = deviceBackend
-					 .createImageView(_colorImage, colorFormat,
-									  VK_IMAGE_ASPECT_COLOR_BIT, 1)
-					 .value;
+	_colorView =
+		deviceBackend
+			.createImageView(_colorImage, colorFormat,
+							 VK_IMAGE_ASPECT_COLOR_BIT, 1, _arrayLayers)
+			.value;
 }
 
 void evan::ASwapchainImage::createDepthResources(
@@ -161,7 +164,8 @@ void evan::ASwapchainImage::createDepthResources(
 		._usage		  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 		._properties  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		._image		  = _depthImage,
-		._imageMemory = _depthMemory
+		._imageMemory = _depthMemory,
+		._arrayLayers = _arrayLayers
 	};
 
 	this->getLogger().info()
@@ -173,10 +177,11 @@ void evan::ASwapchainImage::createDepthResources(
 		<< "\n properties: " << VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	deviceContext.getDeviceBackend()->createImage(depthImageProperties);
-	_depthView = deviceContext.getDeviceBackend()
-					 ->createImageView(_depthImage, depthFormat,
-									   VK_IMAGE_ASPECT_DEPTH_BIT, 1)
-					 .value;
+	_depthView =
+		deviceContext.getDeviceBackend()
+			->createImageView(_depthImage, depthFormat,
+							  VK_IMAGE_ASPECT_DEPTH_BIT, 1, _arrayLayers)
+			.value;
 
 	this->getLogger().info() << "Transitioning depth image layout to "
 								"DEPTH_STENCIL_ATTACHMENT_OPTIMAL...";
@@ -230,7 +235,9 @@ void evan::ASwapchainImage::createFramebuffers(VkDevice logicalDevice,
 		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width		 = _extent.width;
 		framebufferInfo.height		 = _extent.height;
-		framebufferInfo.layers		 = 1;
+		// One layer per view for multiview swapchains, 1 otherwise: the
+		// render pass covers as many layers as the attachments provide.
+		framebufferInfo.layers = _arrayLayers;
 
 		this->getLogger().info()
 			<< "Framebuffer creation info:\n render pass: "

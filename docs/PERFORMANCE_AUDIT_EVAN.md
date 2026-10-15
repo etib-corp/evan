@@ -96,7 +96,7 @@ Desktop path is the same minus the OpenXR calls, with
 | 5 | `Scene::getMeshes()` reallocates per frame | CONFIRMED | `Scene.cpp:69-80` |
 | 6 | `RessourceManager::sync()` per frame + per object-add (map copies + prefix scans) | CONFIRMED | `RessourceManager.cpp:77-174`; `Engine.cpp:139,166,190,222,238` |
 | 7 | `vkQueueWaitIdle` on every mesh upload / vertex update | CONFIRMED | `ADeviceBackend.cpp:214-241`; `GPUMesh.cpp:80,161` |
-| 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | RESOLVED (MSAA + blending; multiview pending) | `DeviceContext.cpp` (MSAA opt-in); `Renderer.cpp` (`PipelineVariant`, depth-sorted draws) |
+| 8 | 4× MSAA + blending on all geometry, 2× full passes (no multiview) | RESOLVED (MSAA + blending + multiview, auto-gated on device/runtime support) | `DeviceContext.cpp` (MSAA opt-in); `Renderer.cpp` (`PipelineVariant`, depth-sorted draws, single multiview submission); `XrSwapchainContext.cpp` (layered swapchain) |
 | 9 | `GPUMaterial::getDescriptorSets()` returns vector by value | RESOLVED | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` |
 | 10 | No `VkPipelineCache` (pipelines created with `VK_NULL_HANDLE`) | RESOLVED | `DeviceContext.cpp`; `Renderer.cpp` |
 
@@ -165,10 +165,15 @@ Not significant: `getPipelineLayer()` returning `std::string` by value
 Static analysis cannot prove GPU bottlenecks; these are hypotheses to confirm
 with timestamps/RenderDoc:
 
-- **No culling** (frustum/distance/occlusion). Every mesh is submitted.
-- **No instancing/batching** — identical meshes are separate draws.
-- **No multiview** — stereo is two full passes (`Renderer.cpp`), doubling
-  vertex/fragment work and command recording.
+- **Culling** (frustum/distance/occlusion): implemented; every mesh is tested
+  against the frustum of each view covered by the pass.
+- **Instancing/batching** — identical meshes are separate draws unless they
+  share pipeline, material and geometry, in which case they are merged.
+- **Multiview** — implemented: stereo renders both eyes in one pass over a
+  layered swapchain when the OpenXR runtime accepts one
+  (`docs/DESIGN_MULTIVIEW.md`); the two-pass path remains the fallback and
+  `EVAN_MULTIVIEW=off` forces it for comparison. The GPU-time and
+  invocation-count deltas are still to be measured.
 - **MSAA is opt-in** (`DeviceContext::setMsaaSamples`, `RenderSettings`), one
   sample by default. A single-sampled desktop swapchain renders straight into
   the swapchain image (`ColorAttachmentMode::DirectToSwapchain`): no

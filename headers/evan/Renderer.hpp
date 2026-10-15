@@ -35,6 +35,7 @@
 #include <optional>
 #include <cstdint>
 #include <map>
+#include <span>
 #include <vector>
 
 namespace evan
@@ -600,6 +601,19 @@ namespace evan
 								 std::size_t viewSlot);
 
 		/**
+		 * @brief Updates one uniform slot with the matrices of every view.
+		 *
+		 * Used by the multiview path: all eyes are written into one slot and
+		 * the vertex shader selects the entry through gl_ViewIndex.
+		 *
+		 * @param views The views covered by the single pass, in view order.
+		 * @param viewSlot Index of the uniform slot to write, always 0 today.
+		 */
+		void updateMultiviewUniformBuffer(
+			const std::vector<utility::graphic::ViewF> &views,
+			std::size_t viewSlot);
+
+		/**
 		 * @brief Records the command buffer for rendering a frame.
 		 *
 		 * This method is responsible for recording the command buffer with the
@@ -611,13 +625,14 @@ namespace evan
 		 * ensure that the command buffer contains the correct commands for
 		 * rendering the scene in each frame.
 		 *
-		 * @param view The view state used to build the culling frustum.
+		 * @param views The views covered by this pass: one in the fallback
+		 * path, every eye in multiview mode. Culling keeps a mesh visible when
+		 * any of them can see it.
 		 */
-		void recordCommandBuffer(VkRenderPass renderPass,
-								 VkFramebuffer swapChainFramebuffer,
-								 VkExtent2D swapChainExtent,
-								 std::size_t viewSlot,
-								 const utility::graphic::ViewF &view);
+		void recordCommandBuffer(
+			VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
+			VkExtent2D swapChainExtent, std::size_t viewSlot,
+			std::span<const utility::graphic::ViewF> views);
 
 		/**
 		 * @brief Finds the graphics pipeline of a (shader, blend mode) pair.

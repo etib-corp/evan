@@ -32,8 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `evan::RenderSettings`, passed to the `Engine` constructor, exposes the
   construction-time render configuration: the MSAA sample count and the opaque
   draw ordering.
+- Stereo multiview rendering (`VK_KHR_multiview`), enabled automatically when
+  the device exposes the feature and the OpenXR runtime accepts a swapchain
+  with one array layer per view: both eyes are drawn in one render pass over a
+  single layered swapchain, recorded in one command buffer and submitted once.
+  `EVAN_MULTIVIEW=auto|on|off` overrides the selection and the existing
+  two-pass path stays as the transparent fallback. See
+  `docs/DESIGN_MULTIVIEW.md`.
 
 ### Changed
+
+- The per-view uniform block is now `model` followed by `views[2]` (one
+  view/projection pair per eye), selected in the vertex shader with
+  `gl_ViewIndex`; the two-pass fallback writes each eye into its own dynamic
+  slot. Shader assets must be rebuilt against this layout, and the example
+  GLSL sources now live under `examples/GLFW-linux-base/shaders/src` with the
+  compiled SPIR-V next to them.
 
 - Replaced `file(GLOB)` with explicit source lists for reproducible builds.
 - Multisampling is now opt-in: `DeviceContext` defaults to

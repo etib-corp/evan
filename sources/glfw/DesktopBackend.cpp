@@ -474,6 +474,27 @@ void evan::DesktopBackend::createLogicalDevice()
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
 #endif
 
+	// The example shader contract uses the ViewIndex input, whose SPIR-V
+	// MultiView capability requires the multiview feature to be enabled even
+	// though desktop render passes keep a zero view mask. Enable it whenever
+	// the device offers it; the query uses the instance's Vulkan 1.1 version.
+	VkPhysicalDeviceMultiviewFeatures multiviewFeatures {};
+	multiviewFeatures.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+
+	const bool multiviewAvailable = multiviewMode() != MultiviewMode::Off
+		&& queryMultiviewSupport(_physicalDevice, VK_API_VERSION_1_1);
+	if (multiviewAvailable) {
+		multiviewFeatures.multiview = VK_TRUE;
+		_multiviewSupported			= true;
+		this->getLogger().info()
+			<< "Enabling the multiview feature on the Vulkan device.";
+	} else if (multiviewMode() == MultiviewMode::On) {
+		this->getLogger().error()
+			<< "EVAN_MULTIVIEW=on but the device does not support the "
+			   "multiview feature. Continuing without multiview.";
+	}
+
 	VkDeviceCreateInfo createInfo {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -482,6 +503,7 @@ void evan::DesktopBackend::createLogicalDevice()
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.pNext = _multiviewSupported ? &multiviewFeatures : nullptr;
 
 	createInfo.enabledExtensionCount =
 		static_cast<uint32_t>(desktopExtensions.size());

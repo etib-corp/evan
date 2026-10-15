@@ -32,6 +32,9 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 
 #ifdef NDEBUG
@@ -71,6 +74,76 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
  *
  */
 const int MAX_SWAPCHAINS = 8;
+
+/*
+ * @brief Maximum number of views renderable in a single multiview pass.
+ *
+ * Stereo view configurations have two views; the multiview uniform layout and
+ * the render-pass view mask are sized for this bound. View configurations with
+ * more views fall back to the per-view recording path.
+ */
+constexpr uint32_t MAX_MULTIVIEW_VIEWS = 2;
+
+/**
+ * @brief How the multiview rendering path is selected.
+ *
+ * Driven by the EVAN_MULTIVIEW environment variable, mirroring EVAN_MSAA:
+ * unset or unrecognised values mean Auto.
+ */
+enum class MultiviewMode {
+	Auto,	 ///< Use multiview when the device and runtime support it.
+	On,		 ///< Require multiview; log an error when it cannot be enabled.
+	Off		 ///< Force the two-pass fallback, to test or compare it.
+};
+
+/**
+ * @brief Reads the EVAN_MULTIVIEW override.
+ *
+ * Accepts 1/on/true/yes for MultiviewMode::On and 0/off/false/no for
+ * MultiviewMode::Off. The value is read once per process.
+ *
+ * @return The requested multiview mode.
+ */
+inline MultiviewMode multiviewMode()
+{
+	static const MultiviewMode mode = [] {
+		const char *value = std::getenv("EVAN_MULTIVIEW");
+		if (value == nullptr || value[0] == '\0') {
+			return MultiviewMode::Auto;
+		}
+		if (std::strcmp(value, "1") == 0 || std::strcmp(value, "on") == 0
+			|| std::strcmp(value, "true") == 0
+			|| std::strcmp(value, "yes") == 0) {
+			return MultiviewMode::On;
+		}
+		if (std::strcmp(value, "0") == 0 || std::strcmp(value, "off") == 0
+			|| std::strcmp(value, "false") == 0
+			|| std::strcmp(value, "no") == 0) {
+			return MultiviewMode::Off;
+		}
+		return MultiviewMode::Auto;
+	}();
+	return mode;
+}
+
+/**
+ * @brief Builds the render-pass view mask for a view count.
+ *
+ * Multiview is only used for stereo today: at least two views are required for
+ * the mask to be non-zero, and counts above MAX_MULTIVIEW_VIEWS fall back to
+ * the per-view path (mask 0).
+ *
+ * @param viewCount Number of views to render.
+ * @return The view mask, or 0 when multiview must not be used.
+ */
+constexpr uint32_t multiviewViewMask(std::size_t viewCount)
+{
+	if (viewCount < 2
+		|| viewCount > static_cast<std::size_t>(MAX_MULTIVIEW_VIEWS)) {
+		return 0u;
+	}
+	return (1u << viewCount) - 1u;
+}
 
 /**
  * @brief Number of per-frame slots to allocate for a backend.
