@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Frame instrumentation, off by default: `EVAN_STATS=1` enables CPU phase
+  timers in `Renderer::drawFrame` (upload flush, preprocess, acquire,
+  in-flight fence wait, per-view uniform/record/submit, OpenXR end-of-frame
+  wait, present, postprocess), per-frame counters (meshes, draw calls,
+  pipeline/descriptor binds, `sync()` calls vs skips, `GPUMesh`
+  creation/destruction churn, blocking upload waits) and non-blocking GPU
+  timestamp queries around each render pass. One aggregated log record is
+  emitted every `EVAN_STATS_INTERVAL` frames (default 120); `EVAN_STATS_GPU=0`
+  keeps the CPU side without query pools. `Renderer::getStats()` and
+  `Engine::getFrameStats()` expose the window for a host-side debug overlay.
+  See `docs/DESIGN_INSTRUMENTATION.md` and the `docs/PROFILING.md` runbook
+  (RenderDoc, Nsight Graphics, Radeon GPU Profiler, validation + performance
+  layers, N=100/1000 PoC recipe).
 - Engine: implement `utility::Engine::getDeltaTime()` (exposes the existing
   per-frame `_deltaTime`) and the scissor API — `Engine::setScissor()` /
   `clearScissor()` forward to `Renderer`, which applies the clamped rectangle
