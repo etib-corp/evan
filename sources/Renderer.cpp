@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 
 namespace
 {
@@ -215,9 +216,10 @@ void evan::Renderer::destroy(VkDevice device)
 	this->getLogger().info() << "Destroying Renderer resources...";
 
 	this->getLogger().info() << "Destroying render objects...";
-	for (auto &[_, object]: _objects) {
-		object->destroy(device);
-	}
+	_objects.forEach(
+		[device](std::size_t, const std::shared_ptr<RenderObject> &object) {
+			object->destroy(device);
+		});
 	_objects.clear();
 
 	this->getLogger().info() << "Destroying descriptor pool...";
@@ -253,10 +255,9 @@ void evan::Renderer::destroy(VkDevice device)
 
 size_t evan::Renderer::addObject(std::shared_ptr<RenderObject> object)
 {
-	this->getLogger().info() << "Registering render object with ID "
-							 << _nextObjectID << " in Renderer...";
-	const size_t objectID = _nextObjectID++;
-	_objects[objectID]	  = object;
+	const size_t objectID = _objects.add(std::move(object));
+	this->getLogger().info() << "Registering render object with ID " << objectID
+							 << " in Renderer...";
 	return objectID;
 }
 
@@ -265,13 +266,11 @@ bool evan::Renderer::updateObject(std::shared_ptr<RenderObject> object,
 {
 	this->getLogger().info()
 		<< "Updating render object with ID " << objectID << " in Renderer...";
-	auto it = _objects.find(objectID);
-	if (it == _objects.end()) {
+	if (!_objects.update(objectID, std::move(object))) {
 		this->getLogger().warning() << "Render object with ID " << objectID
 									<< " not found in Renderer. Update failed.";
 		return false;
 	}
-	it->second = object;
 	return true;
 }
 
@@ -279,17 +278,13 @@ bool evan::Renderer::removeObject(size_t objectID)
 {
 	this->getLogger().info()
 		<< "Removing render object with ID " << objectID << " from Renderer...";
-	return _objects.erase(objectID) > 0;
+	return _objects.remove(objectID);
 }
 
 std::shared_ptr<evan::RenderObject>
 	evan::Renderer::getObject(size_t objectID) const
 {
-	auto objectIt = _objects.find(objectID);
-	if (objectIt == _objects.end()) {
-		return nullptr;
-	}
-	return objectIt->second;
+	return _objects.get(objectID);
 }
 
 evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
@@ -367,11 +362,12 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// frame.
 	std::vector<GPUMesh *> &meshes = _drawScratch->meshes;
 	meshes.clear();
-	for (const auto &[id, object]: _objects) {
-		for (const auto &mesh: object->getMeshes()) {
-			meshes.push_back(mesh.get());
-		}
-	}
+	_objects.forEach(
+		[&meshes](std::size_t, const std::shared_ptr<RenderObject> &object) {
+			for (const auto &mesh: object->getMeshes()) {
+				meshes.push_back(mesh.get());
+			}
+		});
 
 	// Every drawn mesh consumes one transform slot per view. Grow the instance
 	// buffer before recording any view: reallocating it while a recorded

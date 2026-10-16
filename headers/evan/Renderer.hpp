@@ -22,6 +22,7 @@
 #include "evan/GPUVertex.hpp"
 #include "evan/GPUMesh.hpp"
 
+#include "evan/ObjectRegistry.hpp"
 #include "evan/RenderObject.hpp"
 
 #include <utility/graphic/scissor.hpp>
@@ -631,18 +632,13 @@ namespace evan
 		/**
 		 * @brief The registry of render objects owned by the renderer.
 		 *
-		 * The key is the unique object ID returned by addObject(), and the
-		 * value is the RenderObject whose GPU meshes are drawn each frame.
-		 * This is the single owner of the renderable content registered by
-		 * the application.
+		 * Dense slot map keyed by the opaque handles returned from
+		 * addObject(): O(1) resolution, linear iteration over contiguous
+		 * storage for the per-frame draw-list build, and handles that stay
+		 * invalid after their object was removed. This is the single owner of
+		 * the renderable content registered by the application.
 		 */
-		std::map<size_t, std::shared_ptr<RenderObject>> _objects;
-
-		/**
-		 * @brief A counter to generate unique object IDs for the registered
-		 * render objects. Incremented each time a new object is added.
-		 */
-		size_t _nextObjectID = 1;
+		ObjectRegistry<RenderObject> _objects;
 
 		/**
 		 * @brief The active scissor rectangle, in framebuffer pixels.
