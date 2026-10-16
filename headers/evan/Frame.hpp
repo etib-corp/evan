@@ -265,6 +265,35 @@ namespace evan
 		VkDeviceSize getIndirectBufferAlignedSize() const;
 
 		/**
+		 * @brief Indicates whether this frame owns GPU timestamp queries.
+		 *
+		 * True when EVAN_STATS and EVAN_STATS_GPU are enabled and the device
+		 * supports timestamp queries; the renderer only writes and reads
+		 * timestamps when it is true.
+		 *
+		 * @return True when timestamp queries are available on this frame.
+		 */
+		[[nodiscard]] bool hasTimestampQueries() const noexcept
+		{
+			return _timestampQueryPool != VK_NULL_HANDLE;
+		}
+
+		/**
+		 * @brief Gets the timestamp query pool of this frame.
+		 *
+		 * The pool holds two queries per view slot (begin and end of the render
+		 * pass). vkCmdResetQueryPool is recorded at the start of every command
+		 * buffer, so a query is only read after the in-flight fence of the
+		 * frame slot has signalled.
+		 *
+		 * @return The query pool, or VK_NULL_HANDLE when timestamps are off.
+		 */
+		[[nodiscard]] VkQueryPool getTimestampQueryPool() const noexcept
+		{
+			return _timestampQueryPool;
+		}
+
+		/**
 		 * In-flight fence ensuring that a frame's resources (command buffer,
 		 * uniform buffer and semaphores) are not reused until the previous
 		 * frame using them has finished on the GPU. One fence is kept per
@@ -272,6 +301,14 @@ namespace evan
 		 * waited on before the frame is reused.
 		 */
 		VkFence _inFlight = VK_NULL_HANDLE;
+
+		/**
+		 * Timestamp query pool used by the frame statistics, two queries per
+		 * view slot (begin/end of the render pass). VK_NULL_HANDLE when
+		 * EVAN_STATS or EVAN_STATS_GPU is off, or when the device does not
+		 * support timestamp queries.
+		 */
+		VkQueryPool _timestampQueryPool = VK_NULL_HANDLE;
 
 		/**
 		 * Per-swapchain semaphores signaled when a swapchain image is
@@ -374,6 +411,17 @@ namespace evan
 		 * create the buffer and allocate memory.
 		 */
 		void createIndirectBuffer(const ADeviceBackend &deviceBackend);
+
+		/**
+		 * @brief Creates the timestamp query pool for this frame.
+		 *
+		 * Only called when frame statistics ask for GPU timings and the device
+		 * supports timestamp queries; the pool holds two queries per view slot
+		 * and is destroyed in cleanup().
+		 *
+		 * @param device The Vulkan logical device used to create the pool.
+		 */
+		void createTimestampQueryPool(VkDevice device);
 
 		/**
 		 * @brief Vulkan buffer for the uniform buffer object (UBO) used in this

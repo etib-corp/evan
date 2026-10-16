@@ -340,6 +340,11 @@ frame in flight during stereo.
 
 ## Instrumentation recommendations (evan-scoped)
 
+Design: [`docs/DESIGN_INSTRUMENTATION.md`](DESIGN_INSTRUMENTATION.md)
+(implemented) — off-by-default CPU phase timers in `Renderer::drawFrame`,
+per-frame counters, non-blocking GPU timestamp queries, one aggregated log
+record every N frames, and the `docs/PROFILING.md` tooling runbook.
+
 - **`Renderer::drawFrame`**: timestamp preprocess, acquire, per-view
   `updateUniformBuffer`/`recordCommandBuffer`/`vkQueueSubmit`, fence waits,
   present. Separates CPU record from GPU wait.

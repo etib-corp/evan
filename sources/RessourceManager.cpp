@@ -7,6 +7,8 @@
 
 #include "evan/RessourceManager.hpp"
 
+#include "evan/FrameStats.hpp"
+
 evan::RessourceManager::RessourceManager(
 	std::shared_ptr<utility::RessourceProvider> ressourceProvider,
 	std::shared_ptr<DeviceContext> deviceContext)
@@ -75,6 +77,8 @@ void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
 
 void evan::RessourceManager::sync(bool refresh)
 {
+	evan::stats::countSync();
+
 	this->getLogger().debug() << "Synchronizing RessourceManager...";
 	auto renderer = _renderer.lock();
 	if (!renderer) {
@@ -86,6 +90,7 @@ void evan::RessourceManager::sync(bool refresh)
 	const uint64_t version = _ressourceProvider->version();
 
 	if (!refresh && _synchronized && version == _syncedVersion) {
+		evan::stats::countSyncSkip();
 		return;
 	}
 

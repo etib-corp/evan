@@ -6,6 +6,7 @@
 */
 
 #include "evan/ADeviceBackend.hpp"
+#include "evan/FrameStats.hpp"
 #include "evan/MemoryType.hpp"
 
 #include <cassert>
@@ -235,6 +236,10 @@ void evan::ADeviceBackend::endSingleTimeCommands(
 
 	this->getLogger().info() << "Waiting for submission to complete...";
 
+	// A blocking wait on the upload path: counted so the frame statistics can
+	// show how much upload draining a frame pays (the audit's P1.5 signal).
+	evan::stats::countUploadWait();
+
 	// Wait only for this submission instead of draining the whole queue.
 	vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
 	vkDestroyFence(_device, fence, nullptr);
@@ -442,6 +447,44 @@ evan::Result<VkImageView> evan::ADeviceBackend::createImageView(
 	this->getLogger().info() << "Successfully created image view!";
 
 	return { Error::Ok, imageView };
+}
+
+bool evan::ADeviceBackend::supportsTimestampQueries()
+{
+	VkPhysicalDeviceProperties properties {};
+	vkGetPhysicalDeviceProperties(_physicalDevice, &properties);
+	return properties.limits.timestampComputeAndGraphics == VK_TRUE
+		&& properties.limits.timestampPeriod > 0.0f
+		&& this->getTimestampValidBits() > 0;
+}
+
+float evan::ADeviceBackend::getTimestampPeriod() const
+{
+	VkPhysicalDeviceProperties properties {};
+	vkGetPhysicalDeviceProperties(_physicalDevice, &properties);
+	return properties.limits.timestampPeriod;
+}
+
+uint32_t evan::ADeviceBackend::getTimestampValidBits()
+{
+	// timestampValidBits is a queue-family property, so it is read from the
+	// graphics family the backend records for the device.
+	const QueueFamilyIndices indices = this->findQueueFamilies();
+	if (!indices.graphicsFamily.has_value()) {
+		return 0;
+	}
+
+	uint32_t familyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &familyCount,
+											 nullptr);
+	if (familyCount == 0 || indices.graphicsFamily.value() >= familyCount) {
+		return 0;
+	}
+
+	std::vector<VkQueueFamilyProperties> families(familyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &familyCount,
+											 families.data());
+	return families[indices.graphicsFamily.value()].timestampValidBits;
 }
 
 ///////////////////////

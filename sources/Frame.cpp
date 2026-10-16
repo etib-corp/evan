@@ -29,6 +29,13 @@ evan::Frame::Frame(std::shared_ptr<DeviceContext> deviceContext,
 	this->ensureInstanceCapacity(0);
 	this->createIndirectBuffer(*deviceBackend);
 
+	// GPU timestamp queries are only created when frame statistics ask for
+	// them: the pool is a GPU resource and must cost nothing otherwise.
+	if (statsEnabled() && statsGpuEnabled()
+		&& deviceBackend->supportsTimestampQueries()) {
+		this->createTimestampQueryPool(deviceBackend->getDevice());
+	}
+
 	this->getLogger().info() << "Frame created successfully.";
 }
 
@@ -118,6 +125,11 @@ void evan::Frame::cleanup()
 	}
 	_imageAvailable.clear();
 	_renderFinished.clear();
+
+	if (_timestampQueryPool != VK_NULL_HANDLE) {
+		vkDestroyQueryPool(device, _timestampQueryPool, nullptr);
+		_timestampQueryPool = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info()
 		<< "Destroying uniform buffer and freeing memory...";
@@ -420,4 +432,24 @@ void evan::Frame::createIndirectBuffer(const ADeviceBackend &deviceBackend)
 								"successfully. Mapping memory...";
 	vkMapMemory(deviceBackend.getDevice(), _indirectBufferMemory, 0, bufferSize,
 				0, &_indirectBufferMapped);
+}
+
+void evan::Frame::createTimestampQueryPool(VkDevice device)
+{
+	VkQueryPoolCreateInfo poolInfo {};
+	poolInfo.sType		= VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	poolInfo.queryType	= VK_QUERY_TYPE_TIMESTAMP;
+	poolInfo.queryCount = static_cast<uint32_t>(2 * _perFrameSlotCount);
+
+	if (vkCreateQueryPool(device, &poolInfo, nullptr, &_timestampQueryPool)
+		!= VK_SUCCESS) {
+		_timestampQueryPool = VK_NULL_HANDLE;
+		this->getLogger().warning()
+			<< "Failed to create the timestamp query pool; GPU timings are "
+			   "unavailable for this frame.";
+		return;
+	}
+
+	this->getLogger().info() << "Timestamp query pool created with "
+							 << poolInfo.queryCount << " queries.";
 }

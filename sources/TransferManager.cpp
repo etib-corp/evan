@@ -7,6 +7,8 @@
 
 #include "evan/TransferManager.hpp"
 
+#include "evan/FrameStats.hpp"
+
 #include <cstring>
 
 namespace
@@ -427,6 +429,11 @@ void evan::TransferManager::waitIdle()
 	for (const auto &batch: _pending) {
 		fences.push_back(batch.fence);
 	}
+
+	// A blocking drain of the upload batches: counted so the frame statistics
+	// can show how much upload draining a frame pays (the audit's P1.5
+	// signal).
+	evan::stats::countUploadWait();
 
 	vkWaitForFences(_device, static_cast<uint32_t>(fences.size()),
 					fences.data(), VK_TRUE, UINT64_MAX);
