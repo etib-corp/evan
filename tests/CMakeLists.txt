@@ -24,6 +24,7 @@ set(TEST_SOURCES
     sources/test_frame_stats.cpp
     sources/test_instance_transforms.cpp
     sources/test_multiview.cpp
+    sources/test_object_registry.cpp
 )
 
 # Fetch GoogleTest
