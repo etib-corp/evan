@@ -24,7 +24,7 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 	_vertexCount	   = vertices.size();
 	_materialID		   = materialID;
 
-	for (const auto &vertex : vertices) {
+	for (const auto &vertex: vertices) {
 		_bounds.include(utility::math::Vector<float, 3>(vertex.pos));
 	}
 
@@ -52,8 +52,8 @@ evan::GPUMesh::GPUMesh(std::shared_ptr<DeviceContext> deviceContext,
 
 	this->getLogger().info() << "Uploading vertex data to the GPU...";
 
-	deviceContext->getTransferManager().uploadBuffer(
-		vertices.data(), bufferSize, _vertexBuffer);
+	deviceContext->getTransferManager().uploadBuffer(vertices.data(),
+													 bufferSize, _vertexBuffer);
 
 	this->getLogger().info() << "Vertex buffer created successfully.";
 
@@ -106,7 +106,7 @@ void evan::GPUMesh::updateVertices(const std::vector<GPUVertex> &vertices)
 		vertices.data(), bufferSize, _vertexBuffer);
 
 	utility::math::AabbF bounds;
-	for (const auto &vertex : vertices) {
+	for (const auto &vertex: vertices) {
 		bounds.include(utility::math::Vector<float, 3>(vertex.pos));
 	}
 	_bounds = bounds;
@@ -226,6 +226,6 @@ void evan::GPUMesh::createIndexBuffer(
 	deviceBackend->createBuffer(indexBufferProperties);
 
 	this->getLogger().info() << "Uploading index data to the GPU...";
-	deviceContext->getTransferManager().uploadBuffer(
-		indices.data(), bufferSize, _indexBuffer);
+	deviceContext->getTransferManager().uploadBuffer(indices.data(), bufferSize,
+													 _indexBuffer);
 }

@@ -171,21 +171,20 @@ void evan::GPUTexture::createImage(const ADeviceBackend &deviceBackend,
 	auto &transfer = _deviceContext->getTransferManager();
 
 	this->getLogger().info() << "Recording image layout transition...";
-	transfer.transitionImageLayout(_image, imageFormat,
-								   VK_IMAGE_LAYOUT_UNDEFINED,
-								   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-								   _mipLevel);
+	transfer.transitionImageLayout(
+		_image, imageFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _mipLevel);
 
 	VkBufferImageCopy region {};
-	region.bufferOffset					  = 0;
-	region.bufferRowLength				  = 0;
-	region.bufferImageHeight			  = 0;
-	region.imageSubresource.aspectMask	  = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel	  = 0;
+	region.bufferOffset					   = 0;
+	region.bufferRowLength				   = 0;
+	region.bufferImageHeight			   = 0;
+	region.imageSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel	   = 0;
 	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount	  = 1;
-	region.imageOffset					  = { 0, 0, 0 };
-	region.imageExtent = { texWidth, texHeight, 1 };
+	region.imageSubresource.layerCount	   = 1;
+	region.imageOffset					   = { 0, 0, 0 };
+	region.imageExtent					   = { texWidth, texHeight, 1 };
 
 	this->getLogger().info() << "Recording pixel upload...";
 	transfer.uploadBufferToImage(pixels, imageSize, _image, region);

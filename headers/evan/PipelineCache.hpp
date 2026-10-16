@@ -53,7 +53,7 @@ namespace evan
 
 		~PipelineCache() = default;
 
-		PipelineCache(const PipelineCache &) = delete;
+		PipelineCache(const PipelineCache &)			= delete;
 		PipelineCache &operator=(const PipelineCache &) = delete;
 
 		/**
@@ -84,9 +84,9 @@ namespace evan
 		 * @return True when the blob matches the current device, false
 		 * otherwise.
 		 */
-		[[nodiscard]] static bool isBlobCompatible(
-			const std::vector<std::byte> &blob,
-			const VkPipelineCacheHeaderVersionOne &expected);
+		[[nodiscard]] static bool
+			isBlobCompatible(const std::vector<std::byte> &blob,
+							 const VkPipelineCacheHeaderVersionOne &expected);
 
 		/**
 		 * @brief Reads a whole pipeline cache blob from disk.
@@ -96,9 +96,8 @@ namespace evan
 		 * when the read fails.
 		 * @return True when the file was read completely, false otherwise.
 		 */
-		[[nodiscard]] static bool
-			readBlob(const std::filesystem::path &path,
-					 std::vector<std::byte> &blob);
+		[[nodiscard]] static bool readBlob(const std::filesystem::path &path,
+										   std::vector<std::byte> &blob);
 
 		/**
 		 * @brief Writes a pipeline cache blob to disk atomically.
@@ -111,9 +110,8 @@ namespace evan
 		 * @param blob Raw bytes to persist.
 		 * @return True when the blob was written, false otherwise.
 		 */
-		[[nodiscard]] static bool
-			writeBlob(const std::filesystem::path &path,
-					  const std::vector<std::byte> &blob);
+		[[nodiscard]] static bool writeBlob(const std::filesystem::path &path,
+											const std::vector<std::byte> &blob);
 
 		/**
 		 * @brief Creates the Vulkan pipeline cache.
@@ -163,14 +161,20 @@ namespace evan
 		 * @return The pipeline cache handle, or `VK_NULL_HANDLE` when the
 		 * cache could not be created.
 		 */
-		[[nodiscard]] VkPipelineCache getHandle() const { return _handle; }
+		[[nodiscard]] VkPipelineCache getHandle() const
+		{
+			return _handle;
+		}
 
 		/**
 		 * @brief Tells whether the cache is written to and read from disk.
 		 *
 		 * @return True when a path was given to init().
 		 */
-		[[nodiscard]] bool isPersistent() const { return !_path.empty(); }
+		[[nodiscard]] bool isPersistent() const
+		{
+			return !_path.empty();
+		}
 
 		private:
 		/**

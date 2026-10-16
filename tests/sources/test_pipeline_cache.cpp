@@ -122,7 +122,7 @@ namespace xider::tests
 			ScopedEnvironmentVariable(const ScopedEnvironmentVariable &) =
 				delete;
 			ScopedEnvironmentVariable &
-			operator=(const ScopedEnvironmentVariable &) = delete;
+				operator=(const ScopedEnvironmentVariable &)		= delete;
 			ScopedEnvironmentVariable(ScopedEnvironmentVariable &&) = delete;
 
 			private:
@@ -154,10 +154,9 @@ namespace xider::tests
 				std::filesystem::remove_all(_path, error);
 			}
 
-			ScopedTemporaryDirectory(const ScopedTemporaryDirectory &) =
-				delete;
+			ScopedTemporaryDirectory(const ScopedTemporaryDirectory &) = delete;
 			ScopedTemporaryDirectory &
-			operator=(const ScopedTemporaryDirectory &) = delete;
+				operator=(const ScopedTemporaryDirectory &)		  = delete;
 			ScopedTemporaryDirectory(ScopedTemporaryDirectory &&) = delete;
 
 			[[nodiscard]] const std::filesystem::path &path() const
@@ -190,7 +189,10 @@ namespace xider::tests
 				return {};
 			}
 
-			bool shouldClose() const override { return false; }
+			bool shouldClose() const override
+			{
+				return false;
+			}
 
 			std::vector<std::shared_ptr<utility::event::Event>>
 				pollEvents(evan::ADeviceBackend &) override
@@ -228,8 +230,9 @@ namespace xider::tests
 		 * @param uuidSeed Value the pipeline cache UUID is filled with.
 		 * @return The properties of the fake device.
 		 */
-		VkPhysicalDeviceProperties
-			makeProperties(uint32_t vendorID, uint32_t deviceID, uint8_t uuidSeed)
+		VkPhysicalDeviceProperties makeProperties(uint32_t vendorID,
+												  uint32_t deviceID,
+												  uint8_t uuidSeed)
 		{
 			VkPhysicalDeviceProperties properties {};
 			properties.vendorID = vendorID;
@@ -249,9 +252,9 @@ namespace xider::tests
 		 * header, mimicking the payload a driver writes.
 		 * @return The raw bytes of a persisted cache.
 		 */
-		std::vector<std::byte> makeBlob(
-			const VkPhysicalDeviceProperties &properties,
-			std::size_t trailingBytes = 32)
+		std::vector<std::byte>
+			makeBlob(const VkPhysicalDeviceProperties &properties,
+					 std::size_t trailingBytes = 32)
 		{
 			const auto header = evan::PipelineCache::buildHeader(properties);
 			std::vector<std::byte> blob(sizeof(VkPipelineCacheHeaderVersionOne)
@@ -268,8 +271,9 @@ namespace xider::tests
 
 		const auto header = evan::PipelineCache::buildHeader(properties);
 
-		EXPECT_EQ(header.headerSize,
-				  static_cast<uint32_t>(sizeof(VkPipelineCacheHeaderVersionOne)));
+		EXPECT_EQ(
+			header.headerSize,
+			static_cast<uint32_t>(sizeof(VkPipelineCacheHeaderVersionOne)));
 		EXPECT_EQ(header.headerVersion, VK_PIPELINE_CACHE_HEADER_VERSION_ONE);
 		EXPECT_EQ(header.vendorID, properties.vendorID);
 		EXPECT_EQ(header.deviceID, properties.deviceID);
@@ -283,12 +287,13 @@ namespace xider::tests
 		const auto properties = makeProperties(0x10DE, 0x2484, 7);
 
 		EXPECT_TRUE(evan::PipelineCache::isBlobCompatible(
-			makeBlob(properties), evan::PipelineCache::buildHeader(properties)));
+			makeBlob(properties),
+			evan::PipelineCache::buildHeader(properties)));
 	}
 
 	TEST(PipelineCacheTest, RejectsEmptyBlob)
 	{
-		const auto properties	 = makeProperties(0x10DE, 0x2484, 7);
+		const auto properties = makeProperties(0x10DE, 0x2484, 7);
 		const std::vector<std::byte> blob;
 
 		EXPECT_FALSE(evan::PipelineCache::isBlobCompatible(
@@ -297,7 +302,7 @@ namespace xider::tests
 
 	TEST(PipelineCacheTest, RejectsTruncatedBlob)
 	{
-		const auto properties = makeProperties(0x10DE, 0x2484, 7);
+		const auto properties		= makeProperties(0x10DE, 0x2484, 7);
 		std::vector<std::byte> blob = makeBlob(properties);
 		blob.resize(sizeof(VkPipelineCacheHeaderVersionOne) - 1);
 
@@ -338,13 +343,12 @@ namespace xider::tests
 
 	TEST(PipelineCacheTest, RejectsBlobFromAnotherDriverVersion)
 	{
-		const auto properties = makeProperties(0x10DE, 0x2484, 7);
+		const auto properties		= makeProperties(0x10DE, 0x2484, 7);
 		std::vector<std::byte> blob = makeBlob(properties);
 		const std::size_t lastUuidByte =
 			sizeof(VkPipelineCacheHeaderVersionOne) - 1;
-		blob[lastUuidByte] =
-			static_cast<std::byte>(std::to_integer<uint8_t>(blob[lastUuidByte])
-								   ^ 0x01);
+		blob[lastUuidByte] = static_cast<std::byte>(
+			std::to_integer<uint8_t>(blob[lastUuidByte]) ^ 0x01);
 
 		EXPECT_FALSE(evan::PipelineCache::isBlobCompatible(
 			blob, evan::PipelineCache::buildHeader(properties)));
@@ -353,7 +357,7 @@ namespace xider::tests
 	TEST(PipelineCacheTest, RoundTripsBlobOnDisk)
 	{
 		ScopedTemporaryDirectory directory;
-		const auto path = directory.path() / "nested" / "pipeline.bin";
+		const auto path		  = directory.path() / "nested" / "pipeline.bin";
 		const auto properties = makeProperties(0x10DE, 0x2484, 7);
 		const std::vector<std::byte> written = makeBlob(properties);
 
@@ -369,9 +373,9 @@ namespace xider::tests
 	TEST(PipelineCacheTest, WriteBlobReplacesAnExistingBlob)
 	{
 		ScopedTemporaryDirectory directory;
-		const auto path = directory.path() / "pipeline.bin";
+		const auto path		  = directory.path() / "pipeline.bin";
 		const auto properties = makeProperties(0x10DE, 0x2484, 7);
-		const auto firstBlob = makeBlob(properties);
+		const auto firstBlob  = makeBlob(properties);
 		const auto secondBlob = makeBlob(properties, 64);
 
 		ASSERT_TRUE(evan::PipelineCache::writeBlob(path, firstBlob));
@@ -385,7 +389,7 @@ namespace xider::tests
 	TEST(PipelineCacheTest, WriteBlobKeepsNoTemporaryFileBehind)
 	{
 		ScopedTemporaryDirectory directory;
-		const auto path = directory.path() / "pipeline.bin";
+		const auto path		  = directory.path() / "pipeline.bin";
 		const auto properties = makeProperties(0x10DE, 0x2484, 7);
 
 		ASSERT_TRUE(evan::PipelineCache::writeBlob(path, makeBlob(properties)));
@@ -419,8 +423,8 @@ namespace xider::tests
 	{
 		std::vector<std::byte> blob;
 
-		EXPECT_FALSE(evan::PipelineCache::readBlob(
-			std::filesystem::path(), blob));
+		EXPECT_FALSE(
+			evan::PipelineCache::readBlob(std::filesystem::path(), blob));
 	}
 
 	TEST(PipelineCacheTest, UsesPlatformCacheRootByDefault)
@@ -458,7 +462,7 @@ namespace xider::tests
 	{
 		ScopedEnvironmentVariable clearedOverride(kCacheDirVariable, "");
 		ScopedEnvironmentVariable clearedSwitch(kDisableVariable, "");
-		const TestablePlatform platform{std::filesystem::path{}};
+		const TestablePlatform platform { std::filesystem::path {} };
 
 		EXPECT_TRUE(platform.getPipelineCachePath().empty());
 	}

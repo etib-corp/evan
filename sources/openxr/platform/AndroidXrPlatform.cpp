@@ -27,7 +27,7 @@ namespace
 	 * the Java method is unavailable.
 	 */
 	std::filesystem::path queryJavaCacheDirectory(JNIEnv *environment,
-												 jobject activity)
+												  jobject activity)
 	{
 		jclass contextClass = environment->GetObjectClass(activity);
 		if (contextClass == nullptr) {
@@ -95,13 +95,12 @@ namespace
 			return {};
 		}
 
-		auto *vm = static_cast<JavaVM *>(applicationVM);
-		auto *instance = static_cast<jobject>(activity);
+		auto *vm			= static_cast<JavaVM *>(applicationVM);
+		auto *instance		= static_cast<jobject>(activity);
 		JNIEnv *environment = nullptr;
-		bool attached = false;
+		bool attached		= false;
 
-		if (vm->GetEnv(reinterpret_cast<void **>(&environment),
-					   JNI_VERSION_1_6)
+		if (vm->GetEnv(reinterpret_cast<void **>(&environment), JNI_VERSION_1_6)
 			!= JNI_OK) {
 			if (vm->AttachCurrentThread(&environment, nullptr) != JNI_OK) {
 				return {};
