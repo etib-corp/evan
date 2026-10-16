@@ -63,12 +63,24 @@ namespace xider::tests
 		EXPECT_FALSE(evan::isFatal(evan::Error::Suboptimal));
 		EXPECT_FALSE(evan::isFatal(evan::Error::SwapchainOutOfDate));
 		EXPECT_FALSE(evan::isFatal(evan::Error::NotReady));
+		EXPECT_FALSE(evan::isFatal(evan::Error::Unsupported));
 
 		EXPECT_TRUE(evan::isRecoverable(evan::Error::SwapchainOutOfDate));
 		EXPECT_TRUE(evan::isRecoverable(evan::Error::Suboptimal));
 		EXPECT_TRUE(evan::isRecoverable(evan::Error::NotReady));
+		EXPECT_TRUE(evan::isRecoverable(evan::Error::Unsupported));
 		EXPECT_FALSE(evan::isRecoverable(evan::Error::Ok));
 		EXPECT_FALSE(evan::isRecoverable(evan::Error::DeviceLost));
+	}
+
+	// A capability that is simply unavailable on a build/device (e.g. AR on a
+	// desktop GLFW build) is an expected, recoverable state: it must never be
+	// reported as fatal, and it must not be confused with success.
+	TEST(ErrorTest, UnsupportedIsRecoverable)
+	{
+		EXPECT_FALSE(evan::isOk(evan::Error::Unsupported));
+		EXPECT_FALSE(evan::isFatal(evan::Error::Unsupported));
+		EXPECT_TRUE(evan::isRecoverable(evan::Error::Unsupported));
 	}
 
 	// Synthetic recovery injection: a renderer must distinguish a recoverable
