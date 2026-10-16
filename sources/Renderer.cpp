@@ -36,33 +36,6 @@ namespace
 	};
 
 	/**
-	 * @brief A mesh resolved for command buffer recording.
-	 *
-	 * Built once per command buffer, sorted so that opaque draws run first,
-	 * consecutive draws share pipeline and descriptor state, and overdraw is
-	 * reduced, then recorded with bind commands issued only when the bound
-	 * state changes.
-	 */
-	struct DrawItem {
-		uint32_t pipelineKey			= 0;
-		uint32_t materialID				= 0;
-		evan::BlendMode blendMode		= evan::BlendMode::Opaque;
-		VkPipeline pipeline				= VK_NULL_HANDLE;
-		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-		VkDescriptorSet descriptorSet	= VK_NULL_HANDLE;
-		VkBuffer vertexBuffer			= VK_NULL_HANDLE;
-		VkBuffer indexBuffer			= VK_NULL_HANDLE;
-		uint32_t indexCount				= 0;
-		///< Distance from the camera to the mesh bounds, used to order opaque
-		///< draws front-to-back and alpha-blended draws back-to-front.
-		float depth			= 0.0f;
-		glm::mat4 transform = glm::mat4(1.0f);
-		///< Sort key resolved once per frame before ordering: opaque/alpha
-		///< partition, depth order, batching state and a unique tiebreak.
-		evan::DrawSortKey key {};
-	};
-
-	/**
 	 * @brief Whether verbose per-mesh draw logging is enabled.
 	 *
 	 * Controlled by the EVAN_DEBUG_DRAW_LOG environment variable. Off by
@@ -112,6 +85,59 @@ namespace
 	}
 }	 // namespace
 
+namespace evan
+{
+	/**
+	 * @brief A mesh resolved for command buffer recording.
+	 *
+	 * Built once per command buffer, sorted so that opaque draws run first,
+	 * consecutive draws share pipeline and descriptor state, and overdraw is
+	 * reduced, then recorded with bind commands issued only when the bound
+	 * state changes.
+	 */
+	struct DrawItem {
+		uint32_t pipelineKey			= 0;
+		uint32_t materialID				= 0;
+		evan::BlendMode blendMode		= evan::BlendMode::Opaque;
+		VkPipeline pipeline				= VK_NULL_HANDLE;
+		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+		VkDescriptorSet descriptorSet	= VK_NULL_HANDLE;
+		VkBuffer vertexBuffer			= VK_NULL_HANDLE;
+		VkBuffer indexBuffer			= VK_NULL_HANDLE;
+		uint32_t indexCount				= 0;
+		///< Distance from the camera to the mesh bounds, used to order opaque
+		///< draws front-to-back and alpha-blended draws back-to-front.
+		float depth			= 0.0f;
+		glm::mat4 transform = glm::mat4(1.0f);
+		///< Sort key resolved once per frame before ordering: opaque/alpha
+		///< partition, depth order, batching state and a unique tiebreak.
+		evan::DrawSortKey key {};
+	};
+
+	/**
+	 * @brief Reusable per-frame scratch for the draw-list build.
+	 *
+	 * Owned by the Renderer. Every container keeps its capacity across
+	 * frames, so after warm-up the frame build performs no heap allocations
+	 * for them. Lists are kept per view slot so future parallel recording
+	 * has one set of scratch per recorder.
+	 */
+	struct DrawListScratch {
+		///< One draw list per view slot.
+		std::array<std::vector<DrawItem>, MAX_SWAPCHAINS> drawLists;
+
+		///< One frustum list per view slot.
+		std::array<std::vector<Frustum>, MAX_SWAPCHAINS> frustums;
+
+		///< Flattened mesh list of the current frame (raw pointers; the
+		///< registry keeps the objects alive for the frame's duration).
+		std::vector<GPUMesh *> meshes;
+
+		///< View list of the current multiview pass.
+		std::vector<utility::graphic::ViewF> views;
+	};
+}	 // namespace evan
+
 evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
@@ -128,6 +154,8 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 	this->_currentFrameIndex = 0;
 
 	this->getLogger().info() << "Current frame index: " << _currentFrameIndex;
+
+	_drawScratch = std::make_unique<DrawListScratch>();
 
 	this->createDescriptorSetLayout(
 		deviceContext->getDeviceBackend()->getDevice());
@@ -146,6 +174,14 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 			std::make_shared<Frame>(deviceContext, perFrameSlotCount));
 	}
 	this->getLogger().info() << "Frames created successfully.";
+
+	// The frame collection is fixed from this point on, so cache the uniform
+	// buffer handles: getUniformBuffers() hands out a reference instead of
+	// rebuilding the vector per call.
+	_uniformBuffers.reserve(_frames.size());
+	for (const auto &frame: _frames) {
+		_uniformBuffers.push_back(frame->getUniformBuffer());
+	}
 
 	_stats.enabled = statsEnabled();
 	if (_stats.enabled) {
@@ -325,15 +361,34 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// completed now; fold them into the statistics without blocking.
 	this->readGpuTimestamps(frame);
 
+	// Flatten the registered meshes into the frame scratch once: the vector
+	// keeps its capacity across frames and raw pointers avoid copying every
+	// shared_ptr per view. The registry keeps the objects alive for the whole
+	// frame.
+	std::vector<GPUMesh *> &meshes = _drawScratch->meshes;
+	meshes.clear();
+	for (const auto &[id, object]: _objects) {
+		for (const auto &mesh: object->getMeshes()) {
+			meshes.push_back(mesh.get());
+		}
+	}
+
 	// Every drawn mesh consumes one transform slot per view. Grow the instance
 	// buffer before recording any view: reallocating it while a recorded
 	// command buffer of this frame still referenced the old handle would be
 	// invalid, and the wait above guarantees the previous frame using this slot
 	// has finished with the current buffer.
-	frame.ensureInstanceCapacity(this->getMeshes().size());
+	frame.ensureInstanceCapacity(meshes.size());
 
 	// 2. Acquire exactly one image per swapchain image set.
-	std::vector<uint32_t> acquiredImage(swapchainCount, 0);
+	if (swapchainCount > static_cast<std::size_t>(MAX_SWAPCHAINS)) {
+		this->getLogger().error()
+			<< "Frame has " << swapchainCount << " swapchains, but only "
+			<< MAX_SWAPCHAINS << " per-frame slots are available. Aborting "
+			<< "frame rendering.";
+		return Error::RuntimeError;
+	}
+	std::array<uint32_t, MAX_SWAPCHAINS> acquiredImage {};
 	{
 		evan::ScopedTimer acquireTimer = _stats.timer(_stats.acquire);
 		for (std::size_t s = 0; s < swapchainCount; ++s) {
@@ -373,7 +428,9 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// completed as well. viewOwnsInFlightFence() below encodes that decision
 	// and is covered by a unit test; do not attach the fence to every view,
 	// that reintroduces the P0-03 inter-eye stall.
-	std::vector<std::size_t> renderableViews;
+	std::array<std::size_t, MAX_SWAPCHAINS> renderableViewData {};
+	std::size_t renderableViewCount = 0;
+	bool tooManyRenderableViews		= false;
 	for (std::size_t v = 0; v < viewSet.size(); ++v) {
 		const std::size_t s = viewSet[v].swapchainIndex;
 		if (s >= swapchainCount) {
@@ -382,16 +439,23 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 				<< ". Skipping view.";
 			continue;
 		}
-		renderableViews.push_back(v);
+		if (renderableViewCount == static_cast<std::size_t>(MAX_SWAPCHAINS)) {
+			tooManyRenderableViews = true;
+			break;
+		}
+		renderableViewData[renderableViewCount++] = v;
 	}
 
-	if (renderableViews.size() > MAX_SWAPCHAINS) {
+	if (tooManyRenderableViews) {
 		this->getLogger().error()
-			<< "Frame has " << renderableViews.size() << " views, but only "
-			<< MAX_SWAPCHAINS
+			<< "Frame has more than " << MAX_SWAPCHAINS
+			<< " renderable views, but only " << MAX_SWAPCHAINS
 			<< " per-view resources are available. Aborting frame rendering.";
 		return Error::RuntimeError;
 	}
+
+	const std::span<const std::size_t> renderableViews(
+		renderableViewData.data(), renderableViewCount);
 
 	if (!renderableViews.empty()) {
 		vkResetFences(device, 1, &frame._inFlight);
@@ -415,7 +479,8 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 		const std::size_t s = viewSet[renderableViews.front()].swapchainIndex;
 		auto &imageSet		= *swapchainContext._swapchainImages[s];
 
-		std::vector<utility::graphic::ViewF> views;
+		std::vector<utility::graphic::ViewF> &views = _drawScratch->views;
+		views.clear();
 		views.reserve(renderableViews.size());
 		for (const std::size_t v: renderableViews) {
 			views.push_back(viewSet[v].view);
@@ -433,7 +498,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			frame.resetCommandBuffer(0);
 			this->recordCommandBuffer(swapchainContext.getRenderPass(),
 									  imageSet.getFramebuffer(acquiredImage[s]),
-									  imageSet.getExtent(), 0, views);
+									  imageSet.getExtent(), 0, views, meshes);
 		}
 
 		VkPipelineStageFlags waitStages[] = {
@@ -487,7 +552,8 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 					swapchainContext.getRenderPass(),
 					imageSet.getFramebuffer(acquiredImage[s]),
 					imageSet.getExtent(), i,
-					std::span<const utility::graphic::ViewF>(&view.view, 1));
+					std::span<const utility::graphic::ViewF>(&view.view, 1),
+					meshes);
 			}
 
 			VkPipelineStageFlags waitStages[] = {
@@ -629,13 +695,9 @@ VkDescriptorPool evan::Renderer::getDescriptorPool() const
 	return _descriptorPool;
 }
 
-const std::vector<VkBuffer> evan::Renderer::getUniformBuffers() const
+const std::vector<VkBuffer> &evan::Renderer::getUniformBuffers() const
 {
-	std::vector<VkBuffer> uniformBuffers;
-	for (const auto &frame: _frames) {
-		uniformBuffers.push_back(frame->getUniformBuffer());
-	}
-	return uniformBuffers;
+	return _uniformBuffers;
 }
 
 VkDescriptorSetLayout evan::Renderer::getDescriptorSetLayout() const
@@ -1028,7 +1090,8 @@ VkRect2D evan::Renderer::clampScissor(const utility::graphic::ScissorRect &rect,
 void evan::Renderer::recordCommandBuffer(
 	VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
 	VkExtent2D swapChainExtent, std::size_t viewSlot,
-	std::span<const utility::graphic::ViewF> views)
+	std::span<const utility::graphic::ViewF> views,
+	std::span<GPUMesh *const> meshes)
 {
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
@@ -1114,8 +1177,6 @@ void evan::Renderer::recordCommandBuffer(
 			<< swapChainExtent.width << "x" << swapChainExtent.height;
 	}
 
-	const auto &meshes = this->getMeshes();
-
 	DrawStats stats {};
 	stats.totalMeshes = meshes.size();
 
@@ -1123,7 +1184,8 @@ void evan::Renderer::recordCommandBuffer(
 	// mode. Culling must keep a mesh visible for any covered view, and the
 	// depth order is measured from the eye midpoint (a heuristic; the depth
 	// buckets make the exact reference point non-critical).
-	std::vector<Frustum> frustums;
+	std::vector<Frustum> &frustums = _drawScratch->frustums[viewSlot];
+	frustums.clear();
 	frustums.reserve(views.size());
 	glm::vec3 cameraPos(0.0f);
 	for (const auto &view: views) {
@@ -1143,7 +1205,9 @@ void evan::Renderer::recordCommandBuffer(
 
 	// Build the draw list: cull, resolve each mesh's pipeline, material and
 	// descriptor state once, then sort so consecutive draws share GPU state.
-	std::vector<DrawItem> drawList;
+	// The list is reused across frames (per view slot) with its capacity kept.
+	std::vector<DrawItem> &drawList = _drawScratch->drawLists[viewSlot];
+	drawList.clear();
 	drawList.reserve(meshes.size());
 
 	for (const auto &mesh: meshes) {
@@ -1668,14 +1732,4 @@ void evan::Renderer::readGpuTimestamps(const Frame &frame)
 		}
 		_stats.gpuPass[slot].add(deltaNs);
 	}
-}
-
-std::vector<std::shared_ptr<evan::GPUMesh>> evan::Renderer::getMeshes() const
-{
-	std::vector<std::shared_ptr<evan::GPUMesh>> meshes;
-	for (const auto &[id, object]: _objects) {
-		const auto &objectMeshes = object->getMeshes();
-		meshes.insert(meshes.end(), objectMeshes.begin(), objectMeshes.end());
-	}
-	return meshes;
 }

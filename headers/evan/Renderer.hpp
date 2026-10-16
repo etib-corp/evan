@@ -43,6 +43,17 @@
 namespace evan
 {
 	/**
+	 * @brief Reusable per-frame scratch for the draw-list build.
+	 *
+	 * Defined in `Renderer.cpp`; the renderer holds it behind a pointer so
+	 * the recording-time structures stay out of this public header. It keeps
+	 * one draw list and one frustum list per view slot, the flattened mesh
+	 * list of the current frame and the multiview view list, all reused
+	 * across frames with their capacity preserved.
+	 */
+	struct DrawListScratch;
+
+	/**
 	 * @brief The Renderer class is responsible for managing the graphics
 	 * pipeline, descriptor sets, and rendering frames. It interacts with the
 	 * device context and swapchain context to draw the scene on the screen.
@@ -300,21 +311,15 @@ namespace evan
 		VkDescriptorPool getDescriptorPool() const;
 
 		/**
-		 * @brief Retrieves the Vulkan descriptor set layout associated with the
-		 * Renderer.
+		 * @brief Retrieves the uniform buffer handles, one per frame in flight.
 		 *
-		 * This method returns the Vulkan descriptor set layout that defines the
-		 * structure of the descriptor sets used by the Renderer. The descriptor
-		 * set layout specifies the types and counts of resources that can be
-		 * bound to the graphics pipeline, such as uniform buffers and textures.
-		 * Implement this method to provide access to the descriptor set layout
-		 * for other components of the rendering system that may need to create
-		 * or manage descriptor sets based on this layout.
+		 * The frames are created at construction and never replaced, so the
+		 * handle list is cached and handed out by reference instead of being
+		 * rebuilt on every call.
 		 *
-		 * @return The Vulkan descriptor set layout associated with the
-		 * Renderer.
+		 * @return The uniform buffer handles, in frame order.
 		 */
-		const std::vector<VkBuffer> getUniformBuffers() const;
+		const std::vector<VkBuffer> &getUniformBuffers() const;
 
 		/**
 		 * @brief Retrieves the Vulkan descriptor set layout associated with the
@@ -615,6 +620,15 @@ namespace evan
 		VkDescriptorPool _descriptorPool;
 
 		/**
+		 * @brief Uniform buffer handles, one per frame in flight.
+		 *
+		 * Cached at construction (the frame collection is fixed afterwards)
+		 * so getUniformBuffers() hands out a reference instead of rebuilding
+		 * the vector on every call.
+		 */
+		std::vector<VkBuffer> _uniformBuffers;
+
+		/**
 		 * @brief The registry of render objects owned by the renderer.
 		 *
 		 * The key is the unique object ID returned by addObject(), and the
@@ -681,11 +695,15 @@ namespace evan
 		 * @param views The views covered by this pass: one in the fallback
 		 * path, every eye in multiview mode. Culling keeps a mesh visible when
 		 * any of them can see it.
+		 * @param meshes The frame's flattened mesh list (frame scratch), one
+		 * entry per mesh of every registered object in registry order.
 		 */
-		void recordCommandBuffer(
-			VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
-			VkExtent2D swapChainExtent, std::size_t viewSlot,
-			std::span<const utility::graphic::ViewF> views);
+		void recordCommandBuffer(VkRenderPass renderPass,
+								 VkFramebuffer swapChainFramebuffer,
+								 VkExtent2D swapChainExtent,
+								 std::size_t viewSlot,
+								 std::span<const utility::graphic::ViewF> views,
+								 std::span<GPUMesh *const> meshes);
 
 		/**
 		 * @brief Emits the aggregated statistics record when a window is due.
@@ -767,20 +785,14 @@ namespace evan
 		void createDescriptorPool(VkDevice device, uint32_t materialCount);
 
 		/**
-		 * @brief Retrieves the list of GPU meshes associated with the
-		 * registered render objects.
+		 * @brief The renderer's reusable per-frame scratch storage.
 		 *
-		 * This method returns a vector of shared pointers to GPUMesh objects
-		 * that are associated with the registered render objects in the
-		 * Renderer. Each GPUMesh represents a mesh that can be drawn during
-		 * rendering operations. Implement this method to provide access to the
-		 * list of GPU meshes for other components of the rendering system that
-		 * may need to access or manipulate the meshes for rendering purposes.
-		 *
-		 * @return A vector of shared pointers to GPUMesh objects associated
-		 * with the registered render objects.
+		 * Defined in Renderer.cpp and created at construction. Reused every
+		 * frame with its capacity preserved, which removes the steady-state
+		 * heap traffic of the draw-list build (per-view draw and frustum
+		 * lists, the flattened mesh list and the multiview view list).
 		 */
-		std::vector<std::shared_ptr<GPUMesh>> getMeshes() const;
+		std::unique_ptr<DrawListScratch> _drawScratch;
 
 		std::shared_ptr<RessourceManager>
 			_ressourceManager;	  ///< A shared pointer to the RessourceManager,
