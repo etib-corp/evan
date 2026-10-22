@@ -30,6 +30,8 @@ namespace evan
 		SwapchainOutOfDate,	   // VK_ERROR_OUT_OF_DATE_KHR: recreate swapchain
 		NotReady,	 // VK_NOT_READY / XR session not running / invalid
 					 // time
+		Unsupported,	// feature/capability unavailable on this build or
+						// device (e.g. AR on a desktop build)
 
 		// Fatal — the consumer should stop cleanly.
 		DeviceLost,		// VK_ERROR_DEVICE_LOST
@@ -58,6 +60,7 @@ namespace evan
 			case Error::Suboptimal:
 			case Error::SwapchainOutOfDate:
 			case Error::NotReady:
+			case Error::Unsupported:
 				return false;
 			case Error::DeviceLost:
 			case Error::RuntimeLost:
