@@ -80,8 +80,7 @@ VkSurfaceKHR
 // Protected Methods //
 ///////////////////////
 
-std::filesystem::path
-	evan::MacOsDesktopPlatform::getDefaultCacheRoot() const
+std::filesystem::path evan::MacOsDesktopPlatform::getDefaultCacheRoot() const
 {
 	const char *home = std::getenv("HOME");
 	if (home == nullptr || home[0] == '\0') {

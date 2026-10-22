@@ -159,8 +159,9 @@ namespace evan
 		 * @brief Retrieves the pipeline cache used when creating pipelines.
 		 *
 		 * The returned cache is passed to `vkCreateGraphicsPipelines` so the
-		 * driver can reuse pipelines it already compiled, either earlier in this
-		 * run or during a previous one when the blob was reloaded from disk.
+		 * driver can reuse pipelines it already compiled, either earlier in
+		 * this run or during a previous one when the blob was reloaded from
+		 * disk.
 		 *
 		 * @return A reference to the pipeline cache owned by this device
 		 * context.

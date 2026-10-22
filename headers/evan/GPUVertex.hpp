@@ -135,8 +135,9 @@ namespace evan
 				attributeDescriptions {};
 
 			for (std::size_t i = 0; i < 4; ++i) {
-				attributeDescriptions[i].binding  = 1;
-				attributeDescriptions[i].location = static_cast<uint32_t>(3 + i);
+				attributeDescriptions[i].binding = 1;
+				attributeDescriptions[i].location =
+					static_cast<uint32_t>(3 + i);
 				attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 				attributeDescriptions[i].offset =
 					static_cast<uint32_t>(i * sizeof(glm::vec4));

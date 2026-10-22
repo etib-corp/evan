@@ -70,10 +70,10 @@ std::filesystem::path evan::IPlatform::getPipelineCachePath() const
 		return {};
 	}
 
-	const std::string overridden = getEnvironment(kCacheDirVariable);
-	const std::filesystem::path root =
-		!overridden.empty() ? std::filesystem::path(overridden)
-							: this->getDefaultCacheRoot();
+	const std::string overridden	 = getEnvironment(kCacheDirVariable);
+	const std::filesystem::path root = !overridden.empty()
+		? std::filesystem::path(overridden)
+		: this->getDefaultCacheRoot();
 
 	if (root.empty()) {
 		this->getLogger().info()
