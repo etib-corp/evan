@@ -44,9 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`evanConfig.cmake`) for `find_package(evan)`, and CPack rules.
 - Benchmark harness (`BUILD_BENCHMARKS`) covering scene object management.
 - CI hardening: `ctest` execution, ASan/UBSan and `clang-tidy` jobs, and
-  coverage reporting.
+  per-platform coverage reporting (GLFW on Linux, macOS and Windows; OpenXR on
+  Linux) merged in Codecov.
 - Documentation: full README, Getting Started tutorial, architecture diagrams,
-  and versioning & support policy.
+  versioning & support policy, and a [Testing & Coverage](docs/TESTING.md)
+  guide.
 - A runnable `examples/scene_objects` sample.
 - `evan::RenderSettings`, passed to the `Engine` constructor, exposes the
   construction-time render configuration: the MSAA sample count and the opaque
