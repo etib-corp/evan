@@ -244,6 +244,13 @@ VkDeviceSize evan::Frame::getIndirectBufferAlignedSize() const
 	return _indirectBufferAlignedSize;
 }
 
+void evan::Frame::markTimestampQueriesRecorded(std::size_t viewSlot) noexcept
+{
+	if (viewSlot < static_cast<std::size_t>(MAX_SWAPCHAINS)) {
+		_timestampQueriesRecorded[viewSlot] = true;
+	}
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////

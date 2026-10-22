@@ -284,13 +284,40 @@ namespace evan
 		 * The pool holds two queries per view slot (begin and end of the render
 		 * pass). vkCmdResetQueryPool is recorded at the start of every command
 		 * buffer, so a query is only read after the in-flight fence of the
-		 * frame slot has signalled.
+		 * frame slot has signalled, and only for view slots that recorded at
+		 * least once (see hasRecordedTimestampQueries()).
 		 *
 		 * @return The query pool, or VK_NULL_HANDLE when timestamps are off.
 		 */
 		[[nodiscard]] VkQueryPool getTimestampQueryPool() const noexcept
 		{
 			return _timestampQueryPool;
+		}
+
+		/**
+		 * @brief Records that a view slot's timestamp queries were written.
+		 *
+		 * The renderer calls this when the slot's command buffer records the
+		 * query reset and the begin/end timestamps. Reading a query before its
+		 * first reset is a validation error
+		 * (VUID-vkGetQueryPoolResults-None-09401), so readGpuTimestamps skips
+		 * the slots that never recorded.
+		 *
+		 * @param viewSlot Index of the view slot that recorded timestamps.
+		 */
+		void markTimestampQueriesRecorded(std::size_t viewSlot) noexcept;
+
+		/**
+		 * @brief Whether a view slot's timestamp queries were ever recorded.
+		 *
+		 * @param viewSlot Index of the view slot to query.
+		 * @return True when the slot recorded its query reset at least once.
+		 */
+		[[nodiscard]] bool
+			hasRecordedTimestampQueries(std::size_t viewSlot) const noexcept
+		{
+			return viewSlot < static_cast<std::size_t>(MAX_SWAPCHAINS)
+				&& _timestampQueriesRecorded[viewSlot];
 		}
 
 		/**
@@ -309,6 +336,13 @@ namespace evan
 		 * support timestamp queries.
 		 */
 		VkQueryPool _timestampQueryPool = VK_NULL_HANDLE;
+
+		/**
+		 * Per-view-slot flag: whether the slot recorded its timestamp query
+		 * reset and writes at least once. A query must be reset before it is
+		 * read; slots that never recorded must not be read.
+		 */
+		bool _timestampQueriesRecorded[MAX_SWAPCHAINS] {};
 
 		/**
 		 * Per-swapchain semaphores signaled when a swapchain image is

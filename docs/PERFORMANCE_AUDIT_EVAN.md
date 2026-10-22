@@ -328,6 +328,10 @@ frame in flight during stereo.
 
 ### P3 — Low impact (do later)
 
+A staged proposal for these items — what is already resolved at v2026.1.4,
+what remains, and the measurement gates for the gated ones — lives in
+[`DESIGN_P3_OPTIMIZATIONS.md`](DESIGN_P3_OPTIMIZATIONS.md).
+
 - Object pools/arenas for `RenderObject`/`GPUMesh`.
 - SoA/contiguous scene storage instead of `shared_ptr` maps.
 - `getPipelineLayer()` by value, `getUniformBuffers()` by value.
