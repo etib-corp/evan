@@ -179,7 +179,7 @@ jobs:
       - name: Run tests under OpenCppCoverage
         if: matrix.operating-system == 'windows'
         run: >
-          OpenCppCoverage
+          & "C:\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
           --sources ${{ github.workspace }}\sources
           --export_type cobertura:${{ github.workspace }}\coverage.xml
           --
