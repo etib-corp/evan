@@ -88,17 +88,56 @@ jobs:
           -p ${{ github.workspace }}/build
           --quiet
 
+  # Coverage is collected for every backend/OS combination that builds the
+  # tests. Android is excluded: tests are not built there and CI has no
+  # device/emulator to run them on.
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GLFW Linux
+            engine-backend: glfw
+            operating-system: linux
+            runner: ubuntu-latest
+            cxx_flags: "--coverage"
+            linker_flags: "--coverage"
+          - name: OpenXR Linux
+            engine-backend: openxr
+            operating-system: linux
+            runner: ubuntu-latest
+            cxx_flags: "--coverage"
+            linker_flags: "--coverage"
+          - name: GLFW macOS
+            engine-backend: glfw
+            operating-system: macos
+            runner: macos-latest
+            cxx_flags: "-fprofile-instr-generate -fcoverage-mapping"
+            linker_flags: "-fprofile-instr-generate"
+          # OpenCppCoverage instruments the MSVC debug build, so no extra
+          # compiler/linker flags are needed on Windows.
+          - name: GLFW Windows
+            engine-backend: glfw
+            operating-system: windows
+            runner: windows-latest
+            cxx_flags: ""
+            linker_flags: ""
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6.0.2
 
       - name: Install lcov
+        if: matrix.operating-system == 'linux'
         run: sudo apt-get install -y lcov
 
       - name: Install Ubuntu dependencies
+        if: matrix.operating-system == 'linux'
         run: bash scripts/install_ubuntu_dependencies.sh
+
+      - name: Install OpenCppCoverage
+        if: matrix.operating-system == 'windows'
+        run: choco install -y opencppcoverage
 
       - name: Configure Vulkan SDK
         uses: humbletim/setup-vulkan-sdk@v1.2.1
@@ -112,11 +151,15 @@ jobs:
           cmake
           -B ${{ github.workspace }}/build
           -S ${{ github.workspace }}
-          -DBUILD_FOR_GLFW=ON
-          -DBUILD_FOR_LINUX=ON
+          -DBUILD_FOR_GLFW=${{ matrix.engine-backend == 'glfw' }}
+          -DBUILD_FOR_OPENXR=${{ matrix.engine-backend == 'openxr' }}
+          -DBUILD_FOR_LINUX=${{ matrix.operating-system == 'linux' }}
+          -DBUILD_FOR_MACOS=${{ matrix.operating-system == 'macos' }}
+          -DBUILD_FOR_WINDOWS=${{ matrix.operating-system == 'windows' }}
+          -DBUILD_FOR_ANDROID=OFF
           -DBUILD_TESTING=ON
-          -DCMAKE_CXX_FLAGS="--coverage"
-          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+          -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.linker_flags }}"
 
       - name: Build
         run: >
@@ -124,12 +167,28 @@ jobs:
           --build ${{ github.workspace }}/build
 
       - name: Run tests
+        if: matrix.operating-system != 'windows'
+        env:
+          # GCC ignores this; clang on macOS writes one profile per process.
+          LLVM_PROFILE_FILE: ${{ github.workspace }}/coverage-%p.profraw
         run: >
           ctest
           --test-dir ${{ github.workspace }}/build
           --output-on-failure
 
-      - name: Generate coverage report
+      - name: Run tests under OpenCppCoverage
+        if: matrix.operating-system == 'windows'
+        run: >
+          OpenCppCoverage
+          --sources ${{ github.workspace }}\sources
+          --export_type cobertura:${{ github.workspace }}\coverage.xml
+          --
+          ctest
+          --test-dir ${{ github.workspace }}\build
+          --output-on-failure
+
+      - name: Generate coverage report (Linux)
+        if: matrix.operating-system == 'linux'
         run: >
           lcov
           --capture
@@ -141,10 +200,22 @@ jobs:
           --exclude '*/tests/*'
           --exclude '*/googletest*'
 
+      - name: Generate coverage report (macOS)
+        if: matrix.operating-system == 'macos'
+        run: |
+          xcrun llvm-profdata merge -sparse "${{ github.workspace }}"/coverage-*.profraw \
+            -o "${{ github.workspace }}/coverage.profdata"
+          xcrun llvm-cov export "${{ github.workspace }}/build/tests/test_evan" \
+            -instr-profile="${{ github.workspace }}/coverage.profdata" \
+            -format=lcov \
+            -ignore-filename-regex='.*/(third_party|_deps|tests|examples)/.*' \
+            > "${{ github.workspace }}/coverage.info"
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5.0.0
         with:
-          files: coverage.info
+          files: ${{ matrix.operating-system == 'windows' && 'coverage.xml' || 'coverage.info' }}
+          name: ${{ matrix.name }}
           fail_ci_if_error: false
 
   benchmarks:

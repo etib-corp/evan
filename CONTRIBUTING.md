@@ -22,7 +22,7 @@ with consistent quality and collaboration practices.
 2. Create a dedicated branch.
 3. Implement your changes.
 4. Add or update tests.
-5. Run the test suite.
+5. Run the test suite (see [Testing & Coverage](docs/TESTING.md)).
 6. Open a pull request.
 
 Ensure your code matches conventions and passes tests before requesting review.
