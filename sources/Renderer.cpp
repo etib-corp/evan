@@ -1135,6 +1135,9 @@ void evan::Renderer::recordCommandBuffer(
 							beginQuery, 2);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 							frame.getTimestampQueryPool(), beginQuery);
+		// From now on the slot holds a reset query pair: the results may be
+		// read once the in-flight fence of a later use of this slot signals.
+		frame.markTimestampQueriesRecorded(viewSlot);
 	}
 
 	if (isDrawLogEnabled()) {
@@ -1701,6 +1704,13 @@ void evan::Renderer::readGpuTimestamps(const Frame &frame)
 	// The per-frame slot count is clamped to [1, MAX_SWAPCHAINS], so the
 	// gpuPass indices below are always in range.
 	for (std::size_t slot = 0; slot < frame.getPerFrameSlotCount(); ++slot) {
+		if (!frame.hasRecordedTimestampQueries(slot)) {
+			// The slot recorded nothing yet (first use of the frame slot, or
+			// a view count that never touched it). Reading an unreset query
+			// is a validation error; skip it.
+			continue;
+		}
+
 		// One result plus its availability flag per query, 64-bit each.
 		uint64_t values[4]	  = { 0, 0, 0, 0 };
 		const VkResult result = vkGetQueryPoolResults(
