@@ -82,14 +82,14 @@ namespace evan
 		 * @brief Get the path where the Vulkan pipeline cache is persisted.
 		 *
 		 * The returned path is where the cache blob written by
-		 * `PipelineCache::persist()` is stored, and where the next run looks for
-		 * a blob to reuse, so pipelines are not recompiled from scratch on every
-		 * launch.
+		 * `PipelineCache::persist()` is stored, and where the next run looks
+		 * for a blob to reuse, so pipelines are not recompiled from scratch on
+		 * every launch.
 		 *
 		 * The default implementation honors two environment variables and then
 		 * falls back to the per-user cache directory of the running platform:
-		 * - `EVAN_PIPELINE_CACHE_DISABLE`, set to any non-empty value other than
-		 *   `0`, disables persistence entirely.
+		 * - `EVAN_PIPELINE_CACHE_DISABLE`, set to any non-empty value other
+		 * than `0`, disables persistence entirely.
 		 * - `EVAN_PIPELINE_CACHE_DIR` overrides the cache root directory, which
 		 *   lets an application keep the blob next to its own build output.
 		 *
@@ -149,6 +149,44 @@ namespace evan
 			const DeviceContext &deviceContext) const = 0;
 
 		/**
+		 * @brief Check if the platform supports AR features.
+		 *
+		 * Desktop platforms inherit the unsupported default. The OpenXR
+		 * platform overrides this once runtime probing lands in AR-004/AR-005.
+		 *
+		 * @return True when the platform supports AR, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isARSupported() const
+		{
+			return false;
+		}
+
+		/**
+		 * @brief Enable or disable AR features on the platform.
+		 *
+		 * The desktop default has no side effects and reports that the
+		 * feature is unavailable.
+		 *
+		 * @param enabled True to enable AR features, false to disable them.
+		 * @return Error::Unsupported on platforms without AR support.
+		 */
+		virtual Error setAREnabled(bool enabled)
+		{
+			(void)enabled;
+			return Error::Unsupported;
+		}
+
+		/**
+		 * @brief Check if AR features are currently enabled on the platform.
+		 *
+		 * @return True when AR features are enabled, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isAREnabled() const
+		{
+			return false;
+		}
+
+		/**
 		 * @brief Get the last error recorded by the platform.
 		 *
 		 * Platforms record a sticky error while polling events (e.g.
@@ -167,13 +205,14 @@ namespace evan
 		 *
 		 * This is the directory the pipeline cache blob is stored under, before
 		 * the `EVAN_PIPELINE_CACHE_DIR` override is applied. It is where the
-		 * platform is allowed to write user data, for example `~/Library/Caches`
-		 * on macOS, `XDG_CACHE_HOME` or `~/.cache` on Linux, `%LOCALAPPDATA%` on
-		 * Windows, and the application cache directory on Android.
+		 * platform is allowed to write user data, for example
+		 * `~/Library/Caches` on macOS, `XDG_CACHE_HOME` or `~/.cache` on Linux,
+		 * `%LOCALAPPDATA%` on Windows, and the application cache directory on
+		 * Android.
 		 *
 		 * Every concrete platform implements this method, because only the
-		 * platform knows which directory it is allowed to write to. Returning an
-		 * empty path disables persistence.
+		 * platform knows which directory it is allowed to write to. Returning
+		 * an empty path disables persistence.
 		 *
 		 * @return The cache root directory, or an empty path when the platform
 		 * has no writable cache location.
