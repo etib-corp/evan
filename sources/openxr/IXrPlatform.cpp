@@ -14,6 +14,56 @@
 // Public Methods //
 ////////////////////
 
+bool evan::IXrPlatform::isARSupported() const
+{
+	int blendModeCount = 0;
+	std::vector<XrEnvironmentBlendMode> blendModes;
+
+	XrResult result = xrEnumerateEnvironmentBlendModes(_XrInstance, _XrSystemId,
+								 XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, ,
+								 &blendModeCount, nullptr);
+	if (blendModeCount == 0 || result != XR_SUCCESS) {
+		this->getLogger().warning()
+			<< "No environment blend modes supported by the OpenXR runtime";
+		return false;
+	}
+	blendModes.resize(blendModeCount);
+	result = xrEnumerateEnvironmentBlendModes(_XrInstance, _XrSystemId,
+											  XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+											  &blendModeCount, blendModes.data());
+	if (result != XR_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to enumerate environment blend modes: "
+			<< mapXrResultToString(result);
+		return false;
+	}
+	for (const auto &blendMode : blendModes) {
+		if (blendMode == XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND) {
+			this->getLogger().info()
+				<< "OpenXR runtime supports AR (alpha blend) environment";
+			return true;
+		}
+	}
+	this->getLogger().info() << "OpenXR runtime does not support AR (alpha blend) environment";
+	return false;
+}
+
+evan::Error evan::IXrPlatform::setAREnabled(bool enabled)
+{
+	if (enabled && !isARSupported()) {
+		this->getLogger().warning()
+			<< "Attempted to enable AR features, but the OpenXR runtime does not support AR";
+		return Error::Unsupported;
+	}
+	_options.arEnabled = enabled;
+	return Error::Ok;
+}
+
+bool evan::IXrPlatform::isAREnabled() const
+{
+	return _options.arEnabled;
+}
+
 bool evan::IXrPlatform::shouldClose() const
 {
 	return _shouldClose;

@@ -34,6 +34,41 @@ namespace evan
 		virtual ~IXrPlatform() = default;
 
 		/**
+		 * @brief Check if the platform supports AR features.
+		 *
+		 * @return true if the platform supports AR, false otherwise.
+		 *
+		 * This method can be used to determine if the platform has AR
+		 * capabilities, such as support for augmented reality rendering or
+		 * tracking.
+		 */
+		[[nodiscard]] bool isARSupported() const override;
+
+		/**
+		 * @brief Enable or disable AR features on the platform.
+		 *
+		 * @param enabled true to enable AR features, false to disable them.
+		 * @return An Error indicating the result of the operation.
+		 *
+		 * This method can be used to enable or disable AR features on the
+		 * platform based on user preferences or application requirements. The
+		 * implementation may perform necessary checks and configurations to
+		 * enable or disable AR functionality.
+		 */
+		virtual evan::Error setAREnabled(bool enabled) override;
+
+		/**
+		 * @brief Check if AR features are currently enabled on the platform.
+		 *
+		 * @return true if AR features are enabled, false otherwise.
+		 *
+		 * This method can be used to query the current state of AR features on
+		 * the platform, allowing the application to adapt its behavior
+		 * accordingly.
+		 */
+		[[nodiscard]] bool isAREnabled() const override;
+
+		/**
 		 * @brief Get the required instance extensions for the OpenXR platform.
 		 *
 		 * This function returns a vector of strings representing the required
