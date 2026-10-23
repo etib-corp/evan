@@ -43,40 +43,6 @@ namespace evan
 		virtual ~IPlatform() = default;
 
 		/**
-		 * @brief Check if the platform supports AR features.
-		 *
-		 * @return true if the platform supports AR, false otherwise.
-		 *
-		 * This method can be used to determine if the platform has AR
-		 * capabilities, such as support for augmented reality rendering or
-		 * tracking.
-		 */
-		[[nodiscard]] virtual bool isARSupported() const;
-
-		/**
-		 * @brief Enable or disable AR features on the platform.
-		 *
-		 * @param enabled true to enable AR features, false to disable them.
-		 * @return An Error indicating the result of the operation.
-		 *
-		 * This method can be used to enable or disable AR features on the
-		 * platform, depending on the application's requirements and user
-		 * preferences.
-		 */
-		virtual evan::Error setAREnabled(bool enabled);
-
-		/**
-		 * @brief Check if AR features are currently enabled on the platform.
-		 *
-		 * @return true if AR features are enabled, false otherwise.
-		 *
-		 * This method can be used to query the current state of AR features on
-		 * the platform, allowing the application to adapt its behavior
-		 * accordingly.
-		 */
-		[[nodiscard]] virtual bool isAREnabled() const;
-
-		/**
 		 * @brief Get the required instance extensions for the platform.
 		 *
 		 * @return A vector of strings representing the required instance
@@ -181,6 +147,44 @@ namespace evan
 		 */
 		virtual std::shared_ptr<ASwapchainContext> createSwapchainContext(
 			const DeviceContext &deviceContext) const = 0;
+
+		/**
+		 * @brief Check if the platform supports AR features.
+		 *
+		 * Desktop platforms inherit the unsupported default. The OpenXR
+		 * platform overrides this once runtime probing lands in AR-004/AR-005.
+		 *
+		 * @return True when the platform supports AR, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isARSupported() const
+		{
+			return false;
+		}
+
+		/**
+		 * @brief Enable or disable AR features on the platform.
+		 *
+		 * The desktop default has no side effects and reports that the
+		 * feature is unavailable.
+		 *
+		 * @param enabled True to enable AR features, false to disable them.
+		 * @return Error::Unsupported on platforms without AR support.
+		 */
+		virtual Error setAREnabled(bool enabled)
+		{
+			(void)enabled;
+			return Error::Unsupported;
+		}
+
+		/**
+		 * @brief Check if AR features are currently enabled on the platform.
+		 *
+		 * @return True when AR features are enabled, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isAREnabled() const
+		{
+			return false;
+		}
 
 		/**
 		 * @brief Get the last error recorded by the platform.

@@ -61,21 +61,6 @@ namespace
 	}
 }	 // namespace
 
-bool evan::IPlatform::isARSupported() const
-{
-	return false;
-}
-
-evan::Error evan::IPlatform::setAREnabled(bool enabled)
-{
-	return evan::Error::Unsupported;
-}
-
-bool evan::IPlatform::isAREnabled() const
-{
-	return false;
-}
-
 std::filesystem::path evan::IPlatform::getPipelineCachePath() const
 {
 	if (isEnvironmentEnabled(kDisableVariable)) {
