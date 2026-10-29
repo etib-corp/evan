@@ -352,6 +352,40 @@ namespace evan
 		Error getLastError() const;
 
 		/**
+		 * @brief Whether this engine can enable AR features.
+		 *
+		 * Returns false when there is no platform and on desktop builds,
+		 * where the platform keeps its unsupported defaults. On OpenXR the
+		 * platform reports the runtime capability once AR-004/AR-005 land.
+		 *
+		 * @return True when AR can be enabled, false otherwise.
+		 */
+		[[nodiscard]] bool isARSupported() const;
+
+		/**
+		 * @brief Whether AR features are currently enabled.
+		 *
+		 * Mirrors the last successful setAREnabled() call. A failed or
+		 * unsupported request never changes this state.
+		 *
+		 * @return True when AR features are enabled, false otherwise.
+		 */
+		[[nodiscard]] bool isAREnabled() const;
+
+		/**
+		 * @brief Enables or disables AR features.
+		 *
+		 * The request is delegated to the platform, which owns the runtime
+		 * state. Unsupported platforms (including every desktop build) refuse
+		 * the request without side effects; this method never throws.
+		 *
+		 * @param enabled True to enable AR features, false to disable them.
+		 * @return Error::Ok when the request was applied, Error::Unsupported
+		 * when AR is unavailable, or another platform error on failure.
+		 */
+		Error setAREnabled(bool enabled);
+
+		/**
 		 * @brief Polls for events from the platform. This method is responsible
 		 * for handling input events, window events, and other platform-specific
 		 * events. It is typically called once per frame, allowing the engine to
@@ -524,6 +558,15 @@ namespace evan
 		std::shared_ptr<RessourceManager> _ressourceManager;
 
 		private:
+		/**
+		 * @brief Last successfully applied AR state.
+		 *
+		 * The engine mirrors the platform state so isAREnabled() never reports
+		 * a successful enable that the platform refused. AR-004/AR-005 keep the
+		 * platform side of this state in sync with the OpenXR runtime.
+		 */
+		bool _arEnabled = false;
+
 		/**
 		 * When true, the engine copies keyboard and mouse input for movement:
 		 * - Keyboard events are copied for entity movement and related actions.

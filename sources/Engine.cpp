@@ -390,6 +390,35 @@ evan::Error evan::Engine::getLastError() const
 	return _platform->getLastError();
 }
 
+bool evan::Engine::isARSupported() const
+{
+	return _platform != nullptr && _platform->isARSupported();
+}
+
+bool evan::Engine::isAREnabled() const
+{
+	return _platform != nullptr && _platform->isAREnabled();
+}
+
+evan::Error evan::Engine::setAREnabled(bool enabled)
+{
+	if (_platform == nullptr) {
+		return Error::Unsupported;
+	}
+
+	// The platform is the source of truth: desktop builds and runtimes
+	// without AR support refuse the request here without side effects.
+	if (enabled && !_platform->isARSupported()) {
+		return Error::Unsupported;
+	}
+
+	const Error result = _platform->setAREnabled(enabled);
+	if (result == Error::Ok) {
+		_arEnabled = enabled;
+	}
+	return result;
+}
+
 void evan::Engine::pollEvents()
 {
 	this->getLogger().info() << "Polling events from platform...";

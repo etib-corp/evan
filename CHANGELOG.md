@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `setAREnabled()` — with desktop-safe defaults (`false` / `false` /
   `Error::Unsupported`), so GLFW platforms are gated without per-platform
   changes. OpenXR runtime probing and overrides land with AR-004/AR-005.
+- `Engine`: AR capability API forwarding to the platform —
+  `Engine::isARSupported()`, `Engine::isAREnabled()` and
+  `Engine::setAREnabled()`. The engine mirrors the last successful call, and
+  desktop builds report unsupported without side effects.
 - Frame instrumentation, off by default: `EVAN_STATS=1` enables CPU phase
   timers in `Renderer::drawFrame` (upload flush, preprocess, acquire,
   in-flight fence wait, per-view uniform/record/submit, OpenXR end-of-frame
