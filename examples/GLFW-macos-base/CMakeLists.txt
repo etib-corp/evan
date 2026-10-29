@@ -10,4 +10,7 @@ add_custom_command(TARGET GLFW-macos-base POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/examples/GLFW-macos-base/textures
     $<TARGET_FILE_DIR:GLFW-macos-base>/textures
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/examples/GLFW-macos-base/shaders
+    $<TARGET_FILE_DIR:GLFW-macos-base>/shaders
 )

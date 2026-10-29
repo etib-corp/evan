@@ -24,6 +24,47 @@ cmake --build build --target GLFW-linux-base
 ./build/examples/GLFW-linux-base/GLFW-linux-base
 ```
 
+## GLFW-macos-base
+
+A minimal GLFW desktop sample that runs on macOS (Vulkan through MoltenVK). It
+creates a `MacOsDesktopPlatform` and drives the `Engine` update/render/poll
+loop. It also hosts the P3 proof-of-concept workload used to fill the trigger
+table of `docs/DESIGN_P3_OPTIMIZATIONS.md` §4.
+
+### Building
+
+```sh
+cmake -S . -B build \
+  -DBUILD_FOR_GLFW=ON \
+  -DBUILD_FOR_MACOS=ON \
+  -DBUILD_EXAMPLES=ON
+cmake --build build --target GLFW-macos-base
+```
+
+### Running
+
+```sh
+./build/examples/GLFW-macos-base/GLFW-macos-base
+```
+
+Two opt-in knobs add the N-object workload; both default to `0`, which keeps
+the empty scene and the "run until the window closes" loop:
+
+| Variable | Default | Meaning |
+| -------- | ------- | ------- |
+| `EVAN_POC_MESHES` | `0` | Cubes to spawn: one shared local-space cube mesh, one `Primitive` per object, laid out on a grid in front of the camera with `Engine::setObjectTransform`. |
+| `EVAN_POC_FRAMES` | `0` | Stop after that many frames and exit. |
+
+```sh
+cd build/examples/GLFW-macos-base
+EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
+  EVAN_POC_MESHES=1000 EVAN_POC_FRAMES=420 \
+  UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-base
+```
+
+`scripts/run-poc.sh` wraps this for N=100 and N=1000, averages the report
+windows and writes a markdown table; see `docs/PROFILING.md` §6.
+
 ## GLFW-windows-base
 
 A minimal GLFW desktop sample that runs on Windows. It creates a
