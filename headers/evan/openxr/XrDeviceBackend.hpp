@@ -408,6 +408,17 @@ namespace evan
 			getAvailableExtensions() const noexcept;
 
 		/**
+		 * @brief The AR extension functions resolved for this instance.
+		 *
+		 * Missing extensions leave their pointers null; use the matching
+		 * has*() helper before calling.
+		 *
+		 * @return The loaded function table.
+		 */
+		[[nodiscard]] const XrInstanceFunctions &
+			getInstanceFunctions() const noexcept;
+
+		/**
 		 * @brief The environment blend modes supported by the runtime.
 		 *
 		 * The list is enumerated once for the selected view configuration and
@@ -671,6 +682,14 @@ namespace evan
 		void cacheInstanceExtensions();
 
 		/**
+		 * @brief Resolves and stores the AR extension functions.
+		 *
+		 * Missing functions stay null and are logged, so runtimes without an
+		 * AR extension boot normally and report the capability as unsupported.
+		 */
+		void loadExtensionFunctions();
+
+		/**
 		 * @brief Enumerates and stores the environment blend modes.
 		 *
 		 * Uses the selected view configuration and keeps the VR default
@@ -705,6 +724,11 @@ namespace evan
 		 * A list of all available OpenXR instance extensions.
 		 */
 		std::vector<XrExtensionInfo> _availableXrExtensions;
+
+		/**
+		 * The AR extension functions resolved for this OpenXR instance.
+		 */
+		XrInstanceFunctions _instanceFunctions;
 
 		/**
 		 * The environment blend modes reported by the runtime for the selected
