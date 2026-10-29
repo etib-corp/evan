@@ -127,7 +127,7 @@ const std::vector<std::shared_ptr<evan::GPUMesh>> &
 	return _meshes;
 }
 
-std::string evan::RenderObject::getPipelineLayer() const
+const std::string &evan::RenderObject::getPipelineLayer() const
 {
 	return _pipelineLayer;
 }

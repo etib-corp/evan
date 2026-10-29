@@ -133,7 +133,7 @@ namespace evan
 		 * RenderObject, which can be used to determine rendering configurations
 		 * for this object during the rendering process.
 		 */
-		[[nodiscard]] std::string getPipelineLayer() const;
+		[[nodiscard]] const std::string &getPipelineLayer() const;
 
 		protected:
 		std::vector<std::shared_ptr<GPUMesh>>
