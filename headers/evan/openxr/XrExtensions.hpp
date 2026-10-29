@@ -222,6 +222,14 @@ namespace evan
 			PFN_xrGetSpaceBoundary2DFB getBoundary2D = nullptr;
 
 			/**
+			 * @brief Retrieves a space's room layout.
+			 * @param space The space to retrieve the room layout for.
+			 * @param out The output for the retrieved room layout.
+			 * @return The result of the operation.
+			 */
+			PFN_xrGetSpaceRoomLayoutFB getRoomLayout = nullptr;
+
+			/**
 			 * @brief Whether all XR_FB_scene functions are present.
 			 */
 			[[nodiscard]] bool isComplete() const noexcept;
