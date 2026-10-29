@@ -18,6 +18,7 @@
 #include <iostream>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -406,6 +407,73 @@ namespace evan
 		[[nodiscard]] const std::vector<XrExtensionInfo> &
 			getAvailableExtensions() const noexcept;
 
+		/**
+		 * @brief The environment blend modes supported by the runtime.
+		 *
+		 * The list is enumerated once for the selected view configuration and
+		 * keeps the runtime order.
+		 *
+		 * @return The supported blend modes.
+		 */
+		[[nodiscard]] const std::vector<XrEnvironmentBlendMode> &
+			getSupportedEnvironmentBlendModes() const noexcept;
+
+		/**
+		 * @brief Whether the runtime supports an environment blend mode.
+		 *
+		 * @param mode The blend mode to look up.
+		 * @return True when the mode was reported by the runtime.
+		 */
+		[[nodiscard]] bool supportsEnvironmentBlendMode(
+			XrEnvironmentBlendMode mode) const noexcept;
+
+		/**
+		 * @brief Whether the runtime can do see-through AR.
+		 *
+		 * Requires a passthrough extension (AR-004) and alpha-blend or
+		 * additive compositing (AR-005).
+		 *
+		 * @return True when the runtime meets both requirements.
+		 */
+		[[nodiscard]] bool isARCapable() const noexcept;
+
+		/**
+		 * @brief Sets the environment blend mode for the OpenXR system.
+		 *
+		 * @param mode The desired environment blend mode to set for the
+		 * OpenXR system.
+		 * @return Error::Ok when the mode is supported, Error::Unsupported
+		 * otherwise.
+		 */
+		Error setEnvironmentBlendMode(XrEnvironmentBlendMode mode);
+
+		/**
+		 * @brief Retrieves the environment blend mode of the OpenXR system.
+		 *
+		 * The environment blend mode defines how the virtual content is blended
+		 * with the real-world environment. This value is determined by querying
+		 * the OpenXR runtime and is used to configure rendering and compositing
+		 * behavior for the XR application.
+		 *
+		 * @return XrEnvironmentBlendMode The current environment blend mode of
+		 * the OpenXR system.
+		 */
+		[[nodiscard]] XrEnvironmentBlendMode
+			getEnvironmentBlendMode() const noexcept;
+
+		/**
+		 * @brief Chooses the default blend mode.
+		 *
+		 * Prefers opaque, which preserves the VR behavior, and falls back to
+		 * the first supported mode for AR-only runtimes.
+		 *
+		 * @param supported The modes reported by the runtime.
+		 * @return The mode to submit by default.
+		 */
+		[[nodiscard]] static XrEnvironmentBlendMode
+			selectDefaultEnvironmentBlendMode(
+				std::span<const XrEnvironmentBlendMode> supported) noexcept;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with the specified application name
@@ -603,6 +671,14 @@ namespace evan
 		void cacheInstanceExtensions();
 
 		/**
+		 * @brief Enumerates and stores the environment blend modes.
+		 *
+		 * Uses the selected view configuration and keeps the VR default
+		 * opaque when the runtime supports it.
+		 */
+		void detectEnvironmentBlendModes();
+
+		/**
 		 * The primary view configuration type selected for this OpenXR system,
 		 * chosen by enumerating the configurations supported by the runtime.
 		 */
@@ -629,5 +705,20 @@ namespace evan
 		 * A list of all available OpenXR instance extensions.
 		 */
 		std::vector<XrExtensionInfo> _availableXrExtensions;
+
+		/**
+		 * The environment blend modes reported by the runtime for the selected
+		 * view configuration.
+		 */
+		std::vector<XrEnvironmentBlendMode> _supportedEnvironmentBlendModes;
+
+		/**
+		 * The environment blend mode of the OpenXR system, which defines how
+		 * the virtual content is blended with the real-world environment. This
+		 * value is determined by querying the OpenXR runtime and is used to
+		 * configure rendering and compositing behavior for the XR application.
+		 */
+		XrEnvironmentBlendMode _environmentBlendMode =
+			XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	};
 }	 // namespace evan

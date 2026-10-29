@@ -15,6 +15,7 @@ set(TEST_SOURCES
     sources/test_gpumaterial.cpp
     sources/test_error.cpp
     sources/test_platform_ar.cpp
+    sources/test_environment_blend_mode.cpp
     sources/test_frustum.cpp
     sources/test_memory_type.cpp
     sources/test_pipeline_cache.cpp
