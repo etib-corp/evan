@@ -151,3 +151,8 @@ cmake -S . -B build -DBUILD_DOCS=ON <platform/backend options>
 2. **Add a source/header pair to an existing module**: Place `.hpp` in `headers/evan/` and `.cpp` in `sources/`, follow naming conventions (`PascalCase` class, `camelCase` methods, `_` prefix for members), update namespace nesting, verify build.
 
 3. **Refactor a component to match existing error handling patterns**: Replace raw pointers with `std::unique_ptr` or `std::shared_ptr`, add `const` correctness, use `enum class` for state machines, follow class layout order (public → protected → private).
+
+## Git conventions
+
+Don't commit and don't push on any branch if it is not clearly asked by a human. Agents should only commit and push when explicitly instructed to do so.
+
