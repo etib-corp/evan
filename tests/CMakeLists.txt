@@ -16,6 +16,7 @@ set(TEST_SOURCES
     sources/test_error.cpp
     sources/test_platform_ar.cpp
     sources/test_environment_blend_mode.cpp
+    sources/test_xr_instance_functions.cpp
     sources/test_frustum.cpp
     sources/test_memory_type.cpp
     sources/test_pipeline_cache.cpp

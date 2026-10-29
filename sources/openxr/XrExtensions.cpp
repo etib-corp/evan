@@ -10,6 +10,86 @@
 #include <algorithm>
 #include <array>
 
+namespace
+{
+	/**
+	 * @brief Resolves one function and records the result.
+	 *
+	 * A resolver may return XR_SUCCESS with a null pointer when the runtime
+	 * does not provide the function; both cases are treated as missing.
+	 */
+	template<typename Function>
+	bool loadFunction(const evan::XrExtensions::ProcAddrResolver &resolver,
+					  const char *name, Function &target,
+					  evan::XrExtensionLoadReport *report)
+	{
+		target = nullptr;
+		if (!resolver) {
+			if (report != nullptr) {
+				report->missing.emplace_back(name);
+			}
+			return false;
+		}
+
+		PFN_xrVoidFunction function = nullptr;
+		const XrResult result		= resolver(name, &function);
+		if (result != XR_SUCCESS || function == nullptr) {
+			if (report != nullptr) {
+				report->missing.emplace_back(name);
+			}
+			return false;
+		}
+
+		target = reinterpret_cast<Function>(function);
+		if (report != nullptr) {
+			report->loaded.emplace_back(name);
+		}
+		return true;
+	}
+}	 // namespace
+
+bool evan::XrInstanceFunctions::Passthrough::isComplete() const noexcept
+{
+	return create != nullptr && destroy != nullptr && start != nullptr
+		&& pause != nullptr && createLayer != nullptr && destroyLayer != nullptr
+		&& pauseLayer != nullptr && resumeLayer != nullptr;
+}
+
+bool evan::XrInstanceFunctions::HandTracking::isComplete() const noexcept
+{
+	return createTracker != nullptr && destroyTracker != nullptr
+		&& locateJoints != nullptr;
+}
+
+bool evan::XrInstanceFunctions::HandMesh::isComplete() const noexcept
+{
+	return getMesh != nullptr;
+}
+
+bool evan::XrInstanceFunctions::Scene::isComplete() const noexcept
+{
+	return getBoundingBox2D != nullptr && getBoundingBox3D != nullptr
+		&& getSemanticLabels != nullptr && getBoundary2D != nullptr
+		&& getRoomLayout != nullptr;
+}
+
+bool evan::XrInstanceFunctions::SpatialEntity::isComplete() const noexcept
+{
+	return createAnchor != nullptr && getUuid != nullptr
+		&& enumerateComponents != nullptr && setComponentStatus != nullptr
+		&& getComponentStatus != nullptr;
+}
+
+bool evan::XrInstanceFunctions::SpatialQuery::isComplete() const noexcept
+{
+	return query != nullptr && retrieveResults != nullptr;
+}
+
+bool evan::XrInstanceFunctions::SpatialStorage::isComplete() const noexcept
+{
+	return save != nullptr && erase != nullptr;
+}
+
 std::vector<evan::XrExtensionInfo>
 	evan::XrExtensions::enumerateInstanceExtensions(XrResult *outResult)
 {
@@ -163,4 +243,80 @@ std::vector<std::string> evan::XrExtensions::composeRequiredInstanceExtensions(
 		}
 	}
 	return requiredExtensions;
+
+evan::XrInstanceFunctions
+	evan::XrExtensions::loadInstanceFunctions(XrInstance instance,
+											  XrExtensionLoadReport *report)
+{
+	if (instance == XR_NULL_HANDLE) {
+		return loadInstanceFunctions(
+			[](const char *, PFN_xrVoidFunction *) {
+				return XR_ERROR_HANDLE_INVALID;
+			},
+			report);
+	}
+
+	return loadInstanceFunctions(
+		[instance](const char *name, PFN_xrVoidFunction *function) {
+			return xrGetInstanceProcAddr(instance, name, function);
+		},
+		report);
+}
+
+evan::XrInstanceFunctions
+	evan::XrExtensions::loadInstanceFunctions(const ProcAddrResolver &resolver,
+											  XrExtensionLoadReport *report)
+{
+	XrInstanceFunctions functions;
+
+	auto load = [&](const char *name, auto &target) {
+		loadFunction(resolver, name, target, report);
+	};
+
+	// XR_FB_passthrough
+	load("xrCreatePassthroughFB", functions.passthrough.create);
+	load("xrDestroyPassthroughFB", functions.passthrough.destroy);
+	load("xrPassthroughStartFB", functions.passthrough.start);
+	load("xrPassthroughPauseFB", functions.passthrough.pause);
+	load("xrCreatePassthroughLayerFB", functions.passthrough.createLayer);
+	load("xrDestroyPassthroughLayerFB", functions.passthrough.destroyLayer);
+	load("xrPassthroughLayerPauseFB", functions.passthrough.pauseLayer);
+	load("xrPassthroughLayerResumeFB", functions.passthrough.resumeLayer);
+	load("xrPassthroughLayerSetStyleFB", functions.passthrough.setStyle);
+
+	// XR_EXT_hand_tracking
+	load("xrCreateHandTrackerEXT", functions.handTracking.createTracker);
+	load("xrDestroyHandTrackerEXT", functions.handTracking.destroyTracker);
+	load("xrLocateHandJointsEXT", functions.handTracking.locateJoints);
+
+	// XR_FB_hand_tracking_mesh
+	load("xrGetHandMeshFB", functions.handMesh.getMesh);
+
+	// XR_FB_scene
+	load("xrGetSpaceBoundingBox2DFB", functions.scene.getBoundingBox2D);
+	load("xrGetSpaceBoundingBox3DFB", functions.scene.getBoundingBox3D);
+	load("xrGetSpaceSemanticLabelsFB", functions.scene.getSemanticLabels);
+	load("xrGetSpaceBoundary2DFB", functions.scene.getBoundary2D);
+	load("xrGetSpaceRoomLayoutFB", functions.scene.getRoomLayout);
+
+	// XR_FB_spatial_entity
+	load("xrCreateSpatialAnchorFB", functions.spatialEntity.createAnchor);
+	load("xrGetSpaceUuidFB", functions.spatialEntity.getUuid);
+	load("xrEnumerateSpaceSupportedComponentsFB",
+		 functions.spatialEntity.enumerateComponents);
+	load("xrSetSpaceComponentStatusFB",
+		 functions.spatialEntity.setComponentStatus);
+	load("xrGetSpaceComponentStatusFB",
+		 functions.spatialEntity.getComponentStatus);
+
+	// XR_FB_spatial_entity_query
+	load("xrQuerySpacesFB", functions.spatialQuery.query);
+	load("xrRetrieveSpaceQueryResultsFB",
+		 functions.spatialQuery.retrieveResults);
+
+	// XR_FB_spatial_entity_storage
+	load("xrSaveSpaceFB", functions.spatialStorage.save);
+	load("xrEraseSpaceFB", functions.spatialStorage.erase);
+
+	return functions;
 }

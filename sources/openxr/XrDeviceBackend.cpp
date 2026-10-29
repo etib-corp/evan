@@ -44,6 +44,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	Version appVersion(0, 1, 0);
 	createXrInstance(platform);
 	this->cacheInstanceExtensions();
+	this->loadExtensionFunctions();
 	getSystem();
 
 	const IXrPlatform &xrPlatform =
@@ -650,6 +651,12 @@ const std::vector<evan::XrExtensionInfo> &
 	return _availableXrExtensions;
 }
 
+const evan::XrInstanceFunctions &
+	evan::XrDeviceBackend::getInstanceFunctions() const noexcept
+{
+	return _instanceFunctions;
+}
+
 const std::vector<XrEnvironmentBlendMode> &
 	evan::XrDeviceBackend::getSupportedEnvironmentBlendModes() const noexcept
 {
@@ -879,6 +886,24 @@ void evan::XrDeviceBackend::cacheInstanceExtensions()
 		} else {
 			this->getLogger().info() << "  " << name << " [missing]";
 		}
+	}
+}
+
+void evan::XrDeviceBackend::loadExtensionFunctions()
+{
+	XrExtensionLoadReport report;
+	_instanceFunctions =
+		evan::XrExtensions::loadInstanceFunctions(_XrInstance, &report);
+
+	this->getLogger().info()
+		<< "OpenXR extension functions loaded: " << report.loaded.size()
+		<< ", missing: " << report.missing.size();
+
+	for (const auto &name: report.missing) {
+		this->getLogger().warning() << "  " << name << " [missing]";
+	}
+	for (const auto &name: report.loaded) {
+		this->getLogger().info() << "  " << name << " [loaded]";
 	}
 }
 
