@@ -149,6 +149,44 @@ namespace evan
 			const DeviceContext &deviceContext) const = 0;
 
 		/**
+		 * @brief Check if the platform supports AR features.
+		 *
+		 * Desktop platforms inherit the unsupported default. The OpenXR
+		 * platform overrides this once runtime probing lands in AR-004/AR-005.
+		 *
+		 * @return True when the platform supports AR, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isARSupported() const
+		{
+			return false;
+		}
+
+		/**
+		 * @brief Enable or disable AR features on the platform.
+		 *
+		 * The desktop default has no side effects and reports that the
+		 * feature is unavailable.
+		 *
+		 * @param enabled True to enable AR features, false to disable them.
+		 * @return Error::Unsupported on platforms without AR support.
+		 */
+		virtual Error setAREnabled(bool enabled)
+		{
+			(void)enabled;
+			return Error::Unsupported;
+		}
+
+		/**
+		 * @brief Check if AR features are currently enabled on the platform.
+		 *
+		 * @return True when AR features are enabled, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isAREnabled() const
+		{
+			return false;
+		}
+
+		/**
 		 * @brief Get the last error recorded by the platform.
 		 *
 		 * Platforms record a sticky error while polling events (e.g.

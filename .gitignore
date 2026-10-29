@@ -4,3 +4,4 @@ build/
 
 # Android example assets (large binaries, provided out of band)
 examples/OpenXR-android-base/app/assets/
+__pycache__/
