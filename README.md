@@ -60,7 +60,8 @@ ctest --test-dir build --output-on-failure
 
 Optional options:
 
-- `-DBUILD_TESTING=ON` — build and run the test suite.
+- `-DBUILD_TESTING=ON` — build and run the test suite. See
+  [Testing & Coverage](docs/TESTING.md) for coverage reports.
 - `-DBUILD_DOCS=ON` — build Doxygen documentation.
 - `-DBUILD_BENCHMARKS=ON` — build the benchmark harness.
 
@@ -86,6 +87,7 @@ target_link_libraries(my_app PRIVATE evan::evan)
 - [Technical Choices](docs/TECHNICAL_CHOICES.md)
 - [Code Conventions](docs/CODE_CONVENTIONS.md)
 - [Commit Conventions](docs/COMMIT_CONVENTIONS.md)
+- [Testing & Coverage](docs/TESTING.md)
 
 ## Contributing
 
