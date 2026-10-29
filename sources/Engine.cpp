@@ -271,7 +271,18 @@ bool evan::Engine::removeObject(
 bool evan::Engine::setObjectTransform(size_t objectID,
 									  const glm::mat4 &transform)
 {
+	if (!_renderer) {
+		return false;
+	}
+
 	auto object = _renderer->getObject(objectID);
+
+	if (!object) {
+		this->getLogger().warning()
+			<< "Cannot set the transform of unknown object " << objectID << ".";
+		return false;
+	}
+
 	object->setTransform(transform);
 	return true;
 }

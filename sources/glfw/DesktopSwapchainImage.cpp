@@ -23,6 +23,12 @@ evan::DesktopSwapchainImage::DesktopSwapchainImage(
 	auto &backend = evan::checkedCast<evan::DesktopBackend>(
 		*deviceContext.getDeviceBackend());
 
+	// cleanup() releases the swapchain, its image views, framebuffers and the
+	// color/depth resources through the logical device. Without this capture
+	// the guard in cleanup() returns immediately and every one of those
+	// objects outlives vkDestroyDevice.
+	_device = backend.getDevice();
+
 	this->getLogger().info()
 		<< "Querying swap chain support details for DesktopSwapchainImage...";
 	evan::SwapChainSupportDetails swapChainSupport =
@@ -148,7 +154,11 @@ evan::DesktopSwapchainImage::~DesktopSwapchainImage()
 
 void evan::DesktopSwapchainImage::destroy(VkDevice device)
 {
-	(void)device;
+	// The constructor captures the device; the caller's handle is only a
+	// fallback for an image that was built without one.
+	if (_device == VK_NULL_HANDLE) {
+		_device = device;
+	}
 	this->cleanup();
 }
 
@@ -220,6 +230,10 @@ void evan::DesktopSwapchainImage::cleanup()
 		vkFreeMemory(_device, _depthMemory, nullptr);
 		_depthMemory = VK_NULL_HANDLE;
 	}
+
+	// Nothing left to release: forget the device so a second cleanup (the
+	// destructor after an explicit destroy) cannot touch a destroyed one.
+	_device = VK_NULL_HANDLE;
 }
 
 void evan::DesktopSwapchainImage::fillPresentInfo(
