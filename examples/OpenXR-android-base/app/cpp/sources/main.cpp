@@ -127,7 +127,7 @@ void android_main(struct android_app *android_app)
 	std::shared_ptr<utility::graphic::Primitive> cubePrimitive =
 		std::make_shared<utility::graphic::Primitive>(
 			std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
-	int id = engine.addPrimitive(cubePrimitive);
+	int id = engine.createObject(cubePrimitive);
 
 	while (!android_app->destroyRequested) {
 		// Process Android events
@@ -151,7 +151,6 @@ void android_main(struct android_app *android_app)
 
 		// Application lifecycle
 		engine.update();
-		engine.addPrimitive(cubePrimitive);
 		engine.render();
 		engine.pollEvents();
 	}

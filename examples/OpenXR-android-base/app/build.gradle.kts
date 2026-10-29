@@ -24,6 +24,9 @@ android {
                 arguments.add("-DANDROID_USE_LEGACY_TOOLCHAIN_FILE=OFF")
             }
         }
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
