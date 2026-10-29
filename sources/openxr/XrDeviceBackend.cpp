@@ -10,7 +10,32 @@
 #include "evan/openxr/XrSwapchainContext.hpp"
 #include "evan/CheckedCast.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cstdint>
+#include <string_view>
+#include <utility>
+
+namespace
+{
+	/**
+	 * @brief Human-readable name of an environment blend mode.
+	 */
+	std::string_view
+		environmentBlendModeToString(XrEnvironmentBlendMode mode) noexcept
+	{
+		switch (mode) {
+			case XR_ENVIRONMENT_BLEND_MODE_OPAQUE:
+				return "OPAQUE";
+			case XR_ENVIRONMENT_BLEND_MODE_ADDITIVE:
+				return "ADDITIVE";
+			case XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND:
+				return "ALPHA_BLEND";
+			default:
+				return "UNKNOWN";
+		}
+	}
+}	 // namespace
 
 evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 {
@@ -30,6 +55,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 		_viewConfigurationType =
 			selectViewConfigurationType(viewConfigurations);
 	}
+	this->detectEnvironmentBlendModes();
 
 	this->createInstance(platform, "Evan", appVersion);
 	this->pickPhysicalDevice();
@@ -103,7 +129,7 @@ evan::Error
 	if (frameState.shouldRender == XR_FALSE) {
 		XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 		frameEndInfo.displayTime		  = _predictedDisplayTime;
-		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+		frameEndInfo.environmentBlendMode = _environmentBlendMode;
 		frameEndInfo.layerCount			  = 0;
 		frameEndInfo.layers				  = nullptr;
 		xrEndFrame(_session, &frameEndInfo);
@@ -168,7 +194,7 @@ evan::Error
 	};
 	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 	frameEndInfo.displayTime		  = _predictedDisplayTime;
-	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+	frameEndInfo.environmentBlendMode = _environmentBlendMode;
 	frameEndInfo.layerCount			  = (layer.viewCount > 0) ? 1u : 0u;
 	frameEndInfo.layers =
 		(frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
@@ -624,6 +650,61 @@ const std::vector<evan::XrExtensionInfo> &
 	return _availableXrExtensions;
 }
 
+const std::vector<XrEnvironmentBlendMode> &
+	evan::XrDeviceBackend::getSupportedEnvironmentBlendModes() const noexcept
+{
+	return _supportedEnvironmentBlendModes;
+}
+
+bool evan::XrDeviceBackend::supportsEnvironmentBlendMode(
+	XrEnvironmentBlendMode mode) const noexcept
+{
+	return std::find(_supportedEnvironmentBlendModes.begin(),
+					 _supportedEnvironmentBlendModes.end(), mode)
+		!= _supportedEnvironmentBlendModes.end();
+}
+
+bool evan::XrDeviceBackend::isARCapable() const noexcept
+{
+	return hasPassthroughExtension()
+		&& (supportsEnvironmentBlendMode(XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND)
+			|| supportsEnvironmentBlendMode(
+				XR_ENVIRONMENT_BLEND_MODE_ADDITIVE));
+}
+
+evan::Error
+	evan::XrDeviceBackend::setEnvironmentBlendMode(XrEnvironmentBlendMode mode)
+{
+	if (!supportsEnvironmentBlendMode(mode)) {
+		this->getLogger().warning()
+			<< "Environment blend mode " << environmentBlendModeToString(mode)
+			<< " is not supported by the runtime.";
+		return Error::Unsupported;
+	}
+	_environmentBlendMode = mode;
+	return Error::Ok;
+}
+
+XrEnvironmentBlendMode
+	evan::XrDeviceBackend::getEnvironmentBlendMode() const noexcept
+{
+	return _environmentBlendMode;
+}
+
+XrEnvironmentBlendMode evan::XrDeviceBackend::selectDefaultEnvironmentBlendMode(
+	std::span<const XrEnvironmentBlendMode> supported) noexcept
+{
+	for (const auto mode: supported) {
+		if (mode == XR_ENVIRONMENT_BLEND_MODE_OPAQUE) {
+			return mode;
+		}
+	}
+	if (!supported.empty()) {
+		return supported.front();
+	}
+	return XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////
@@ -674,6 +755,15 @@ void evan::XrDeviceBackend::getSystem()
 		this->getLogger().error() << "Failed to get OpenXR system.";
 		return;
 	}
+
+	XrSystemProperties properties { XR_TYPE_SYSTEM_PROPERTIES };
+	result = xrGetSystemProperties(_XrInstance, _systemId, &properties);
+	if (result != XR_SUCCESS) {
+		this->getLogger().warning()
+			<< "Failed to get OpenXR system properties.";
+		return;
+	}
+	this->getLogger().info() << "OpenXR system: " << properties.systemName;
 }
 
 void evan::XrDeviceBackend::createSession()
@@ -763,4 +853,51 @@ void evan::XrDeviceBackend::cacheInstanceExtensions()
 			this->getLogger().info() << "  " << name << " [missing]";
 		}
 	}
+}
+
+void evan::XrDeviceBackend::detectEnvironmentBlendModes()
+{
+	std::uint32_t count = 0;
+	XrResult result		= xrEnumerateEnvironmentBlendModes(
+		_XrInstance, _systemId, _viewConfigurationType, 0, &count, nullptr);
+
+	if (result != XR_SUCCESS || count == 0) {
+		this->getLogger().warning()
+			<< "No environment blend modes reported by the OpenXR runtime.";
+		_supportedEnvironmentBlendModes = { XR_ENVIRONMENT_BLEND_MODE_OPAQUE };
+		_environmentBlendMode			= XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+		return;
+	}
+
+	std::vector<XrEnvironmentBlendMode> modes(count);
+	result = xrEnumerateEnvironmentBlendModes(_XrInstance, _systemId,
+											  _viewConfigurationType, count,
+											  &count, modes.data());
+
+	if (result == XR_ERROR_SIZE_INSUFFICIENT) {
+		modes.resize(count);
+		result = xrEnumerateEnvironmentBlendModes(_XrInstance, _systemId,
+												  _viewConfigurationType, count,
+												  &count, modes.data());
+	}
+	if (result != XR_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to enumerate environment blend modes.";
+		_supportedEnvironmentBlendModes = { XR_ENVIRONMENT_BLEND_MODE_OPAQUE };
+		_environmentBlendMode			= XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+		return;
+	}
+
+	modes.resize(count);
+	_supportedEnvironmentBlendModes = std::move(modes);
+	_environmentBlendMode =
+		selectDefaultEnvironmentBlendMode(_supportedEnvironmentBlendModes);
+
+	this->getLogger().info() << "OpenXR environment blend modes:";
+	for (const auto mode: _supportedEnvironmentBlendModes) {
+		this->getLogger().info() << "  " << environmentBlendModeToString(mode);
+	}
+	this->getLogger().info()
+		<< "Selected environment blend mode: "
+		<< environmentBlendModeToString(_environmentBlendMode);
 }
