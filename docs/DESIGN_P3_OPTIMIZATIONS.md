@@ -287,6 +287,66 @@ Optional supporting evidence: a `benchmarks/` micro-benchmark for the
 registry (WS2) comparing `std::map` vs slot-map iteration at N=1k/10k — cheap
 to add with the existing Google Benchmark setup.
 
+### PoC results (macOS / MoltenVK, 2026-10-29)
+
+Harness: `scripts/run-poc.sh` on `examples/GLFW-macos-base` with
+`EVAN_POC_MESHES=N` (one shared local-space cube mesh, one `Primitive` per
+object, placed on a grid through `Engine::setObjectTransform`) and
+`EVAN_POC_FRAMES` for a reproducible run, `EVAN_STATS=1
+EVAN_STATS_INTERVAL=60`. Warm-up windows are dropped, the counters are divided
+by the window's `frames=` value (they are window sums, the `cpu_ms`/`gpu_ms`
+phases are already averages) and windows that still show mesh churn are
+skipped. Full record, per-window values and the environment: 
+[`POC_RESULTS_P3.md`](POC_RESULTS_P3.md).
+
+Machine: Apple M3, macOS 27.2 (26B123), MoltenVK from Vulkan SDK 1.4.304.1,
+debug build with `VK_LAYER_KHRONOS_validation` active (clean run, no `VUID`).
+Window 800×600, default MSAA, one view. One representative run, five
+steady-state windows per N:
+
+| N | rec (ms) | submit (ms) | wait (ms) | ubo (ms) | pres (ms) | gpu pass0 (ms) | draws calls | pso | ds | mesh_churn | uploadwaits |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | 0.98 | 7.00 | 0.02 | 0.01 | 0.03 | 0.17 | 101 | 1 | 1 | +0/-0 | 0 |
+| 1000 | 5.80 | 2.24 | 0.02 | 0.01 | 0.02 | 0.62 | 1000 | 1 | 1 | +0/-0 | 0 |
+
+Spread over three runs of the fixed build: `rec` 0.87–0.98 ms at N=100 and
+5.80–6.23 ms at N=1000, `gpu pass0` 0.17–0.47 ms and 0.33–0.62 ms, `submit`
+6.8–7.1 ms and 0.4–2.2 ms, `wait` ≤0.22 ms everywhere. `submit` is the only
+unstable phase (MoltenVK queue/present blocking); the GPU pass timer is coarse
+(~0.1 ms steps), so `pass0` is an order-of-magnitude signal.
+
+Reading:
+
+- `rec` scales with the object count (5.9× for 10× N, ≈5.8 µs per recorded
+  draw at N=1000): single-threaded command recording is the desktop CPU cost
+  that grows with the scene.
+- `wait` stays at 0.02 ms, `renderwait` does not exist on GLFW, and one
+  submission covers the frame: nothing waits on the GPU.
+- `pso` = `ds` = 1 per frame at both N — one material, one pipeline, one bind
+  per run.
+- Steady state is clean: `mesh_churn +0/-0`, `uploadwaits=0`.
+- Startup allocates one `GPUMesh` per object (two device allocations each),
+  which is why N=1000 takes a moment to start.
+- `draws calls` reads N+1 when the pointer enters the window before the
+  measurement: the engine registers a debug ray mesh on the first
+  mouse-motion event.
+
+Decision against the trigger table:
+
+| Workstream | Measured on this run | Decision |
+| ---------- | -------------------- | -------- |
+| WS4 parallel recording | desktop single view, no per-view `rec` split; `rec` grows linearly with the draw count (0.98 → 5.80 ms for 10× N) | **keep serial** — the trigger wants XR stereo per-view `rec` > ~15 % of the 90 Hz budget (≈1.7 ms); re-run the harness on the OpenXR build |
+| WS5 timeline semaphores | `wait` 0.02 ms (≤1 % of the frame), no `renderwait`, one submission per frame | **keep binary fence** — no ordering need is visible |
+| WS6 bindless | `ds` = 1 per frame at both N (one material, one bind per run) | **keep per-material sets** — binds do not scale with the object count, and this scene has a single material |
+
+Caveats: `rec` is CPU-bound and inflates several-fold on a busy host (2.7 ms
+and 14.1 ms at N=100/N=1000 were observed at load average ~11), so record on
+an idle machine and compare runs from the same session; the desktop
+single-view build cannot answer WS4 by construction;
+back-face culling is disabled in the static pipeline state (the projection
+flips Y, so the front-face convention has to be settled before re-enabling
+it), which makes `pass0` a double-sided fill cost.
+
 ## 5. File-by-file change map
 
 Ungated (this cycle, when approved):
@@ -393,4 +453,25 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   is gone. Validation: 9 new `ObjectRegistryTest` unit tests (reuse,
   stale-handle rejection, iteration order, 10k-op stress) plus the full
   suite (364/364).
-- **WS4–WS6: not started**, gated on the PoC measurements (§4).
+- **PoC harness: added (2026-10-29).** `examples/GLFW-macos-base` gained the
+  `EVAN_POC_MESHES` / `EVAN_POC_FRAMES` knobs and the missing `shaders/`
+  assets (the mesh shader now consumes the per-instance model matrix, so
+  transformed meshes are actually drawn), and `scripts/run-poc.sh` runs the
+  N=100/1000 workload and reports the trigger-table fields. First results and
+  the keep-or-defer decision are recorded in §4.
+- **Robustness fixes (2026-10-29), found while running the PoC.** The
+  desktop swapchain image never captured its logical device, so
+  `DesktopSwapchainImage::cleanup()` returned early: the swapchain, its image
+  views, framebuffers and color/depth resources outlived `vkDestroyDevice`
+  and MoltenVK's presentation callbacks then touched a destroyed device,
+  which aborted the process on exit. The device is now captured at
+  construction (and `destroy()` falls back to its argument), the render pass
+  handle is reset, the pipeline no longer declares `VK_DYNAMIC_STATE_CULL_MODE`
+  (a Vulkan 1.3 / `VK_EXT_extended_dynamic_state` state that was never set —
+  culling is static `VK_CULL_MODE_NONE` for now), the descriptor pool is
+  created with `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` so
+  `GPUMaterial` may free its sets, and `Engine::setObjectTransform()` returns
+  `false` for an unknown object instead of dereferencing null. Validation runs
+  are clean and `run-poc.sh` finishes with no aborts.
+- **WS4–WS6: not started**, gated on the PoC measurements (§4); the desktop
+  run of 2026-10-29 triggers none of them.

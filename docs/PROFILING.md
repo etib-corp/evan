@@ -113,16 +113,47 @@ read with `VK_QUERY_RESULT_WITH_AVAILABILITY_BIT` (never blocking).
 
 ## 6. PoC recipe — N=100 vs N=1000
 
-1. Build the example scene at N objects (scratch flag or test scene; keep the
-   same window size and MSAA for both runs).
-2. Run each N with:
+The `GLFW-macos-base` example ships the workload and `scripts/run-poc.sh`
+drives it, so the whole run is one command:
 
-   ```sh
-   EVAN_STATS=1 EVAN_STATS_INTERVAL=120 ./example
-   ```
+```sh
+scripts/run-poc.sh            # N=100 and N=1000, 7 windows each
+```
 
-   and let at least 4 windows complete (~1000 frames) before reading numbers.
-3. Fill the table (averages from the last window):
+It builds the example (which also copies `shaders/` and `textures/` next to
+the binary), runs each N with `EVAN_STATS=1 EVAN_STATS_INTERVAL=60`, discards
+the warm-up windows, averages the rest and writes `summary.md` plus the raw
+logs under `build/poc-results/<timestamp>/`. `--mesh-counts`, `--interval`,
+`--warmup`, `--windows`, `--frames` and `--out` override the defaults.
+
+Run it by hand with the same knobs:
+
+| Variable | Default | Meaning |
+| -------- | ------- | ------- |
+| `EVAN_POC_MESHES` | `0` | Cubes to spawn: one shared local-space mesh, one `Primitive` per object, placed on a grid in front of the camera through `Engine::setObjectTransform`. `0` keeps the empty scene. |
+| `EVAN_POC_FRAMES` | `0` | Stop after that many frames and exit (`0` runs until the window is closed). Needed for a reproducible run that flushes its log. |
+
+```sh
+cd build/examples/GLFW-macos-base
+EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
+  EVAN_POC_MESHES=1000 EVAN_POC_FRAMES=420 \
+  UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-base
+```
+
+`UTILITY_LOG_LEVEL=info` matters in release builds (which suppress `info`)
+and in debug builds (which otherwise log every vertex); `NO_COLOR=1` keeps the
+parsed values free of ANSI escapes. Keep the window size (800×600) and MSAA
+the same for every N.
+
+Counters in a `evan stats:` line are **sums over the window**, not per-frame
+values (`cpu_ms`/`gpu_ms` are already per-frame averages), so divide them by
+`frames=` before comparing; `run-poc.sh` does that.
+
+One measurement note: the engine registers a debug ray object on the first
+mouse-motion event even though this sample sets no event callback, so `draws
+calls` reads N or N+1 depending on whether the pointer entered the window.
+
+Fill the table (averages over the steady-state windows, churn-free ones):
 
 | Metric | N=100 | N=1000 |
 | ------ | ----- | ------ |
@@ -136,8 +167,15 @@ read with `VK_QUERY_RESULT_WITH_AVAILABILITY_BIT` (never blocking).
 | `uploadwaits` | | |
 | measured FPS | | |
 
-4. Repeat with toggles that isolate audit findings: `EVAN_MULTIVIEW=off`
-   (two-pass GPU timing, per-eye), `EVAN_MSAA=4` vs `EVAN_MSAA=1` (bandwidth),
-   `EVAN_DEBUG_DISABLE_CULLING=1` (culling effect at N=1000).
-5. Record results in the instrumentation issue and under “Expected impact” in
-   [`PERFORMANCE_AUDIT_EVAN.md`](PERFORMANCE_AUDIT_EVAN.md).
+Variations worth running through the same harness (exported variables are
+inherited by the example):
+
+- `EVAN_MSAA=4` vs `EVAN_MSAA=1` — bandwidth cost of multisampling.
+- `EVAN_DEBUG_DISABLE_CULLING=1` — culling effect at N=1000.
+- `--mesh-counts "100 1000 5000"` — draw-call scaling on the same machine.
+- The OpenXR stereo build — the only configuration that gives WS4 its
+  per-view `rec` signal.
+
+Record the results in `docs/DESIGN_P3_OPTIMIZATIONS.md` §4 (“PoC results”) and
+under “Expected impact” in
+[`PERFORMANCE_AUDIT_EVAN.md`](PERFORMANCE_AUDIT_EVAN.md).
