@@ -94,7 +94,7 @@ bool evan::RenderObject::updateMeshes(
 
 	auto existingIt = _meshes.begin();
 	for (const auto &entry: rawObjects) {
-		const auto &mesh	  = entry.second;
+		const auto &mesh	= entry.second;
 		const auto &gpuMesh = *existingIt;
 
 		if (mesh.getVertices().size() != gpuMesh->getVertexCount()

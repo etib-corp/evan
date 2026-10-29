@@ -38,9 +38,8 @@ namespace xider::tests
 
 	TEST(GPUMaterial, GetDescriptorSetsReturnsConstReference)
 	{
-		EXPECT_TRUE(
-			(std::is_reference_v<decltype(
-				std::declval<const evan::GPUMaterial &>()
-					.getDescriptorSets())>));
+		EXPECT_TRUE((std::is_reference_v<
+					 decltype(std::declval<const evan::GPUMaterial &>()
+								  .getDescriptorSets())>));
 	}
 }	 // namespace xider::tests

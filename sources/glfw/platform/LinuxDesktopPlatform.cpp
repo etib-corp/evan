@@ -68,8 +68,7 @@ VkSurfaceKHR
 // Protected Methods //
 ///////////////////////
 
-std::filesystem::path
-	evan::LinuxDesktopPlatform::getDefaultCacheRoot() const
+std::filesystem::path evan::LinuxDesktopPlatform::getDefaultCacheRoot() const
 {
 	const char *xdgCache = std::getenv("XDG_CACHE_HOME");
 	if (xdgCache != nullptr && xdgCache[0] != '\0') {
