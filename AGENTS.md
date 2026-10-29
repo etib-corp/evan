@@ -10,7 +10,8 @@ EVAN is a C++ rendering/engine library for building desktop and extended reality
 - **Build system**: CMake 3.10+ (no presets; uses platform/backend options)
 - **Dependency strategy**: FetchContent (glm, stb, GoogleTest, OpenXR-SDK, GLFW, doxygen-awesome-css)
 - **Test framework**: GoogleTest via `gtest_discover_tests()`
-- **Formatter**: clang-format (LLVM-based, 80-column, tabs, 4-space indent)
+- **Formatter**: clang-format 21.1.8 (LLVM-based, 80-column, tabs, 4-space
+  indent); CI installs this exact version, so format locally with it too
 - **CI**: GitHub Actions (Linux/macOS/Windows runners, Vulkan SDK setup, Android support)
 - **Documentation**: Doxygen with doxygen-awesome-css theme
 
