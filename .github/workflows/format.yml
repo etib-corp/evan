@@ -13,10 +13,16 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v6.0.2
 
+      # Pinned version: clang-format output changes between releases, so CI and
+      # contributors must use the same one (see AGENTS.md).
       - name: Install clang-format
-        run: sudo apt-get install -y clang-format
+        run: |
+          python3 -m venv "$RUNNER_TEMP/clang-format"
+          "$RUNNER_TEMP/clang-format/bin/pip" install --quiet 'clang-format==21.1.8'
+          echo "$RUNNER_TEMP/clang-format/bin" >> "$GITHUB_PATH"
 
       - name: Check formatting
         run: |
+          clang-format --version
           ./scripts/run-clang-format.sh
-          git diff --exit-code
+          git --no-pager diff --exit-code

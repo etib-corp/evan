@@ -10,7 +10,8 @@ EVAN is a C++ rendering/engine library for building desktop and extended reality
 - **Build system**: CMake 3.10+ (no presets; uses platform/backend options)
 - **Dependency strategy**: FetchContent (glm, stb, GoogleTest, OpenXR-SDK, GLFW, doxygen-awesome-css)
 - **Test framework**: GoogleTest via `gtest_discover_tests()`
-- **Formatter**: clang-format (LLVM-based, 80-column, tabs, 4-space indent)
+- **Formatter**: clang-format 21.1.8 (LLVM-based, 80-column, tabs, 4-space
+  indent); CI installs this exact version, so format locally with it too
 - **CI**: GitHub Actions (Linux/macOS/Windows runners, Vulkan SDK setup, Android support)
 - **Documentation**: Doxygen with doxygen-awesome-css theme
 
@@ -150,3 +151,8 @@ cmake -S . -B build -DBUILD_DOCS=ON <platform/backend options>
 2. **Add a source/header pair to an existing module**: Place `.hpp` in `headers/evan/` and `.cpp` in `sources/`, follow naming conventions (`PascalCase` class, `camelCase` methods, `_` prefix for members), update namespace nesting, verify build.
 
 3. **Refactor a component to match existing error handling patterns**: Replace raw pointers with `std::unique_ptr` or `std::shared_ptr`, add `const` correctness, use `enum class` for state machines, follow class layout order (public → protected → private).
+
+## Git conventions
+
+Don't commit and don't push on any branch if it is not clearly asked by a human. Agents should only commit and push when explicitly instructed to do so.
+

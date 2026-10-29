@@ -7,6 +7,17 @@ if ! command -v clang-format &> /dev/null; then
     exit 1
 fi
 
+EXPECTED_CLANG_FORMAT_VERSION="21.1.8"
+CLANG_FORMAT_VERSION="$(clang-format --version 2>/dev/null |
+    grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
+
+# Formatting output changes between clang-format releases; warn when a local
+# binary disagrees with the version CI pins.
+if [ "$CLANG_FORMAT_VERSION" != "$EXPECTED_CLANG_FORMAT_VERSION" ]; then
+    echo "Warning: found clang-format ${CLANG_FORMAT_VERSION:-unknown}," \
+        "CI uses $EXPECTED_CLANG_FORMAT_VERSION. Output may differ."
+fi
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 

@@ -55,4 +55,6 @@ Within each section, keep this order:
 - Class and method order is consistent.
 - No obvious duplication.
 - Error handling is present where needed.
-- Formatting is clean and consistent.
+- Formatting is clean and consistent. CI pins clang-format 21.1.8, and its
+  output differs across releases, so run `./scripts/run-clang-format.sh` with
+  that version.
