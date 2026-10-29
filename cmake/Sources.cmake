@@ -43,6 +43,7 @@ set(EVAN_SOURCES_OPENXR
     sources/openxr/actions/XrManageButtonsActions.cpp
     sources/openxr/actions/XrManageThumbStickActions.cpp
     sources/openxr/platform/LinuxXrPlatform.cpp
+    sources/openxr/XrExtensions.cpp
 )
 
 set(EVAN_SOURCES_OPENXR_ANDROID

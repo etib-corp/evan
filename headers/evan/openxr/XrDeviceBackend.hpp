@@ -9,6 +9,7 @@
 
 #include "evan/openxr/IXrPlatform.hpp"
 #include "evan/openxr/OpenXrOptions.hpp"
+#include "evan/openxr/XrExtensions.hpp"
 #include "evan/openxr/XrManageActions.hpp"
 
 #include "evan/ADeviceBackend.hpp"
@@ -17,6 +18,7 @@
 #include <iostream>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
+#include <string_view>
 #include <vector>
 
 #define LEFT_HAND_INDEX	 0
@@ -377,6 +379,33 @@ namespace evan
 		 */
 		std::array<XrPath, _handCount> _handActionSubactionPath;
 
+		/**
+		 * @brief Whether an OpenXR instance extension is available.
+		 *
+		 * @param name The extension name, for example "XR_FB_passthrough".
+		 * @return True when the runtime reported the extension.
+		 */
+		[[nodiscard]] bool
+			isExtensionSupported(std::string_view name) const noexcept;
+
+		/**
+		 * @brief Whether the runtime provides a passthrough extension.
+		 *
+		 * Checks the Khronos and Meta families. AR-005 combines this with the
+		 * environment blend-mode query to answer isARSupported().
+		 *
+		 * @return True when a passthrough extension is available.
+		 */
+		[[nodiscard]] bool hasPassthroughExtension() const noexcept;
+
+		/**
+		 * @brief The cached OpenXR instance extensions.
+		 *
+		 * @return The extensions reported by the runtime at startup.
+		 */
+		[[nodiscard]] const std::vector<XrExtensionInfo> &
+			getAvailableExtensions() const noexcept;
+
 		protected:
 		/**
 		 * @brief Creates an OpenXR instance with the specified application name
@@ -554,6 +583,26 @@ namespace evan
 		std::vector<const char *> getRequiredInstanceExtensionsAndroid();
 
 		/**
+		 * @brief Retrieves the required instance extensions for Windows in the
+		 * OpenXR device backend.
+		 *
+		 * This function filters and returns a list of available Vulkan layers
+		 * that match the KHRONOS validation layer. It is specifically used to
+		 * configure the OpenXR instance with the appropriate validation layers
+		 * on Windows platforms.
+		 *
+		 */
+		std::vector<const char *> getRequiredInstanceExtensionsWindows();
+
+		/**
+		 * @brief Caches the available instance extensions.
+		 *
+		 * This method enumerates all available instance extensions and stores
+		 * them in the _availableXrExtensions member variable for later use.
+		 */
+		void cacheInstanceExtensions();
+
+		/**
 		 * The primary view configuration type selected for this OpenXR system,
 		 * chosen by enumerating the configurations supported by the runtime.
 		 */
@@ -575,5 +624,10 @@ namespace evan
 		 * platform when the backend is constructed.
 		 */
 		OpenXrOptions _openXrOptions;
+
+		/**
+		 * A list of all available OpenXR instance extensions.
+		 */
+		std::vector<XrExtensionInfo> _availableXrExtensions;
 	};
 }	 // namespace evan

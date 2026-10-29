@@ -18,6 +18,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 
 	Version appVersion(0, 1, 0);
 	createXrInstance(platform);
+	this->cacheInstanceExtensions();
 	getSystem();
 
 	const IXrPlatform &xrPlatform =
@@ -604,6 +605,25 @@ std::vector<VkExtensionProperties>
 	return extensions;
 }
 
+bool evan::XrDeviceBackend::isExtensionSupported(
+	std::string_view name) const noexcept
+{
+	return evan::XrExtensions::isExtensionSupported(_availableXrExtensions,
+													name);
+}
+
+bool evan::XrDeviceBackend::hasPassthroughExtension() const noexcept
+{
+	return isExtensionSupported("XR_KHR_composition_layer_passthrough")
+		|| isExtensionSupported("XR_FB_passthrough");
+}
+
+const std::vector<evan::XrExtensionInfo> &
+	evan::XrDeviceBackend::getAvailableExtensions() const noexcept
+{
+	return _availableXrExtensions;
+}
+
 /////////////////////
 // Private Methods //
 /////////////////////
@@ -719,4 +739,28 @@ std::vector<const char *>
 		}
 	}
 	return availableLayers;
+}
+
+void evan::XrDeviceBackend::cacheInstanceExtensions()
+{
+	XrResult result = XR_SUCCESS;
+	_availableXrExtensions =
+		evan::XrExtensions::enumerateInstanceExtensions(&result);
+
+	if (result != XR_SUCCESS) {
+		this->getLogger().error()
+			<< "Failed to enumerate OpenXR instance extensions.";
+		return;
+	}
+
+	this->getLogger().info()
+		<< "OpenXR instance extensions: " << _availableXrExtensions.size();
+
+	for (const auto &name: XrExtensions::arExtensionNames()) {
+		if (XrExtensions::isExtensionSupported(_availableXrExtensions, name)) {
+			this->getLogger().info() << "  " << name << " [available]";
+		} else {
+			this->getLogger().info() << "  " << name << " [missing]";
+		}
+	}
 }
