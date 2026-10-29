@@ -121,13 +121,15 @@ void android_main(struct android_app *android_app)
 	commandHandler.setAppState(&xrPlatform->_appState);
 	android_app->userData = &commandHandler;
 
+	xrPlatform->getOpenXrOptions().enableArExtensions = true;
+
 	// Initialize Evan engine
 	evan::Engine engine(ressourceProvider, xrPlatform);
 
 	std::shared_ptr<utility::graphic::Primitive> cubePrimitive =
 		std::make_shared<utility::graphic::Primitive>(
 			std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
-	int id = engine.addPrimitive(cubePrimitive);
+	int id = engine.createObject(cubePrimitive);
 
 	while (!android_app->destroyRequested) {
 		// Process Android events
@@ -151,7 +153,6 @@ void android_main(struct android_app *android_app)
 
 		// Application lifecycle
 		engine.update();
-		engine.addPrimitive(cubePrimitive);
 		engine.render();
 		engine.pollEvents();
 	}

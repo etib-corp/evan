@@ -5,6 +5,10 @@
         android:name="android.hardware.vr.headtracking"
         android:required="true" />
 
+    <uses-feature
+        android:name="com.oculus.feature.PASSTHROUGH"
+        android:required="true" />
+
     <application
         android:allowBackup="false"
         android:label="evan_android"
