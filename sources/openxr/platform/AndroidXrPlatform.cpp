@@ -7,6 +7,7 @@
 
 #include "evan/openxr/platform/AndroidXrPlatform.hpp"
 #include "evan/openxr/XrDeviceBackend.hpp"
+#include "evan/openxr/XrExtensions.hpp"
 
 #ifdef __ANDROID__
 	#include <jni.h>
@@ -165,13 +166,35 @@ evan::AndroidXrPlatform::AndroidXrPlatform(
 std::vector<std::string>
 	evan::AndroidXrPlatform::getRequiredInstanceExtensions() const
 {
-	std::vector<std::string> extensions = {
+	const std::vector<std::string> baseline = {
 		XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME,
 #ifdef XR_USE_PLATFORM_ANDROID
 		XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME
 #endif
 	};
-	return extensions;
+
+	if (!_options.enableArExtensions) {
+		return baseline;
+	}
+
+	const auto available = XrExtensions::enumerateInstanceExtensions();
+	if (available.empty()) {
+		this->getLogger().warning()
+			<< "Could not enumerate OpenXR instance extensions; AR "
+			   "extensions stay off.";
+		return baseline;
+	}
+
+	for (const auto name:
+		 XrExtensions::extensionsForFeatures(_options.minimumArFeatures)) {
+		if (!XrExtensions::isExtensionSupported(available, name)) {
+			this->getLogger().info() << "OpenXR AR extension " << name
+									 << " is not available; skipping.";
+		}
+	}
+
+	return XrExtensions::composeRequiredInstanceExtensions(
+		baseline, true, _options.minimumArFeatures, available);
 }
 
 const XrBaseInStructure *evan::AndroidXrPlatform::getInstanceCreateInfo() const

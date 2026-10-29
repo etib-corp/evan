@@ -713,31 +713,58 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 {
 	this->getLogger().info() << "Creating OpenXR instance for XrDeviceBackend";
 
-	std::vector<std::string> requiredExtensions =
+	const std::vector<std::string> requiredExtensions =
 		platform.getRequiredInstanceExtensions();
-	std::vector<const char *> extensions;
-	extensions.reserve(requiredExtensions.size());
-
-	for (const auto &ext: requiredExtensions) {
-		extensions.push_back(ext.c_str());
-	}
-
-	XrInstanceCreateInfo createInfo { XR_TYPE_INSTANCE_CREATE_INFO };
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.enabledExtensionNames = extensions.data();
-	createInfo.enabledApiLayerCount	 = 0;
-	createInfo.enabledApiLayerNames	 = nullptr;
-	std::strcpy(createInfo.applicationInfo.applicationName, "evan");
-	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 
 	const IXrPlatform &xrPlatform =
 		evan::checkedCast<const IXrPlatform>(platform);
 
-	createInfo.next = xrPlatform.getInstanceCreateInfo();
+	auto createInstance = [&](const std::vector<std::string> &names) {
+		std::vector<const char *> extensions;
+		extensions.reserve(names.size());
+		for (const auto &name: names) {
+			extensions.push_back(name.c_str());
+		}
 
-	XrResult result = xrCreateInstance(&createInfo, &_XrInstance);
+		XrInstanceCreateInfo createInfo { XR_TYPE_INSTANCE_CREATE_INFO };
+		createInfo.enabledExtensionCount =
+			static_cast<uint32_t>(extensions.size());
+		createInfo.enabledExtensionNames = extensions.data();
+		createInfo.enabledApiLayerCount	 = 0;
+		createInfo.enabledApiLayerNames	 = nullptr;
+		std::strcpy(createInfo.applicationInfo.applicationName, "evan");
+		createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
+		createInfo.next = xrPlatform.getInstanceCreateInfo();
+
+		return xrCreateInstance(&createInfo, &_XrInstance);
+	};
+
+	XrResult result = createInstance(requiredExtensions);
+	if (result == XR_ERROR_EXTENSION_NOT_PRESENT) {
+		this->getLogger().warning()
+			<< "The runtime rejected an AR extension; retrying without AR "
+			   "extensions.";
+
+		std::vector<std::string> vrOnly;
+		vrOnly.reserve(requiredExtensions.size());
+		for (const auto &name: requiredExtensions) {
+			if (!XrExtensions::isArExtensionName(name)) {
+				vrOnly.push_back(name);
+			}
+		}
+
+		if (vrOnly.size() != requiredExtensions.size()) {
+			result = createInstance(vrOnly);
+		}
+	} else {
+		this->getLogger().info() << "OpenXR instance extensions:";
+		for (const auto &ext: requiredExtensions) {
+			this->getLogger().info() << "[AR]  " << ext;
+		}
+	}
+
+
 	if (result != XR_SUCCESS) {
-		// TODO: Throw an exception or handle the error appropriately
 		this->getLogger().error() << "Failed to create OpenXR instance.";
 		return;
 	}
