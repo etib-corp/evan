@@ -121,7 +121,7 @@ void android_main(struct android_app *android_app)
 	commandHandler.setAppState(&xrPlatform->_appState);
 	android_app->userData = &commandHandler;
 
-	xrPlatform->getOpenXrOptions().enableArExtensions = true;
+	xrPlatform->setOptionArExtensionsEnabled(true);
 
 	// Initialize Evan engine
 	evan::Engine engine(ressourceProvider, xrPlatform);
