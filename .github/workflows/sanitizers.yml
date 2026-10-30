@@ -101,28 +101,26 @@ jobs:
             engine-backend: glfw
             operating-system: linux
             runner: ubuntu-latest
-            cxx_flags: "--coverage"
-            linker_flags: "--coverage"
+            configure_flags: "-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage"
           - name: OpenXR Linux
             engine-backend: openxr
             operating-system: linux
             runner: ubuntu-latest
-            cxx_flags: "--coverage"
-            linker_flags: "--coverage"
+            configure_flags: "-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage"
           - name: GLFW macOS
             engine-backend: glfw
             operating-system: macos
             runner: macos-latest
-            cxx_flags: "-fprofile-instr-generate -fcoverage-mapping"
-            linker_flags: "-fprofile-instr-generate"
+            configure_flags: "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping -DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
           # OpenCppCoverage instruments the MSVC debug build, so no extra
-          # compiler/linker flags are needed on Windows.
+          # compiler/linker flags are needed on Windows. The flags must stay
+          # undefined there: passing an empty CMAKE_CXX_FLAGS drops the MSVC
+          # defaults (/DWIN32 /D_WINDOWS /W3 /GR /EHsc).
           - name: GLFW Windows
             engine-backend: glfw
             operating-system: windows
             runner: windows-latest
-            cxx_flags: ""
-            linker_flags: ""
+            configure_flags: ""
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6.0.2
@@ -158,13 +156,13 @@ jobs:
           -DBUILD_FOR_WINDOWS=${{ matrix.operating-system == 'windows' }}
           -DBUILD_FOR_ANDROID=OFF
           -DBUILD_TESTING=ON
-          -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
-          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.linker_flags }}"
+          ${{ matrix.configure_flags }}
 
       - name: Build
         run: >
           cmake
           --build ${{ github.workspace }}/build
+          --config Debug
 
       - name: Run tests
         if: matrix.operating-system != 'windows'
@@ -181,10 +179,12 @@ jobs:
         run: >
           & "C:\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
           --sources ${{ github.workspace }}\sources
+          --cover_children
           --export_type cobertura:${{ github.workspace }}\coverage.xml
           --
           ctest
           --test-dir ${{ github.workspace }}\build
+          -C Debug
           --output-on-failure
 
       - name: Generate coverage report (Linux)
@@ -193,7 +193,6 @@ jobs:
           lcov
           --capture
           --directory ${{ github.workspace }}/build
-          --output-file coverage.info
           --no-external
           --ignore-errors unused
           --exclude '*/_deps/*'

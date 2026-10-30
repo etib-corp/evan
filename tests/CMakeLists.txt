@@ -51,6 +51,7 @@ target_link_libraries(test_${PROJECT_NAME} PRIVATE
     gtest_main
 )
 
-# Discover and register tests
+# Discover and register tests. Listing tests in a Windows Debug binary loads
+# the PDB and can exceed the 5 s default used by CMake.
 include(GoogleTest)
-gtest_discover_tests(test_${PROJECT_NAME})
+gtest_discover_tests(test_${PROJECT_NAME} DISCOVERY_TIMEOUT 60)
