@@ -103,13 +103,14 @@ std::vector<evan::XrExtensionInfo>
 		return {};
 	}
 
-	std::vector<XrExtensionProperties> properties(
-		count, XrExtensionProperties { XR_TYPE_EXTENSION_PROPERTIES });
+	XrExtensionProperties property {};
+	property.type = XR_TYPE_EXTENSION_PROPERTIES;
+
+	std::vector<XrExtensionProperties> properties(count, property);
 	result = xrEnumerateInstanceExtensionProperties(nullptr, count, &count,
 													properties.data());
 	if (result == XR_ERROR_SIZE_INSUFFICIENT) {
-		properties.assign(
-			count, XrExtensionProperties { XR_TYPE_EXTENSION_PROPERTIES });
+		properties.assign(count, property);
 		result = xrEnumerateInstanceExtensionProperties(nullptr, count, &count,
 														properties.data());
 	}
@@ -243,6 +244,7 @@ std::vector<std::string> evan::XrExtensions::composeRequiredInstanceExtensions(
 		}
 	}
 	return requiredExtensions;
+}
 
 evan::XrInstanceFunctions
 	evan::XrExtensions::loadInstanceFunctions(XrInstance instance,
