@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Engine::isARSupported()`, `Engine::isAREnabled()` and
   `Engine::setAREnabled()`. The engine mirrors the last successful call, and
   desktop builds report unsupported without side effects.
+- OpenXR: per-platform AR instance-extension enablement. `OpenXrOptions` now
+  exposes `enableArExtensions` and the `ArFeature` set; Android and Linux
+  request only the AR extensions the runtime reports as available and retry
+  with the VR-only list if the runtime rejects them.
+- OpenXR Android example: declare the Meta passthrough feature
+  (`com.oculus.feature.PASSTHROUGH`), enable AR extensions before creating the
+  engine, restrict the APK to `arm64-v8a`, and create the demo cube once via
+  `createObject`.
 - Frame instrumentation, off by default: `EVAN_STATS=1` enables CPU phase
   timers in `Renderer::drawFrame` (upload flush, preprocess, acquire,
   in-flight fence wait, per-view uniform/record/submit, OpenXR end-of-frame

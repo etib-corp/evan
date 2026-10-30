@@ -6,6 +6,7 @@
 */
 
 #include "evan/openxr/platform/LinuxXrPlatform.hpp"
+#include "evan/openxr/XrExtensions.hpp"
 
 #include <cstdlib>
 
@@ -21,7 +22,32 @@ evan::LinuxXrPlatform::LinuxXrPlatform()
 std::vector<std::string>
 	evan::LinuxXrPlatform::getRequiredInstanceExtensions() const
 {
-	return { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
+	const std::vector<std::string> baseline = {
+		XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME
+	};
+
+	if (!_options.enableArExtensions) {
+		return baseline;
+	}
+
+	const auto available = XrExtensions::enumerateInstanceExtensions();
+	if (available.empty()) {
+		this->getLogger().warning()
+			<< "Could not enumerate OpenXR instance extensions; AR "
+			   "extensions stay off.";
+		return baseline;
+	}
+
+	for (const auto name:
+		 XrExtensions::extensionsForFeatures(_options.minimumArFeatures)) {
+		if (!XrExtensions::isExtensionSupported(available, name)) {
+			this->getLogger().info() << "OpenXR AR extension " << name
+									 << " is not available; skipping.";
+		}
+	}
+
+	return XrExtensions::composeRequiredInstanceExtensions(
+		baseline, true, _options.minimumArFeatures, available);
 }
 
 const XrBaseInStructure *evan::LinuxXrPlatform::getInstanceCreateInfo() const
