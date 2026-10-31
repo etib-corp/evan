@@ -1,7 +1,7 @@
 # Design: P3 optimizations — data-oriented storage, frame-build scratch and advanced Vulkan features
 
-Status: partially implemented (WS1–WS3 landed on this branch;
-WS4–WS6 gated — see §9)
+Status: partially implemented (WS1–WS3 landed; WS4–WS6 measured on the
+2026-10-29 PoC and kept deferred — see §4 and §9)
 Scope: evan (`Renderer`, `RenderObject`, `GPUMesh`, `Frame`, `DeviceContext`/
 `ADeviceBackend`, `TransferManager`); guillaume/xider only through the
 unchanged public `Engine` API (plus opt-in shader artifacts for the bindless
@@ -272,10 +272,12 @@ approval (shader contract + descriptor layout).
 Order: **WS3 → WS1 → WS2** (ungated, internal) → **WS4 / WS5 / WS6** on their
 triggers.
 
-Pre-requisite for any gate decision: run the audit’s N=100/1000 PoC on the
-now-merged instrumentation (v2026.1.4) with `EVAN_STATS` (and
-`EVAN_STATS_GPU` where supported), plus a RenderDoc capture for the GPU side —
-the `docs/PROFILING.md` runbook describes the procedure. The trigger table:
+Gate decision: run the audit’s N=100/1000 PoC on the now-merged
+instrumentation (v2026.1.4) with `EVAN_STATS` (and `EVAN_STATS_GPU` where
+supported), plus a RenderDoc capture for the GPU side — the
+`docs/PROFILING.md` runbook describes the procedure. It has been run for the
+desktop single-view build (results and decisions below); the XR stereo run
+that WS4 needs is still missing. The trigger table:
 
 | Workstream | Trigger metric (P2-02) | Proposed threshold | If not met |
 | ---------- | ---------------------- | ------------------ | ---------- |
@@ -473,6 +475,13 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   created with `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` so
   `GPUMaterial` may free its sets, and `Engine::setObjectTransform()` returns
   `false` for an unknown object instead of dereferencing null. Validation runs
-  are clean and `run-poc.sh` finishes with no aborts.
-- **WS4–WS6: not started**, gated on the PoC measurements (§4); the desktop
-  run of 2026-10-29 triggers none of them.
+  are clean and `run-poc.sh` finishes with no aborts. The `Renderer.cpp` part
+  of this list (static `VK_CULL_MODE_NONE`, no `VK_DYNAMIC_STATE_CULL_MODE`,
+  pool free flag) was dropped by the #170 merge and re-applied on
+  2026-10-31; the build now reports zero validation errors at N=100.
+- **WS4–WS6: not started, kept deferred by the 2026-10-29 PoC (§4).** The
+  desktop run triggers none of the three: WS4 stays serial (its trigger needs
+  an XR stereo per-view `rec`), WS5 stays on binary fences (`wait` 0.02 ms,
+  one submission per frame), WS6 stays per-material (`ds` = 1 per frame at
+  both N). Reopening one of them requires the measurement named in the
+  trigger table, not a code change.
