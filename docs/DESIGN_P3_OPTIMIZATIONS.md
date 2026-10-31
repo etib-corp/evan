@@ -289,7 +289,7 @@ to add with the existing Google Benchmark setup.
 
 ### PoC results (macOS / MoltenVK, 2026-10-29)
 
-Harness: `scripts/run-poc.sh` on `examples/GLFW-macos-base` with
+Harness: `scripts/run-poc.sh` on `examples/GLFW-macos-poc` with
 `EVAN_POC_MESHES=N` (one shared local-space cube mesh, one `Primitive` per
 object, placed on a grid through `Engine::setObjectTransform`) and
 `EVAN_POC_FRAMES` for a reproducible run, `EVAN_STATS=1
@@ -453,7 +453,8 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   is gone. Validation: 9 new `ObjectRegistryTest` unit tests (reuse,
   stale-handle rejection, iteration order, 10k-op stress) plus the full
   suite (364/364).
-- **PoC harness: added (2026-10-29).** `examples/GLFW-macos-base` gained the
+- **PoC harness: added (2026-10-29).** The dedicated
+  `examples/GLFW-macos-poc` / `examples/GLFW-linux-poc` examples gained the
   `EVAN_POC_MESHES` / `EVAN_POC_FRAMES` knobs and the missing `shaders/`
   assets (the mesh shader now consumes the per-instance model matrix, so
   transformed meshes are actually drawn), and `scripts/run-poc.sh` runs the

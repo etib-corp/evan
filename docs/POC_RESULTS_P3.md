@@ -10,7 +10,7 @@ Date: 2026-10-29 (numbers re-recorded after the shutdown/validation fixes
 described in §7; the first record of the same day was taken on the pre-fix
 build and is superseded)
 Harness: [`scripts/run-poc.sh`](../scripts/run-poc.sh)
-Workload: [`examples/GLFW-macos-base`](../examples/GLFW-macos-base) with
+Workload: [`examples/GLFW-macos-poc`](../examples/GLFW-macos-poc) with
 `EVAN_POC_MESHES=100` / `EVAN_POC_MESHES=1000`
 
 ## 1. Environment

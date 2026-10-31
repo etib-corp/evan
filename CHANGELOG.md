@@ -63,11 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   two-pass path stays as the transparent fallback. See
   `docs/DESIGN_MULTIVIEW.md`.
 
-- P3 proof-of-concept harness: `examples/GLFW-macos-base` accepts
-  `EVAN_POC_MESHES=N` (one shared local-space cube mesh, one `Primitive` per
-  object, placed on a grid through `Engine::setObjectTransform`) and
-  `EVAN_POC_FRAMES=M` (stop after M frames), both off by default, and ships
-  the `shaders/` directory the engine loads. `scripts/run-poc.sh` runs the
+- P3 proof-of-concept harness: the new `examples/GLFW-macos-poc` and
+  `examples/GLFW-linux-poc` examples accept `EVAN_POC_MESHES=N` (one shared
+  local-space cube mesh, one `Primitive` per object, placed on a grid through
+  `Engine::setObjectTransform`) and `EVAN_POC_FRAMES=M` (stop after M frames),
+  both off by default, and ship the `shaders/` directory the engine loads.
+  The `*-base` examples stay free of the workload. `scripts/run-poc.sh` runs the
   N=100/N=1000 workload with `EVAN_STATS`, drops the warm-up windows and
   reports the fields the WS4–WS6 trigger table needs. Results are recorded in
   `docs/DESIGN_P3_OPTIMIZATIONS.md` §4.

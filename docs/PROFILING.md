@@ -113,7 +113,7 @@ read with `VK_QUERY_RESULT_WITH_AVAILABILITY_BIT` (never blocking).
 
 ## 6. PoC recipe — N=100 vs N=1000
 
-The `GLFW-macos-base` example ships the workload and `scripts/run-poc.sh`
+The `GLFW-macos-poc` example ships the workload and `scripts/run-poc.sh`
 drives it, so the whole run is one command:
 
 ```sh
@@ -134,10 +134,10 @@ Run it by hand with the same knobs:
 | `EVAN_POC_FRAMES` | `0` | Stop after that many frames and exit (`0` runs until the window is closed). Needed for a reproducible run that flushes its log. |
 
 ```sh
-cd build/examples/GLFW-macos-base
+cd build/examples/GLFW-macos-poc
 EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
   EVAN_POC_MESHES=1000 EVAN_POC_FRAMES=420 \
-  UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-base
+  UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-poc
 ```
 
 `UTILITY_LOG_LEVEL=info` matters in release builds (which suppress `info`)
