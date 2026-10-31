@@ -20,17 +20,8 @@
  SOFTWARE.
  */
 
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
 #include <cstdint>
-#include <cstdlib>
-#include <exception>
 #include <iostream>
-#include <memory>
-#include <vector>
-
-#include <glm/gtc/matrix_transform.hpp>
 
 #include <evan/glfw/platform/LinuxDesktopPlatform.hpp>
 
@@ -38,54 +29,20 @@
 
 #include <utility/graphic/color.hpp>
 #include <utility/graphic/mesh.hpp>
+#include <utility/graphic/position.hpp>
 #include <utility/graphic/primitive.hpp>
 #include <utility/graphic/vertex.hpp>
 
 namespace
 {
 	/**
-	 * @brief Reads an unsigned count from an environment variable.
-	 *
-	 * Unset, empty or invalid values fall back to @p fallback, so the PoC
-	 * knobs stay opt-in and the example keeps its default behavior.
-	 *
-	 * @param name Environment variable name.
-	 * @param fallback Value used when the variable is absent or invalid.
-	 * @return The parsed count, or @p fallback.
+	 * @brief Builds a plain white cube placed in front of the viewer.
+	 * @return A mesh for the cube, with vertices already in world space.
 	 */
-	std::size_t readCountEnv(const char *name, std::size_t fallback)
-	{
-		const char *value = std::getenv(name);
-
-		if (value == nullptr || value[0] == '\0') {
-			return fallback;
-		}
-
-		try {
-			const long long parsed = std::stoll(value);
-
-			if (parsed < 0) {
-				return fallback;
-			}
-			return static_cast<std::size_t>(parsed);
-		} catch (const std::exception &) {
-			std::cerr << "Ignoring invalid " << name << "=" << value << '\n';
-			return fallback;
-		}
-	}
-
-	/**
-	 * @brief Builds a plain white cube centered on the origin.
-	 *
-	 * The geometry stays in local space: the transform uploaded by
-	 * Engine::setObjectTransform places it, which is what the
-	 * EVAN_POC_MESHES workload exercises.
-	 *
-	 * @return A mesh for the cube, in local space.
-	 */
-	utility::graphic::Mesh buildUnitCubeMesh()
+	utility::graphic::Mesh buildWhiteCubeMesh()
 	{
 		constexpr float half = 0.5f;
+		const utility::graphic::PositionF center(5.0f, 5.0f, 0.0f);
 		const utility::graphic::Color32Bit white(255, 255, 255, 255);
 
 		utility::graphic::Mesh mesh(std::vector<utility::graphic::VertexF> {},
@@ -93,7 +50,8 @@ namespace
 
 		const auto addVertex = [&](float x, float y, float z) {
 			utility::graphic::VertexF vertex;
-			vertex.setPosition(utility::graphic::PositionF(x, y, z));
+			vertex.setPosition(utility::graphic::PositionF(
+				center.x + x, center.y + y, center.z + z));
 			vertex.setColor(white);
 			mesh.addVertex(vertex);
 		};
@@ -121,82 +79,10 @@ namespace
 
 		return mesh;
 	}
-
-	/**
-	 * @brief Registers @p count cubes on a grid in front of the camera.
-	 *
-	 * Every object owns its registry entry, its own GPUMesh (two device
-	 * allocations: vertex and index buffer) and its own draw call, which is
-	 * the workload the P3 proof of concept measures. The grid is sized from
-	 * the live view so that every cube stays inside the frustum at both
-	 * N=100 and N=1000.
-	 *
-	 * @param engine Engine that receives the objects.
-	 * @param count Number of cubes to spawn (0 leaves the scene empty).
-	 */
-	void spawnCubeGrid(evan::Engine &engine, std::size_t count)
-	{
-		if (count == 0) {
-			return;
-		}
-
-		// One cube edge plus one cube of gap between neighbours.
-		constexpr float spacing	  = 2.0f;
-		constexpr float gridUsage = 0.85f;
-
-		const auto view		= engine.getView();
-		const auto viewport = view.getViewportSize();
-		const float aspect = viewport.y > 0.0f ? viewport.x / viewport.y : 1.0f;
-		float tanHalfVertical = std::tan(view.getVerticalFovRadians() * 0.5f);
-
-		if (tanHalfVertical <= 0.0f) {
-			tanHalfVertical = 1.0f;
-		}
-
-		const auto columns = static_cast<std::size_t>(
-			std::ceil(std::sqrt(static_cast<double>(count))));
-		const auto rows = (count + columns - 1) / columns;
-
-		const float halfWidth  = static_cast<float>(columns) * spacing * 0.5f;
-		const float halfHeight = static_cast<float>(rows) * spacing * 0.5f;
-		const float distance   = std::max(
-			  view.getNearPlane() * 2.0f,
-			  std::max(halfWidth / (gridUsage * tanHalfVertical * aspect),
-					   halfHeight / (gridUsage * tanHalfVertical)));
-
-		const utility::graphic::Mesh cubeMesh = buildUnitCubeMesh();
-
-		for (std::size_t index = 0; index < count; ++index) {
-			const auto cube = std::make_shared<utility::graphic::Primitive>(
-				std::vector<utility::graphic::Mesh> { cubeMesh });
-			const std::size_t objectID = engine.createObject(cube);
-
-			const auto column = static_cast<float>(index % columns);
-			const auto row	  = static_cast<float>(index / columns);
-			const float x =
-				(column - (static_cast<float>(columns) - 1.0f) * 0.5f)
-				* spacing;
-			const float y =
-				(row - (static_cast<float>(rows) - 1.0f) * 0.5f) * spacing;
-
-			engine.setObjectTransform(
-				objectID,
-				glm::translate(glm::mat4(1.0f), glm::vec3(x, y, -distance)));
-		}
-
-		std::cout << "PoC workload: " << count << " cubes on a " << columns
-				  << "x" << rows << " grid at z=-" << distance << '\n';
-	}
 }	 // namespace
 
 int main(void)
 {
-	// PoC knobs: both default to 0, which keeps the previous behavior (empty
-	// scene, run until the window is closed). EVAN_POC_FRAMES gives a run a
-	// fixed frame budget, which makes the report windows reproducible.
-	const std::size_t meshCount = readCountEnv("EVAN_POC_MESHES", 0);
-	const std::size_t maxFrames = readCountEnv("EVAN_POC_FRAMES", 0);
-
 	auto platform =
 		std::make_shared<evan::LinuxDesktopPlatform>("linux base", 800, 600);
 
@@ -206,23 +92,25 @@ int main(void)
 
 	evan::Engine engine(ressourceProvider, platform);
 
-	spawnCubeGrid(engine, meshCount);
+	auto cubePrimitive = std::make_shared<utility::graphic::Primitive>(
+		std::vector<utility::graphic::Mesh> { buildWhiteCubeMesh() });
+	engine.createObject(cubePrimitive);
 
-	std::size_t frame = 0;
+	utility::graphic::PoseF pose(
+		utility::graphic::PositionF(0.0f, 0.0f, -1.0f),
+		utility::graphic::OrientationF(0.0f, 0.0f, 0.0f, 1.0f));
+	std::shared_ptr<utility::graphic::Text> text =
+		std::make_shared<utility::graphic::Text>(
+			ressourceProvider, pose,
+			utility::graphic::Color32Bit(255, 255, 255, 255), "Hello World!",
+			24, "fonts/Roboto-Regular.ttf");
+
+	engine.createObject(text);
 
 	while (!platform->shouldClose()) {
 		engine.update();
 		engine.render();
 		engine.pollEvents();
-
-		++frame;
-		if (maxFrames != 0 && frame >= maxFrames) {
-			break;
-		}
 	}
-
-	// The teardown path can abort (pre-existing engine-side cleanup), so flush
-	// the buffered report before the destructors run.
-	std::cout.flush();
 	return 0;
 }
