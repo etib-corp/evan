@@ -2,14 +2,13 @@
 #
 # run-poc.sh -- P3 proof-of-concept harness (issue #120, WS4/WS5/WS6 gate).
 #
-# Runs the macOS GLFW example with EVAN_POC_MESHES=N for each N, collects the
-# `evan stats:` report windows emitted by the P2-02 instrumentation and prints
-# the averaged fields the trigger table in docs/DESIGN_P3_OPTIMIZATIONS.md §4
-# needs (rec, submit, wait, ubo, pres, gpu pass0, draws calls/pso/ds,
-# mesh_churn, uploadwaits).
+# Runs the macOS GLFW PoC example with EVAN_POC_MESHES=N for each N, collects
+# the `evan stats:` report windows emitted by the P2-02 instrumentation and
+# prints the averaged fields the trigger table in
+# docs/DESIGN_P3_OPTIMIZATIONS.md §4 needs (rec, submit, wait, ubo, pres,
+# gpu pass0, draws calls/pso/ds, mesh_churn, uploadwaits).
 #
-# The example exposes two opt-in workload knobs; both default to "off", so its
-# normal behavior is unchanged:
+# The example exposes two workload knobs:
 #   EVAN_POC_MESHES=N   number of cubes to spawn (default 0 = empty scene)
 #   EVAN_POC_FRAMES=M   stop after M frames and exit (default 0 = until close)
 #
@@ -23,8 +22,8 @@
 # Options:
 #   --build-root DIR      CMake build directory (default: <repo>/build)
 #   --example-dir DIR     Example binary directory
-#                         (default: <build-root>/examples/GLFW-macos-base)
-#   --exe NAME            Executable name (default: GLFW-macos-base)
+#                         (default: <build-root>/examples/GLFW-macos-poc)
+#   --exe NAME            Executable name (default: GLFW-macos-poc)
 #   --mesh-counts "A B"   Object counts to run (default: "100 1000")
 #   --interval N          EVAN_STATS_INTERVAL, frames per window (default: 60)
 #   --warmup N            Windows to discard as warm-up (default: 2)
@@ -60,7 +59,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 BUILD_ROOT="$REPO_ROOT/build"
 EXAMPLE_DIR=""
-EXE_NAME="GLFW-macos-base"
+EXE_NAME="GLFW-macos-poc"
 MESH_COUNTS="100 1000"
 INTERVAL=60
 WARMUP_WINDOWS=2
@@ -208,7 +207,7 @@ for count in $MESH_COUNTS; do
 done
 
 if [ -z "$EXAMPLE_DIR" ]; then
-	EXAMPLE_DIR="$BUILD_ROOT/examples/GLFW-macos-base"
+	EXAMPLE_DIR="$BUILD_ROOT/examples/GLFW-macos-poc"
 fi
 if [ -z "$OUT_DIR" ]; then
 	OUT_DIR="$BUILD_ROOT/poc-results/$(date -u +%Y%m%dT%H%M%SZ)"
