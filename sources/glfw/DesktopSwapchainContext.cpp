@@ -58,7 +58,10 @@ void evan::DesktopSwapchainContext::destroy(VkDevice device)
 
 	this->getLogger().info()
 		<< "Destroying render pass for DesktopSwapchainContext...";
-	vkDestroyRenderPass(device, _renderPass, nullptr);
+	if (_renderPass != VK_NULL_HANDLE) {
+		vkDestroyRenderPass(device, _renderPass, nullptr);
+		_renderPass = VK_NULL_HANDLE;
+	}
 
 	this->getLogger().info()
 		<< "Destroying swapchain images for DesktopSwapchainContext...";

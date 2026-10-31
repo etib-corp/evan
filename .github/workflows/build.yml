@@ -84,10 +84,12 @@ jobs:
       - name: Build
         run: >
           cmake --build ${{ github.workspace }}/build
+          --config Debug
 
       - name: Run tests
         if: matrix.operating-system != 'android'
         run: >
           ctest
           --test-dir ${{ github.workspace }}/build
+          --build-config Debug
           --output-on-failure

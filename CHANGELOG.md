@@ -85,6 +85,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   two-pass path stays as the transparent fallback. See
   `docs/DESIGN_MULTIVIEW.md`.
 
+- P3 proof-of-concept harness: the new `examples/GLFW-macos-poc` and
+  `examples/GLFW-linux-poc` examples accept `EVAN_POC_MESHES=N` (one shared
+  local-space cube mesh, one `Primitive` per object, placed on a grid through
+  `Engine::setObjectTransform`) and `EVAN_POC_FRAMES=M` (stop after M frames),
+  both off by default, and ship the `shaders/` directory the engine loads.
+  The `*-base` examples stay free of the workload. `scripts/run-poc.sh` runs the
+  N=100/N=1000 workload with `EVAN_STATS`, drops the warm-up windows and
+  reports the fields the WS4–WS6 trigger table needs. Results are recorded in
+  `docs/DESIGN_P3_OPTIMIZATIONS.md` §4.
+- The example mesh shader consumes the per-instance model matrix (attributes
+  3–6) instead of relying on the always-identity `ubo.model`, so
+  `Engine::setObjectTransform` now visibly places geometry. Rebuilt SPIR-V is
+  shipped for both GLFW examples.
+
 ### Changed
 
 - The per-view uniform block is now `model` followed by `views[2]` (one
@@ -116,6 +130,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on OpenXR), with an opt-in `Engine::setTargetFps()` limiter.
 - Desktop swapchains now prefer `VK_PRESENT_MODE_FIFO_KHR` (vsync) over
   `VK_PRESENT_MODE_MAILBOX_KHR` so the loop is paced by default.
+
+### Fixed
+
+- Desktop shutdown could abort the process with an uncaught
+  `std::system_error: mutex lock failed`. `DesktopSwapchainImage` never
+  captured the logical device, so its `cleanup()` returned early and the
+  swapchain, image views, framebuffers and color/depth resources outlived
+  `vkDestroyDevice`; MoltenVK presentation callbacks then touched the
+  destroyed device. The device is captured at construction, `destroy()` falls
+  back to its argument, and the render pass handle is reset. Validation runs
+  no longer report leaked objects (`VUID-vkDestroyDevice-device-05137`).
+- Graphics pipelines declared `VK_DYNAMIC_STATE_CULL_MODE` without enabling
+  `VK_EXT_extended_dynamic_state`/Vulkan 1.3 and never called
+  `vkCmdSetCullMode`, so the cull state was undefined at draw time
+  (`VUID-VkGraphicsPipelineCreateInfo-pDynamicStates-03378`,
+  `VUID-vkCmdDrawIndexed-None-07840`). Culling is now part of the static
+  pipeline state and disabled, because the projection flips Y for Vulkan.
+- The descriptor pool is created with
+  `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT`; `GPUMaterial` frees its
+  sets individually, which the spec only allows for such a pool
+  (`VUID-vkFreeDescriptorSets-descriptorPool-00312`).
+- `Engine::setObjectTransform()` returns `false` for an unknown object instead
+  of dereferencing a null `RenderObject`.
 
 ## [1.0.0] - 2025-08-21
 

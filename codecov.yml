@@ -1,0 +1,8 @@
+# OpenCppCoverage emits absolute Windows paths in the Cobertura report
+# (e.g. D:\a\evan\evan\sources\Renderer.cpp). Codecov normalizes separators to
+# "/" before applying these rules, so they reduce the CI workspace prefix to a
+# repo-relative path. Linux/macOS reports already use repo-relative paths and
+# are unaffected.
+fixes:
+  - "D:/a/evan/evan/::"
+  - "a/evan/evan/::"
