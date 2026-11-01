@@ -105,6 +105,46 @@ EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
   UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-linux-poc
 ```
 
+## GLFW-stress
+
+The stress harness behind `scripts/run-stress.sh` and
+`docs/STRESS_TESTING.md`. It measures one configuration and prints a
+machine-readable `evan stress:` record (frame rate, frame-time percentiles,
+draw calls, pipeline/descriptor binds, culling, CPU phases, GPU pass time).
+It builds on macOS, Linux and Windows from the same source.
+
+| Flag | Default | Meaning |
+| ---- | ------- | ------- |
+| `--meshes N` | `1000` | Cubes to spawn: one `GPUMesh` and one draw call each, on a grid fitted to the view. |
+| `--pipelines K` | `1` | Distinct pipelines the scene draws through. The harness registers K-1 extra shader modules (copies of the mesh SPIR-V) and cycles the objects over them. |
+| `--frames F` | `300` | Measured frames. |
+| `--warmup W` | `60` | Warm-up frames, excluded from the record. |
+| `--instancing on\|off`, `--indirect on\|off`, `--culling on\|off` | `off`/`off`/`on` | Renderer batching and culling switches. |
+| `--present-mode M` | `fifo` | `fifo`, `mailbox`, `immediate` or `auto` (`EVAN_PRESENT_MODE`); uncapped modes are what a throughput benchmark needs. |
+| `--csv FILE` | unset | Append one CSV row per run. |
+
+### Building
+
+```sh
+cmake -S . -B build \
+  -DBUILD_FOR_GLFW=ON \
+  -DBUILD_FOR_MACOS=ON \
+  -DBUILD_EXAMPLES=ON
+cmake --build build --target GLFW-stress
+```
+
+### Running
+
+```sh
+cd build/examples/GLFW-stress
+NO_COLOR=1 UTILITY_LOG_LEVEL=warning ./GLFW-stress \
+  --meshes 2000 --pipelines 4 --frames 240 --warmup 60 \
+  --present-mode mailbox
+```
+
+`scripts/run-stress.sh` sweeps this example and solves the mesh and pipeline
+limits for a set of frame-rate thresholds; see `docs/STRESS_TESTING.md`.
+
 ## GLFW-windows-base
 
 A minimal GLFW desktop sample that runs on Windows. It creates a

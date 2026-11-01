@@ -11,6 +11,9 @@ if(BUILD_EXAMPLES)
     add_subdirectory(GLFW-macos-poc)
     add_subdirectory(GLFW-linux-poc)
 
+    # Stress harness driven by scripts/run-stress.sh (docs/STRESS_TESTING.md).
+    add_subdirectory(GLFW-stress)
+
     if(BUILD_OPENXR)
         add_subdirectory(OpenXR-android-base)
         add_subdirectory(OpenXR-linux-base)
