@@ -217,9 +217,13 @@ namespace evan
 		 * the mesh. This parameter allows for flexibility in specifying the
 		 * material properties to be applied to the mesh during rendering.
 		 * @param shader The name of the shader to be used for rendering the
-		 * mesh. This parameter allows for flexibility in specifying the shader
-		 * program to be used for rendering the mesh, enabling different visual
-		 * effects and rendering techniques to be applied to the mesh.
+		 * mesh. When it differs from the shader the material is bound to, the
+		 * engine creates (once per material/shader pair) a material variant
+		 * that keeps the material's textures but records with that shader's
+		 * pipeline. An unknown name logs a warning and keeps the material's
+		 * own shader. Every shader named here must be loaded before the
+		 * Engine is constructed, because the Renderer creates one pipeline per
+		 * loaded shader at construction.
 		 * @return The unique identifier (size_t) of the added mesh within the
 		 * renderer, which can be used for future reference or manipulation of
 		 * the mesh in the renderer.
@@ -324,6 +328,16 @@ namespace evan
 		 * @return The current frame statistics of the renderer.
 		 */
 		[[nodiscard]] const FrameStats &getFrameStats() const;
+
+		/**
+		 * @brief Starts a new frame-statistics window.
+		 *
+		 * Clears the accumulated CPU phase samples, counters and GPU pass
+		 * times of the renderer while keeping the enabled/available flags.
+		 * Benchmarks call it once their warm-up frames are done so the
+		 * reported window only covers the measured frames.
+		 */
+		void resetFrameStats() noexcept;
 
 		/**
 		 * @brief Set the scissor (clip) rectangle, in framebuffer pixels.

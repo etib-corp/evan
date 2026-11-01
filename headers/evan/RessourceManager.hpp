@@ -109,6 +109,29 @@ namespace evan
 		void sync(bool refresh = false);
 
 		/**
+		 * @brief Creates, or returns, a material bound to a specific shader.
+		 *
+		 * The variant shares @p sourceMaterialID's CPU-side textures and alpha
+		 * mode but records its draws with the pipeline of @p shaderName. It is
+		 * the mechanism behind the per-mesh shader selection of
+		 * Engine::addMesh, and lets a workload render one surface through
+		 * several pipelines (shader permutations, benchmarks).
+		 *
+		 * Variants are cached per (source material, shader) pair, so repeated
+		 * calls return the same id and do not allocate another GPU material.
+		 * Variant ids are allocated above the provider's id range, so they
+		 * never collide with a provider material.
+		 *
+		 * @param sourceMaterialID Material id in the resource provider.
+		 * @param shaderName Shader name resolvable by the provider (see
+		 * utility::RessourceProvider::getShaderID).
+		 * @return The variant material id, or 0 when the renderer is not bound
+		 * yet, or the source material or the shader does not exist.
+		 */
+		uint32_t createMaterialVariant(uint32_t sourceMaterialID,
+									   const std::string &shaderName);
+
+		/**
 		 * @brief Releases every cached GPU wrapper owned by this manager.
 		 *
 		 * Clears the material, texture and shader caches. With the wrappers
@@ -228,5 +251,27 @@ namespace evan
 		 * synchronized".
 		 */
 		bool _synchronized = false;
+
+		/**
+		 * @brief First id handed out to a material variant.
+		 *
+		 * Provider ids are small sequential counters, so the high half of the
+		 * id space is reserved for variants; createMaterialVariant() still
+		 * skips an id that is already taken.
+		 */
+		static constexpr uint32_t kFirstMaterialVariantID = 0x80000000u;
+
+		/**
+		 * @brief Cache of the variants created by createMaterialVariant().
+		 *
+		 * The key packs the source material id in the high 32 bits and the
+		 * shader id in the low 32 bits.
+		 */
+		std::unordered_map<uint64_t, uint32_t> _materialVariants;
+
+		/**
+		 * @brief Next candidate id for a material variant.
+		 */
+		uint32_t _nextMaterialVariantID = kFirstMaterialVariantID;
 	};
 }	 // namespace evan

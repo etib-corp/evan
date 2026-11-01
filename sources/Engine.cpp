@@ -182,6 +182,33 @@ size_t evan::Engine::addMesh(const utility::graphic::Mesh &mesh,
 							 const std::string &shader)
 {
 	auto material_id = _ressourceProvider->getMaterialID(materialName);
+
+	// The provider binds a material to the shader named after its type; an
+	// explicit shader name is honoured through a cached material variant that
+	// shares the same textures but records with the requested pipeline.
+	if (material_id != 0 && !shader.empty()) {
+		const auto &materials = _ressourceProvider->getMaterials();
+		const auto materialIt = materials.find(material_id);
+		const std::string boundShader =
+			materialIt != materials.end() && materialIt->second
+			? materialIt->second->getShaderName()
+			: std::string();
+
+		if (boundShader != shader) {
+			const uint32_t variantID =
+				_ressourceManager->createMaterialVariant(material_id, shader);
+
+			if (variantID != 0) {
+				material_id = variantID;
+			} else {
+				this->getLogger().warning()
+					<< "Shader '" << shader
+					<< "' could not be bound to material '" << materialName
+					<< "'; drawing with its material shader.";
+			}
+		}
+	}
+
 	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 	rawObjects.emplace(material_id, mesh);
 	std::shared_ptr<RenderObject> renderObject =
@@ -791,6 +818,13 @@ float evan::Engine::getDeltaTime(void) const
 const evan::FrameStats &evan::Engine::getFrameStats() const
 {
 	return _renderer->getStats();
+}
+
+void evan::Engine::resetFrameStats() noexcept
+{
+	if (_renderer) {
+		_renderer->resetStats();
+	}
 }
 
 void evan::Engine::setScissor(const utility::graphic::ScissorRect &rect)

@@ -174,10 +174,11 @@ namespace evan
 		 *
 		 * This function selects the most suitable present mode for the
 		 * swapchain from the list of available present modes provided by the
-		 * physical device. FIFO (vsync) is preferred so the loop is paced by
-		 * presentation and does not spin at unbounded frame rates; MAILBOX may
-		 * be chosen by callers that explicitly opt into an uncapped present
-		 * mode.
+		 * physical device. FIFO (vsync) is the default so the loop is paced by
+		 * presentation and does not spin at unbounded frame rates; the
+		 * EVAN_PRESENT_MODE environment variable opts into MAILBOX, IMMEDIATE
+		 * or AUTO for throughput benchmarks. A request the surface cannot
+		 * honour falls back to FIFO.
 		 *
 		 * @param availablePresentModes A vector of VkPresentModeKHR values
 		 * representing the present modes supported by the physical device. The
