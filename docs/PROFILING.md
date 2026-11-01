@@ -3,7 +3,10 @@
 This page is the measurement runbook referenced by
 [`DESIGN_INSTRUMENTATION.md`](DESIGN_INSTRUMENTATION.md): how to use the
 built-in frame statistics, how to confirm findings with external GPU tools,
-and how to reproduce the N=100 / N=1000 proof-of-concept runs.
+and how to reproduce the N=100 / N=1000 proof-of-concept runs. To find the
+engine's actual limits (mesh count and pipeline count per frame-rate
+threshold), see [`STRESS_TESTING.md`](STRESS_TESTING.md) and
+`scripts/run-stress.sh`.
 
 ## 1. Built-in frame statistics (`EVAN_STATS`)
 

@@ -64,6 +64,10 @@ cmake -S . -B build -DBUILD_TESTING=ON <platform/backend options>
 
 # Build documentation
 cmake -S . -B build -DBUILD_DOCS=ON <platform/backend options>
+
+# Find the engine limits (meshes/pipelines per fps threshold; needs a
+# desktop session, so not for CI)
+scripts/run-stress.sh --quick
 ```
 
 ## C++ conventions for agents
