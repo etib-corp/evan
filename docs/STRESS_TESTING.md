@@ -154,12 +154,19 @@ Use `--present-mode mailbox` (the script default) on Linux and Windows to
 measure the throughput ceiling above the refresh rate, and read `rec_ms` +
 `gpu_ms` against the frame budget when the rate plateaus.
 
-## 5. Recorded example run
+## 5. Recorded runs
+
+Two runs are recorded: a macOS laptop whose display paces the frame rate, and
+a Linux desktop measured in `mailbox`, above the refresh rate. Numbers are
+illustrative and machine-specific; compare runs only on the same machine and
+in the same present mode.
+
+### macOS 27.2 / MoltenVK (Apple M3)
 
 Machine: Apple M3, macOS 27.2, MoltenVK (Metal 4), 800×600, single view,
 `EVAN_MSAA=1`, debug build with validation, culling on, instancing off,
 indirect off. The built-in panel is 120 Hz, so 120 fps is the measurable
-ceiling on this machine. Numbers are illustrative and machine-specific.
+ceiling on this machine.
 
 Mesh sweep at one pipeline (`--frames 120 --warmup 30`; `fps` is the mean
 frame rate of the measured frames):
@@ -188,6 +195,65 @@ Interpretation: recording dominates (`rec_ms` follows the mesh count while
 `gpu_ms` stays under 3 ms), and pipeline count mostly buys state switching
 (771 binds per frame at 32 pipelines with the front-to-back sort) rather than
 GPU work. Both are the signals a limit sweep is supposed to expose.
+
+### Linux x86_64 desktop (`mailbox`)
+
+Full sweep with the script defaults (240 measured frames after 60 warm-up
+frames per probe, culling on, instancing off, indirect off, search bound
+`131072` meshes / `32` pipelines), 800×600, single view, present mode
+`mailbox`. Host: `Linux 7.1.5-76070105-generic / x86_64`; recorded
+2026-11-05. Nothing paces the frame rate here, so these are throughput limits
+and sit far above any refresh rate.
+
+| Threshold | Max meshes (1 pipeline) | FPS at limit (p50) | Max pipelines (1000 meshes) | FPS at limit (p50) |
+| --- | --- | --- | --- | --- |
+| 120 fps | 14848 | 123.73 | 32 | 1365.52 |
+| 100 fps | 17408 | 100.20 | 32 | 1365.52 |
+| 75 fps | 22528 | 75.76 | 32 | 1365.52 |
+| 60 fps | 25600 | 67.68 | 32 | 1365.52 |
+| 30 fps | 38912 | 37.76 | 32 | 1365.52 |
+| 24 fps | 47104 | 28.42 | 32 | 1365.52 |
+
+Indicators at the mesh limit:
+
+| Threshold | meshes | FPS | p50 (ms) | p95 (ms) | draws | pso | ds | vis | culled | rec (ms) | gpu (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 120 fps | 14848 | 123.73 | 8.08 | 8.95 | 14848 | 1 | 1 | 14848 | 0 | 7.72 | 6.68 |
+| 100 fps | 17408 | 100.20 | 9.98 | 10.86 | 17408 | 1 | 1 | 17408 | 0 | 9.50 | 7.93 |
+| 75 fps | 22528 | 75.76 | 13.20 | 14.37 | 22528 | 1 | 1 | 22528 | 0 | 12.63 | 10.42 |
+| 60 fps | 25600 | 67.68 | 14.78 | 15.75 | 25600 | 1 | 1 | 25600 | 0 | 14.09 | 11.83 |
+| 30 fps | 38912 | 37.76 | 26.48 | 36.06 | 38912 | 1 | 1 | 38912 | 0 | 27.44 | 17.49 |
+| 24 fps | 47104 | 28.42 | 35.19 | 44.57 | 47104 | 1 | 1 | 47104 | 0 | 35.64 | 21.22 |
+
+Indicators at the pipeline limit: every threshold is solved by the same cached
+probe, `1000` meshes with `32` pipelines — 1365.52 fps (p50), p50 0.73 ms,
+p95 1.07 ms, 1000 draws, 418 pipeline and 418 descriptor binds per frame,
+`vis` 1000, `culled` 0, `rec` 0.60 ms, `gpu` 0.44 ms.
+
+Interpretation:
+
+- **Recording is the wall.** At every mesh limit `rec_ms` is within a few
+  percent of `p50` (7.72 of 8.08 ms at 120 fps, 35.64 of 35.19 ms at 24 fps),
+  at a flat 0.52–0.56 µs per draw up to 25 600 meshes. The boundary is
+  CPU-side draw-list and command recording, not presentation.
+- **The GPU pass is second, and its margin shrinks.** `gpu_ms` per draw is
+  flat (0.45 µs) across the whole sweep, so it grows linearly with the scene:
+  it takes 83 % of the frame budget at 120 fps but only 60 % at 24 fps, while
+  `rec_ms` grows faster (1.16× the GPU time at 120 fps, 1.68× at 24 fps).
+- **Above ~25 600 meshes the per-draw cost rises** (0.55 µs at 25 600, 0.70 µs
+  at 38 912, 0.76 µs at 47 104) and the tail with it: between the 60 fps and
+  the 24 fps limit `p50` doubles (14.78 → 35.19 ms) but `p95` nearly triples
+  (15.75 → 44.57 ms) and `fps_1pct_low` falls from 35.6 to 10.5 fps.
+- **The pipeline axis hits the search bound, not the engine.** 32 pipelines at
+  1000 meshes still holds 1365 fps, so the limit is *at least* 32 and the axis
+  is unsolved: raise `--pipelines-max` before reading anything into it. The
+  bind cost is measurable even at that size — 418 pipeline and 418 descriptor
+  binds per frame instead of 1, with `rec_ms` 0.31 → 0.60 ms and `gpu_ms`
+  0.27 → 0.44 ms at the same 1000 meshes.
+- **Scene upload scales worse than the frame.** `init_ms` stays at 120–136 ms
+  at every limit (device and pipeline setup do not depend on the scene), but
+  `scene_ms` grows from 6.2 s at 14 848 meshes (0.42 ms/mesh) to 64.2 s at
+  47 104 (1.36 ms/mesh).
 
 ## 6. Variations worth running
 
