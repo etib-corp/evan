@@ -499,7 +499,7 @@ namespace evan
 				bool enableArExtensions, ArFeature features,
 				const std::vector<XrExtensionInfo> &available);
 
-    	/**
+		/**
 		 * @brief Resolves all AR extension functions for @p instance.
 		 *
 		 * Missing functions are left null and listed in @p report. The call is
