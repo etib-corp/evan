@@ -5,7 +5,7 @@ if(POLICY CMP0077)
 endif()
 
 project(evan
-    VERSION 2026.4.5
+    VERSION 2026.4.6
     DESCRIPTION "Evan"
     HOMEPAGE_URL "https://etib-corp.github.io/evan"
     LANGUAGES CXX
