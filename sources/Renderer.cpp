@@ -845,9 +845,13 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode			   = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable		   = VK_FALSE;
+		// Culling is static state: the projection flips Y for Vulkan, so a
+		// counter-clockwise front face would cull the outward faces of the
+		// sample meshes. Turn it on only after settling the winding
+		// convention.
+		rasterizer.cullMode		   = VK_CULL_MODE_NONE;
+		rasterizer.frontFace	   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
 
 #ifdef DEV
 		rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
@@ -860,9 +864,12 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		multisampling.rasterizationSamples = msaaSamples;
 		multisampling.minSampleShading	   = .2f;
 
+		// VK_DYNAMIC_STATE_CULL_MODE is deliberately absent: it belongs to
+		// VK_EXT_extended_dynamic_state (Vulkan 1.3), the device feature chain
+		// does not enable that feature, and the value was never set per frame,
+		// so the state was undefined at draw time.
 		std::vector<VkDynamicState> dynamicStates = {
-			VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR,
-			VK_DYNAMIC_STATE_CULL_MODE
+			VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
 		};
 		VkPipelineDynamicStateCreateInfo dynamicState {};
 		dynamicState.sType =
@@ -994,7 +1001,10 @@ void evan::Renderer::createDescriptorPool(VkDevice device,
 	poolSizes[1].descriptorCount = descriptorCount;
 
 	VkDescriptorPoolCreateInfo poolInfo {};
-	poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	// GPUMaterial releases its descriptor sets individually, which the spec
+	// only allows for a pool created with this flag.
+	poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes	   = poolSizes.data();
 	poolInfo.maxSets	   = descriptorCount;
