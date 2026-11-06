@@ -157,6 +157,21 @@ namespace evan
 			return _options;
 		}
 
+		/**
+		 * @brief Sets whether AR instance extensions may be requested.
+		 *
+		 * This function allows the application to enable or disable the
+		 * request for AR instance extensions. When enabled, the platform may
+		 * request AR-related extensions during OpenXR instance creation.
+		 *
+		 * @param enabled A boolean value indicating whether to enable or
+		 * disable AR instance extension requests.
+		 */
+		void setOptionArExtensionsEnabled(bool enabled)
+		{
+			_options.enableArExtensions = enabled;
+		}
+
 		protected:
 		/**
 		 * @brief Process an OpenXR session state change event.
