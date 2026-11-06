@@ -280,19 +280,51 @@ VkPresentModeKHR evan::DesktopSwapchainImage::chooseSwapPresentMode(
 {
 	this->getLogger().info()
 		<< "Choosing swap present mode for DesktopSwapchainImage...";
-	// Prefer FIFO (vsync) so the loop is paced by presentation and does not
-	// spin at unbounded frame rates now that the engine no longer sleeps to
-	// cap the frame rate by default.
-	for (const auto &availablePresentMode: availablePresentModes) {
-		if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
-			this->getLogger().info() << "Selected preferred swap present mode: "
-										"VK_PRESENT_MODE_FIFO_KHR";
-			return availablePresentMode;
-		}
+
+	const auto supports = [&availablePresentModes](VkPresentModeKHR mode) {
+		return std::find(availablePresentModes.begin(),
+						 availablePresentModes.end(), mode)
+			!= availablePresentModes.end();
+	};
+
+	const auto select = [this](VkPresentModeKHR mode) {
+		this->getLogger().info()
+			<< "Selected preferred swap present mode: " << mode;
+		return mode;
+	};
+
+	const auto selectFifo = [this, &select]() {
+		this->getLogger().info() << "Falling back to FIFO (vsync): the loop is "
+									"paced by presentation.";
+		return select(VK_PRESENT_MODE_FIFO_KHR);
+	};
+
+	// FIFO is the only mode Vulkan guarantees, and it is the default: the loop
+	// is paced by presentation and does not spin at unbounded frame rates now
+	// that the engine no longer sleeps to cap the frame rate by default.
+	// Mailbox/Immediate are opt-in through EVAN_PRESENT_MODE, for benchmarks
+	// that need the throughput ceiling rather than a paced frame rate.
+	const PresentModePreference preference = presentModePreference();
+
+	if (preference == PresentModePreference::Fifo) {
+		return selectFifo();
 	}
-	this->getLogger().info()
-		<< "No preferred swap present mode found, using default mode.";
-	return VK_PRESENT_MODE_FIFO_KHR;
+
+	if ((preference == PresentModePreference::Mailbox
+		 || preference == PresentModePreference::Auto)
+		&& supports(VK_PRESENT_MODE_MAILBOX_KHR)) {
+		return select(VK_PRESENT_MODE_MAILBOX_KHR);
+	}
+
+	if ((preference == PresentModePreference::Immediate
+		 || preference == PresentModePreference::Auto)
+		&& supports(VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+		return select(VK_PRESENT_MODE_IMMEDIATE_KHR);
+	}
+
+	this->getLogger().warning()
+		<< "The requested present mode is not supported by this surface.";
+	return selectFifo();
 }
 
 VkExtent2D evan::DesktopSwapchainImage::chooseSwapExtent(

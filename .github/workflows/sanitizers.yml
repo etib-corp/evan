@@ -40,6 +40,15 @@ jobs:
           --build ${{ github.workspace }}/build
 
       - name: Run tests under sanitizers
+        env:
+          # GoogleTest sorts each suite's tests with std::stable_sort, whose
+          # scratch buffer comes from libstdc++'s get_temporary_buffer. On
+          # GCC 13 that buffer is allocated with nothrow new but released
+          # through the C library allocator, so ASan reports an
+          # alloc-dealloc-mismatch for every suite and aborts the run. The
+          # mismatch is inside libstdc++/GoogleTest, not in EVAN, so keep the
+          # rest of ASan enabled and disable only this check.
+          ASAN_OPTIONS: alloc_dealloc_mismatch=0
         run: >
           ctest
           --test-dir ${{ github.workspace }}/build
@@ -111,7 +120,10 @@ jobs:
             engine-backend: glfw
             operating-system: macos
             runner: macos-latest
-            configure_flags: "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping -DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
+            # The nested quotes are required: the whole flag list is expanded
+            # unquoted into the shell command, so the space between the two
+            # clang flags must be protected from word splitting.
+            configure_flags: "-DCMAKE_CXX_FLAGS='-fprofile-instr-generate -fcoverage-mapping' -DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
           # OpenCppCoverage instruments the MSVC debug build, so no extra
           # compiler/linker flags are needed on Windows. The flags must stay
           # undefined there: passing an empty CMAKE_CXX_FLAGS drops the MSVC

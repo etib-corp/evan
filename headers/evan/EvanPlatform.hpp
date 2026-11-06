@@ -127,6 +127,65 @@ inline MultiviewMode multiviewMode()
 }
 
 /**
+ * @brief Swapchain present mode requested through EVAN_PRESENT_MODE.
+ *
+ * FIFO is the historical default: the frame loop is paced by presentation.
+ * Mailbox and Immediate are opt-in because they uncap the frame rate, which
+ * is what a throughput benchmark needs to measure past the display refresh
+ * rate. Auto prefers Mailbox, then Immediate, then FIFO.
+ */
+enum class PresentModePreference {
+	Fifo,		  ///< VK_PRESENT_MODE_FIFO_KHR (vsync, the default).
+	Mailbox,	  ///< VK_PRESENT_MODE_MAILBOX_KHR when the surface supports it.
+	Immediate,	  ///< VK_PRESENT_MODE_IMMEDIATE_KHR when supported.
+	Auto		  ///< Best uncapped mode the surface supports, else FIFO.
+};
+
+/**
+ * @brief Parses the EVAN_PRESENT_MODE override.
+ *
+ * Accepts fifo/vsync/0 for PresentModePreference::Fifo, mailbox, immediate/
+ * nowait and auto. Missing, empty or unrecognised values keep the default
+ * FIFO mode, so an application that never sets the variable keeps vsync.
+ *
+ * @param value Environment value to parse (may be null).
+ * @return The requested present mode.
+ */
+inline PresentModePreference presentModeFromValue(const char *value)
+{
+	if (value == nullptr || value[0] == '\0' || std::strcmp(value, "fifo") == 0
+		|| std::strcmp(value, "vsync") == 0 || std::strcmp(value, "0") == 0) {
+		return PresentModePreference::Fifo;
+	}
+	if (std::strcmp(value, "mailbox") == 0) {
+		return PresentModePreference::Mailbox;
+	}
+	if (std::strcmp(value, "immediate") == 0
+		|| std::strcmp(value, "nowait") == 0) {
+		return PresentModePreference::Immediate;
+	}
+	if (std::strcmp(value, "auto") == 0) {
+		return PresentModePreference::Auto;
+	}
+	return PresentModePreference::Fifo;
+}
+
+/**
+ * @brief The swapchain present mode requested by EVAN_PRESENT_MODE.
+ *
+ * The value is read once per process. A backend that cannot honour the
+ * request falls back to FIFO and logs the substitution.
+ *
+ * @return The requested present mode.
+ */
+inline PresentModePreference presentModePreference()
+{
+	static const PresentModePreference preference =
+		presentModeFromValue(std::getenv("EVAN_PRESENT_MODE"));
+	return preference;
+}
+
+/**
  * @brief Parses a boolean EVAN_* flag value.
  *
  * A missing, empty, or "0"-leading value disables the flag; any other value

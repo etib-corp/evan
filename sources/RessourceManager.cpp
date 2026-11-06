@@ -183,6 +183,70 @@ void evan::RessourceManager::sync(bool refresh)
 	_synchronized  = true;
 }
 
+uint32_t
+	evan::RessourceManager::createMaterialVariant(uint32_t sourceMaterialID,
+												  const std::string &shaderName)
+{
+	auto renderer = _renderer.lock();
+
+	if (!renderer) {
+		this->getLogger().warning()
+			<< "Cannot create a material variant before the renderer exists.";
+		return 0;
+	}
+
+	const uint32_t shaderID = _ressourceProvider->getShaderID(shaderName);
+
+	if (shaderID == 0) {
+		this->getLogger().warning()
+			<< "Cannot create a material variant: shader '" << shaderName
+			<< "' not found.";
+		return 0;
+	}
+
+	const auto &materials = _ressourceProvider->getMaterials();
+	const auto materialIt = materials.find(sourceMaterialID);
+
+	if (materialIt == materials.end() || !materialIt->second) {
+		this->getLogger().warning()
+			<< "Cannot create a material variant: material id "
+			<< sourceMaterialID << " not found.";
+		return 0;
+	}
+
+	const uint64_t key =
+		(uint64_t { sourceMaterialID } << 32) | uint64_t { shaderID };
+	const auto cached = _materialVariants.find(key);
+
+	if (cached != _materialVariants.end()) {
+		return cached->second;
+	}
+
+	uint32_t variantID = _nextMaterialVariantID;
+
+	while (variantID != 0 && _materials.contains(variantID)) {
+		variantID = ++_nextMaterialVariantID;
+	}
+	if (variantID == 0) {
+		this->getLogger().error()
+			<< "Material variant id space exhausted for material id "
+			<< sourceMaterialID << " and shader '" << shaderName << "'.";
+		return 0;
+	}
+	_nextMaterialVariantID = variantID + 1;
+
+	_materials[variantID] = std::make_shared<GPUMaterial>(
+		_deviceContext, *renderer, *materialIt->second, shaderID);
+	_materialVariants[key] = variantID;
+
+	this->getLogger().info()
+		<< "Created material variant " << variantID << " for material "
+		<< sourceMaterialID << " bound to shader '" << shaderName << "' (id "
+		<< shaderID << ").";
+
+	return variantID;
+}
+
 /////////////
 // Getters //
 /////////////

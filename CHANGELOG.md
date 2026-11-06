@@ -113,6 +113,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Engine::setObjectTransform` now visibly places geometry. Rebuilt SPIR-V is
   shipped for both GLFW examples.
 
+- Stress harness (issue #173): `examples/GLFW-stress` measures one
+  configuration (`--meshes`, `--pipelines`, `--frames`, `--warmup`, batching
+  and culling switches, present mode) and prints a machine-readable
+  `evan stress:` record with the frame rate, frame-time percentiles and the
+  renderer counters. `scripts/run-stress.sh` sweeps it with an exponential +
+  binary search and reports, for 120/100/75/60/30/24 fps, the largest mesh
+  count and pipeline count that still hold the threshold, plus the
+  indicators at each boundary. See `docs/STRESS_TESTING.md`.
+- `Engine::addMesh(mesh, material, shader)` now honours its documented
+  `shader` argument: `RessourceManager::createMaterialVariant()` binds a
+  cached variant of the material (same textures, same alpha mode) to the
+  requested pipeline. `Engine::resetFrameStats()` starts a new statistics
+  window, so a benchmark can exclude its warm-up frames.
+- `EVAN_PRESENT_MODE=fifo|mailbox|immediate|auto` selects the desktop
+  swapchain present mode. FIFO stays the default; the uncapped modes are what
+  a throughput benchmark needs to measure past the display refresh rate, and
+  an unsupported request falls back to FIFO.
+
 ### Changed
 
 - The per-view uniform block is now `model` followed by `views[2]` (one

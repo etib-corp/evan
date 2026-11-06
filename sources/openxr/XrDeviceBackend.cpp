@@ -770,7 +770,6 @@ void evan::XrDeviceBackend::createXrInstance(const IPlatform &platform)
 		}
 	}
 
-
 	if (result != XR_SUCCESS) {
 		this->getLogger().error() << "Failed to create OpenXR instance.";
 		return;
