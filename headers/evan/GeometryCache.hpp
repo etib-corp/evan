@@ -136,11 +136,11 @@ namespace evan
 			const GPUMesh *owner = nullptr;	   ///< Address of that mesh, used
 											   ///< to drop the reverse index
 											   ///< entry without locking it.
-			uint64_t fingerprint = 0;		///< Second, independent hash of
-											///< the content.
-			std::size_t vertexCount = 0;	///< Vertex count of the content.
-			std::size_t indexCount	= 0;	///< Index count of the content.
-			uint32_t materialID		= 0;	///< Material of the content.
+			uint64_t fingerprint = 0;		   ///< Second, independent hash of
+											   ///< the content.
+			std::size_t vertexCount = 0;	   ///< Vertex count of the content.
+			std::size_t indexCount	= 0;	   ///< Index count of the content.
+			uint32_t materialID		= 0;	   ///< Material of the content.
 		};
 
 		/**
