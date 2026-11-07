@@ -18,8 +18,10 @@ set(TEST_SOURCES
     sources/test_environment_blend_mode.cpp
     sources/test_xr_instance_functions.cpp
     sources/test_frustum.cpp
+    sources/test_geometry_cache.cpp
     sources/test_memory_type.cpp
     sources/test_pipeline_cache.cpp
+    sources/test_shader_instancing.cpp
     sources/test_render_settings.cpp
     sources/test_present_mode.cpp
     sources/test_viewset.cpp
