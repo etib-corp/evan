@@ -69,6 +69,11 @@ no way to express "same geometry, different pose" except rebuilding vertices.
    `updateObjectGeometry` routes to `GPUMesh::updateVertices` when vertex counts
    match (guillaume builders keep fixed topology: fixed arc segments, fixed
    quads) and re-creates buffers internally otherwise (rare).
+
+   Note: meshes may be shared with other objects through the geometry cache, so
+   the update has to go through `RenderObject::updateMeshes`, which detaches a
+   shared mesh (private `GPUMesh`) instead of writing into buffers someone else
+   still draws.
 6. Existing `addMesh`/`addText`/`addModel` keep returning the stable object id.
 
 ## 5. Guillaume changes
