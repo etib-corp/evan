@@ -125,9 +125,11 @@ namespace
 	/**
 	 * @brief Registers @p count cubes on a grid in front of the camera.
 	 *
-	 * Every object owns its registry entry, its own GPUMesh (two device
-	 * allocations: vertex and index buffer) and its own draw call, which is
-	 * the workload the P3 proof of concept measures. The grid is sized from
+	 * Every object owns its registry entry and its own transform; the geometry
+	 * is shared, because all the cubes are built from the same mesh content and
+	 * the engine hands out one `GPUMesh` per content. With the instance matrix
+	 * merging that the PoC enables, the whole grid is one instanced draw, which
+	 * is the workload the P3 proof of concept measures. The grid is sized from
 	 * the live view so that every cube stays inside the frustum at both
 	 * N=100 and N=1000.
 	 *
@@ -205,6 +207,12 @@ int main(void)
 		std::make_shared<utility::RessourceProvider>(*systemIO);
 
 	evan::Engine engine(ressourceProvider, platform);
+
+	// Merge the identical cubes into one instanced draw. Merging is gated on
+	// the shader (mesh.vert declares the per-instance matrix, default.vert and
+	// text.vert do not), so enabling it here is safe for every scene this
+	// example draws.
+	engine.setInstancingEnabled(true);
 
 	spawnCubeGrid(engine, meshCount);
 

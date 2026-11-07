@@ -9,6 +9,7 @@
 
 #include "evan/EvanPlatform.hpp"
 #include "evan/ADeviceBackend.hpp"
+#include "evan/GeometryCache.hpp"
 #include "evan/PipelineCache.hpp"
 #include "evan/TransferManager.hpp"
 
@@ -168,6 +169,19 @@ namespace evan
 		 */
 		const PipelineCache &getPipelineCache() const;
 
+		/**
+		 * @brief Retrieves the geometry cache of this device.
+		 *
+		 * The cache shares the `GPUMesh` of objects built from identical
+		 * mesh content, so the same geometry is uploaded once instead of
+		 * once per object. It is scoped to the device because the buffers it
+		 * shares are allocated on that device.
+		 *
+		 * @return A reference to the geometry cache owned by this device
+		 * context.
+		 */
+		GeometryCache &getGeometryCache();
+
 		protected:
 		/**
 		 * The graphics queue, which is used to
@@ -194,6 +208,15 @@ namespace evan
 		 * pipelines compiled by a run are available to the next one.
 		 */
 		PipelineCache _pipelineCache;
+
+		/**
+		 * Geometry shared by the render objects built on this device.
+		 *
+		 * Objects built from identical mesh content get the same `GPUMesh`,
+		 * so the vertex and index buffers are uploaded once and the renderer
+		 * can merge their draws into a single instanced draw.
+		 */
+		GeometryCache _geometryCache;
 
 		/**
 		 * The number of samples used for multisampling
