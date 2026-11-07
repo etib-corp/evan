@@ -14,6 +14,9 @@
 
 #include "evan/EvanPlatform.hpp"
 
+#include <cstdint>
+#include <vector>
+
 namespace evan
 {
 	/**
@@ -66,6 +69,42 @@ namespace evan
 		 */
 		VkShaderModule getFragmentShaderModule() const;
 
+		/**
+		 * @brief Tells whether a vertex shader declares the instance matrix.
+		 *
+		 * The renderer binds one model matrix per drawn instance as four
+		 * `vec4` Input variables at locations 3 to 6 (see
+		 * `GPUVertex::getInstanceAttributeDescriptions`). Only a vertex shader
+		 * that declares all four of them places every instance at its own
+		 * transform; merging identical meshes into one instanced draw is
+		 * correct only for such a shader, so the renderer asks this before
+		 * batching a run of draws.
+		 *
+		 * The check reads the input interface of @p vertexCode directly, so it
+		 * reflects what the SPIR-V module exposes rather than what the
+		 * application intended: a shader optimized down to locations 0-2 (the
+		 * `default.vert` / `text.vert` shape) is reported as not instanced.
+		 *
+		 * @param vertexCode SPIR-V words of the vertex shader module.
+		 * @return True when every instance matrix location is declared as an
+		 * Input variable.
+		 */
+		[[nodiscard]] static bool
+			declaresInstanceInputs(const std::vector<uint32_t> &vertexCode);
+
+		/**
+		 * @brief Tells whether this vertex shader declares the instance
+		 * matrix.
+		 *
+		 * The answer is resolved once, when the module is created, so the
+		 * renderer can ask it for every draw of the frame without walking the
+		 * SPIR-V input interface again.
+		 *
+		 * @return True when the vertex shader consumes the per-instance model
+		 * matrix, false otherwise.
+		 */
+		[[nodiscard]] bool declaresInstanceInputs() const;
+
 		protected:
 		/**
 		 * @brief Releases the Vulkan shader modules owned by this shader.
@@ -98,5 +137,13 @@ namespace evan
 		 * Vulkan logical device used to create and manage shader modules
 		 */
 		VkDevice _logicalDevice = VK_NULL_HANDLE;
+
+		/**
+		 * Whether the vertex shader declares the per-instance model matrix
+		 * (Input locations 3 to 6).
+		 *
+		 * Resolved once from the SPIR-V module; see declaresInstanceInputs.
+		 */
+		bool _declaresInstanceInputs = false;
 	};
 }	 // namespace evan

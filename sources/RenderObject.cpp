@@ -7,11 +7,14 @@
 
 #include "evan/RenderObject.hpp"
 
+#include <utility>
+
 evan::RenderObject::RenderObject(
 	std::shared_ptr<DeviceContext> deviceContext,
 	const std::map<uint32_t, utility::graphic::Mesh> &rawObjects,
 	const std::string &pipelineLayer)
-	: _pipelineLayer(pipelineLayer)
+	: _deviceContext(std::move(deviceContext))
+	, _pipelineLayer(pipelineLayer)
 {
 	this->getLogger().info()
 		<< "Creating RenderObject with pipeline layer: " << pipelineLayer;
@@ -48,8 +51,11 @@ evan::RenderObject::RenderObject(
 
 		this->getLogger().info() << "Creating GPUMesh for mesh ID: " << id;
 
-		_meshes.emplace_back(std::make_shared<GPUMesh>(
-			deviceContext, gpuVertices, mesh.getIndices(), id));
+		// Objects built from the same content share one GPUMesh (and thus
+		// one vertex and index buffer) instead of uploading the geometry
+		// again; the renderer can then merge their draws.
+		_meshes.emplace_back(_deviceContext->getGeometryCache().acquire(
+			_deviceContext, std::move(gpuVertices), mesh.getIndices(), id));
 	}
 	this->getLogger().info()
 		<< "All meshes processed and GPU meshes created successfully.";
@@ -77,9 +83,15 @@ void evan::RenderObject::destroy(VkDevice device)
 
 void evan::RenderObject::setTransform(const glm::mat4 &transform)
 {
+	_transform = transform;
 	for (const auto &mesh: _meshes) {
 		mesh->setTransform(transform);
 	}
+}
+
+const glm::mat4 &evan::RenderObject::getTransform() const
+{
+	return _transform;
 }
 
 bool evan::RenderObject::updateMeshes(
@@ -94,8 +106,8 @@ bool evan::RenderObject::updateMeshes(
 
 	auto existingIt = _meshes.begin();
 	for (const auto &entry: rawObjects) {
-		const auto &mesh	= entry.second;
-		const auto &gpuMesh = *existingIt;
+		const auto &mesh				  = entry.second;
+		std::shared_ptr<GPUMesh> &gpuMesh = *existingIt;
 
 		if (mesh.getVertices().size() != gpuMesh->getVertexCount()
 			|| mesh.getIndices().size()
@@ -110,7 +122,23 @@ bool evan::RenderObject::updateMeshes(
 		for (const auto &vertex: mesh.getVertices()) {
 			gpuVertices.push_back(GPUVertex::createFromVertex(vertex));
 		}
-		gpuMesh->updateVertices(gpuVertices);
+
+		if (gpuMesh.use_count() > 1) {
+			// Another object draws this geometry: detach instead of uploading
+			// into the shared buffers. The shared mesh keeps its content, and
+			// its cache entry stays valid for the object that still uses it.
+			this->getLogger().info()
+				<< "Mesh is shared. Detaching before the update.";
+			const uint32_t materialID = gpuMesh->getMaterialID();
+			gpuMesh = std::make_shared<GPUMesh>(_deviceContext,
+												std::move(gpuVertices),
+												mesh.getIndices(), materialID);
+		} else {
+			// The content changes in place, so the mesh no longer matches the
+			// cache key it was stored under.
+			_deviceContext->getGeometryCache().forget(*gpuMesh);
+			gpuMesh->updateVertices(gpuVertices);
+		}
 		++existingIt;
 	}
 

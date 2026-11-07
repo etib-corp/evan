@@ -183,12 +183,18 @@ namespace evan
 		/**
 		 * @brief Sets the model transform of this mesh.
 		 *
-		 * This is the single source of truth for the pose of the mesh: the
-		 * transform is written into the frame's instance buffer and applied by
-		 * the vertex shader, so moving or scaling the mesh never touches its
+		 * The transform is written into the frame's instance buffer and applied
+		 * by the vertex shader, so moving or scaling the mesh never touches its
 		 * vertex data. The stored vertices are local-space.
 		 *
 		 * @param transform The 4x4 model matrix of this mesh.
+		 *
+		 * @note A mesh is not the source of truth for its pose: the renderer
+		 * uploads the transform of the `RenderObject` that registered it,
+		 * because one mesh may be shared between several objects (see
+		 * GeometryCache) and each of them places it at its own transform.
+		 * Setting it here directly is only meaningful for an object with a
+		 * single user; use RenderObject::setTransform instead.
 		 */
 		void setTransform(const glm::mat4 &transform);
 

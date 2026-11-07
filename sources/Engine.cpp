@@ -782,13 +782,18 @@ void evan::Engine::updateDebugRay(const utility::graphic::RayF &ray)
 		return;
 	}
 
-	std::vector<GPUVertex> gpuVertices;
-	gpuVertices.reserve(rayMesh.getVertices().size());
-	for (const auto &vertex: rayMesh.getVertices()) {
-		gpuVertices.push_back(GPUVertex::createFromVertex(vertex));
-	}
+	// The mesh may be shared with another object through the geometry cache,
+	// so go through updateMeshes(): it detaches a shared mesh instead of
+	// overwriting geometry someone else still draws, and drops the cache entry
+	// of a mesh it rewrites in place.
+	std::map<uint32_t, utility::graphic::Mesh> rawObjects;
 
-	renderObject->getMeshes().front()->updateVertices(gpuVertices);
+	rawObjects.emplace(renderObject->getMeshes().front()->getMaterialID(),
+					   rayMesh);
+	if (!renderObject->updateMeshes(rawObjects)) {
+		this->getLogger().warning()
+			<< "Cannot update the debug ray: its topology changed.";
+	}
 }
 
 void evan::Engine::updateDeltaTime(void)

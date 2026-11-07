@@ -50,6 +50,11 @@ namespace evan
 		 * when rendering this object. The pipeline layer can be used to group
 		 * render objects with similar rendering requirements together, allowing
 		 * for efficient batching and state management in the rendering process.
+		 *
+		 * @note The meshes are obtained from the geometry cache of
+		 * @p deviceContext, so objects built from identical mesh content
+		 * share their vertex and index buffers instead of uploading them
+		 * once each.
 		 */
 		RenderObject(
 			std::shared_ptr<DeviceContext> deviceContext,
@@ -88,8 +93,19 @@ namespace evan
 		 * vertex shader without touching the vertex data.
 		 *
 		 * @param transform The 4x4 model matrix applied to every mesh.
+		 *
+		 * @note The transform is stored on the object, not only on its
+		 * meshes: a GPUMesh may be shared with other objects through the
+		 * geometry cache, and each of them places it at its own transform.
 		 */
 		void setTransform(const glm::mat4 &transform);
+
+		/**
+		 * @brief Retrieves the model transform of this object.
+		 *
+		 * @return The 4x4 model matrix applied to every mesh of this object.
+		 */
+		[[nodiscard]] const glm::mat4 &getTransform() const;
 
 		/**
 		 * @brief Updates the meshes of this object in place.
@@ -98,6 +114,11 @@ namespace evan
 		 * topology (mesh count, vertex count and index count) is unchanged,
 		 * avoiding buffer creation and destruction. When the topology differs,
 		 * returns false so the caller can rebuild the object instead.
+		 *
+		 * A mesh whose geometry is shared with another object is detached
+		 * first: the update builds a private `GPUMesh` from the new data and
+		 * leaves the shared one untouched, so updating this object never
+		 * changes the geometry of another one.
 		 *
 		 * @param rawObjects A map of material IDs to the new mesh data, with
 		 * the same layout used by the constructor.
@@ -136,6 +157,25 @@ namespace evan
 		[[nodiscard]] const std::string &getPipelineLayer() const;
 
 		protected:
+		/**
+		 * Model transform applied to every mesh of this object.
+		 *
+		 * It is stored on the object rather than read back from the meshes
+		 * because a mesh may be shared with other objects through the
+		 * geometry cache: each object places the shared geometry at its own
+		 * transform.
+		 */
+		glm::mat4 _transform = glm::mat4(1.0f);
+
+		/**
+		 * Device the meshes of this object were created on.
+		 *
+		 * Kept so an in-place update can detach a mesh that is shared with
+		 * another object (see updateMeshes) without the caller having to
+		 * hand the device context back.
+		 */
+		std::shared_ptr<DeviceContext> _deviceContext;
+
 		std::vector<std::shared_ptr<GPUMesh>>
 			_meshes;	///< A vector of GPUMesh instances representing the
 						///< meshes associated with this RenderObject. Each

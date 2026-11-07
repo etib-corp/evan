@@ -256,6 +256,11 @@ const evan::PipelineCache &evan::DeviceContext::getPipelineCache() const
 	return _pipelineCache;
 }
 
+evan::GeometryCache &evan::DeviceContext::getGeometryCache()
+{
+	return _geometryCache;
+}
+
 VkSampleCountFlags evan::DeviceContext::getFramebufferSampleCounts() const
 {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
