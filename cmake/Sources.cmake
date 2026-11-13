@@ -14,6 +14,7 @@ set(EVAN_SOURCES_COMMON
     sources/Frame.cpp
     sources/FrameStats.cpp
     sources/Frustum.cpp
+    sources/GeometryCache.cpp
     sources/GPUMaterial.cpp
     sources/GPUMesh.cpp
     sources/GPUShader.cpp

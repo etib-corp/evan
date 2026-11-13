@@ -65,6 +65,7 @@ descriptor set per draw range and resolves each item once; see the audit’s
 | 6 | Bindless / descriptor indexing | per-material descriptor sets | One descriptor set per material per frame-in-flight (`GPUMaterial`, pool `materialCount × MAX_FRAMES_IN_FLIGHT`); UBO dynamic + 4 sampler bindings | Entirely open (WS6) |
 
 Also resolved since the audit (no longer in scope): P0.1 logging, P0.2 sleep,
+geometry sharing / instanced merge (WS1b, §3.1a),
 P0.3 fence waits (single end-of-frame wait; desktop pipelined), P0.4 `sync()`
 caching, P1.3–P1.7, P2.1–P2.4. Still open elsewhere: P2.5 (`_pipelines`
 `std::map` → flat array) and uniform/instance buffer pooling per `GPUMesh`
@@ -115,6 +116,49 @@ behavior change; validation clean. Renderer is never copied (verify at
 implementation — adding the `unique_ptr` member deletes the implicit copy).
 
 Estimate 1–2 days. Risk low. No approval needed.
+
+### 3.1a WS1b — Geometry sharing and shader-gated instanced merge (landed)
+
+**Current (before).** Every `RenderObject` built its own `GPUMesh` per mesh, so
+N objects made from the same source mesh allocated N vertex/index buffer pairs
+and uploaded the same bytes N times. The buffers have distinct handles, so the
+run merge in `recordCommandBuffer` (pipeline + material + vertex buffer + index
+buffer) can never fire: N identical cubes stay N draws.
+
+**Implemented.**
+
+1. **Content-keyed geometry cache.** `GeometryCache` (owned by `DeviceContext`)
+   maps a 64-bit hash of the vertex attributes, the index data, both counts and
+   the material ID to a `std::weak_ptr<GPUMesh>`. A hit locks the pointer and
+   re-verifies the counts, the material and a second independent fingerprint;
+   a miss builds the mesh once. Expired entries are pruned on insertion, so the
+   cache never keeps buffers alive.
+2. **Creation goes through it.** `RenderObject` builds its meshes with
+   `DeviceContext::getGeometryCache().acquire(...)`. The public `GPUMesh` and
+   `RenderObject` surfaces are unchanged.
+3. **Copy-on-write for updates.** `RenderObject::updateMeshes` detaches a mesh
+   whose `use_count() > 1` (private `GPUMesh`, shared one untouched) and drops
+   the cache entry of a mesh it rewrites in place. `Engine::updateDebugRay`
+   goes through `updateMeshes` for the same reason.
+4. **Per-object transforms.** The renderer reads the model matrix from the
+   `RenderObject` (`DrawListScratch::transforms`) instead of the mesh: one
+   `GPUMesh` may serve several objects, each at its own transform.
+5. **Shader capability gate.** `GPUShader::declaresInstanceInputs()` scans the
+   SPIR-V module once at construction for `Input` variables at locations 3–6
+   (the four `vec4` columns of the per-instance matrix). The renderer merges a
+   run only when the bound shader declares all four, so `default.vert` and
+   `text.vert` scenes are never merged. `Renderer::setInstancingEnabled` stays
+   the application switch and now defaults to on.
+
+**Why.** At N=1000 the draw count was the only term that scaled (≈5.4 µs per
+recorded draw). Removing the buffer identity that blocked the merge turns 1000
+draws into 1 and, measured in [`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §8,
+reduces `rec` by 1.45× on the Debug build and to 0.25 ms on Release, and the
+startup `mesh_churn` from +1000 to +1.
+
+**Approval.** No signature changes, but `DeviceContext`, `RenderObject` and
+`GPUShader` each gain a member, which changes their class layout (AGENTS.md).
+`GPUMesh`'s public surface is untouched.
 
 ### 3.2 WS2 — Dense object registry
 
@@ -327,8 +371,12 @@ Reading:
 - `pso` = `ds` = 1 per frame at both N — one material, one pipeline, one bind
   per run.
 - Steady state is clean: `mesh_churn +0/-0`, `uploadwaits=0`.
-- Startup allocates one `GPUMesh` per object (two device allocations each),
-  which is why N=1000 takes a moment to start.
+- Startup allocated one `GPUMesh` per object (two device allocations each),
+  which is why N=1000 took a moment to start. This is the state the table
+  above measures; WS1b (§3.1a) changed it to one `GPUMesh` for the whole
+  scene and re-recorded the workload in
+  [`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §8 (draws 1000 → 1, startup
+  `mesh_churn` +1000 → +1).
 - `draws calls` reads N+1 when the pointer enters the window before the
   measurement: the engine registers a debug ray mesh on the first
   mouse-motion event.

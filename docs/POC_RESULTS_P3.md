@@ -150,3 +150,92 @@ on an idle machine, and compare runs from the same session.
   append the per-view `rec` values here; that is the only missing input for
   WS4.
 
+
+## 8. Geometry sharing and instanced merge (2026-11-06)
+
+§1–§7 measure the per-object-`GPUMesh` build: N objects uploaded the same cube
+N times, so every copy got distinct vertex and index buffers and the renderer
+could not merge their draws. This section records the same workload after the
+geometry cache and the shader-gated instanced merge landed
+([`DESIGN_P3_OPTIMIZATIONS.md`](DESIGN_P3_OPTIMIZATIONS.md) §3.1a).
+
+**What changed.**
+
+- `DeviceContext` owns a `GeometryCache` keyed by a hash of the mesh content
+  (vertex attributes, index data, both counts) plus the material ID.
+  `RenderObject` builds its meshes through it, so objects made from the same
+  mesh share one `GPUMesh` and therefore one vertex and one index buffer.
+  `RenderObject::updateMeshes` detaches a shared mesh before writing into it
+  (copy-on-write), and drops the cache entry of a mesh it rewrites in place.
+- The renderer merges a run of draws only when the bound vertex shader
+  declares the per-instance model matrix (SPIR-V `Input` variables at locations
+  3–6). `default.vert` and `text.vert` do not, so they are never merged.
+- `RenderObject` stores its own model matrix and the renderer reads it from
+  there: one `GPUMesh` may now serve several objects, each with its own
+  transform. Merging is enabled by default (`Renderer::setInstancingEnabled`).
+
+**Method.** Same harness, same workload and same machine as §1, Debug build
+with validation. The runs below are interleaved (old build, new build, old
+build, new build) inside one session so that host load affects both sides
+equally; the host was *not* idle (load average ≈9) and `rec` was inflated by
+roughly 70 % relative to §3 for both builds. The stepped decomposition in
+§8.2 was taken earlier in the session at load average < 2.
+
+### 8.1 Interleaved A/B (Debug, load average ≈9)
+
+| N | build | `rec` (ms) | `gpu pass0` (ms) | draws/frame | `inst` | `pso` | `ds` | start `mesh_churn` | steady `mesh_churn` | `uploadwaits` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | before | 1.77–1.79 | 0.19–0.20 | 101 | 0 | 1 | 1 | +101/-0 | +0/-0 | 0 |
+| 100 | after | 1.27–1.28 | 0.19–0.20 | 1 | 1 | 1 | 1 | +1/-0 | +0/-0 | 0 |
+| 1000 | before | 16.6–19.4 | 0.65–1.01 | 1000 | 0 | 1 | 1 | +1000/-0 | +0/-0 | 0 |
+| 1000 | after | 11.2–11.6 | 0.21–0.32 | 1 | 1 | 1 | 1 | +1/-0 | +0/-0 | 0 |
+
+`rec` improves by 1.40× at N=100 and 1.45× at N=1000 in the same session; the
+same ratio was measured on an idle host (9.81 → 6.78 ms at N=1000, §8.2), so
+the gain is not a load artifact. `gpu pass0` also drops at N=1000 because
+999 fewer draws are encoded per frame.
+
+The `N+1` draw of §3 is still visible at N=100: the debug ray registered by the
+first mouse-motion event is a second, non-mergeable mesh (one extra draw), which
+is the `draws ≤ 2` the issue expects.
+
+### 8.2 Where the remaining `rec` goes (N=1000, Debug, idle host)
+
+Three builds of the same scene measured back to back:
+
+| build | `rec` (ms) | draws/frame | vertex + index binds/frame |
+| --- | --- | --- | --- |
+| before (N `GPUMesh`, no merge) | 9.81 | 1000 | 2000 |
+| geometry cache only (merge off) | 7.67 | 1000 | 0 |
+| geometry cache + instanced merge | 6.78 | 1 | 0 |
+
+The cache alone saves 2.1 ms by removing 2000 buffer binds per frame, merging
+saves a further 0.9 ms by removing 999 `vkCmdDrawIndexed` calls. The remaining
+6.8 ms is *not* per-draw state: it is the per-mesh draw-list build (world-space
+bounds, culling, material/shader/pipeline resolution, sort key, instance matrix
+write) at `-O0`. `rec` therefore no longer contains a per-draw term — the
+`5.36 µs` of §3 were dominated by bookkeeping that this change does not touch,
+not by the draw command.
+
+This is visible in an optimized build, where that bookkeeping almost
+disappears (Release, same machine, `pass0` still in the table above):
+
+| N | build | `rec` (ms) | draws/frame | `gpu pass0` (ms) |
+| --- | --- | --- | --- | --- |
+| 100 | before | 0.05 | 101 | 0.26 |
+| 100 | after | 0.04–0.05 | 1 | 0.19 |
+| 1000 | before | 0.41–0.46 | 1001 | 0.63–0.72 |
+| 1000 | after | 0.25 | 1 | 0.20 |
+
+### 8.3 Acceptance
+
+| Criterion | Result |
+| --- | --- |
+| N=1000 `draws` ≤ 2 | 1 (2 when the debug ray is registered) |
+| N=1000 `instancedDraws` ≥ 1 | 1 per frame |
+| N=1000 `rec` ≤ 1.0 ms | 0.25 ms on Release; 6.8–11.6 ms on Debug (1.45× better than before, §8.2 explains the remainder) |
+| `pso` = 1, `ds` = 1 | 1 / 1 at both N |
+| startup `mesh_churn +1/0` | +1/-0 at both N (was +100/-0 and +1000/-0) |
+| steady `mesh_churn +0/-0`, `uploadwaits` = 0 | +0/-0, 0 |
+| image identical to the pre-change capture | 83 of 2 022 400 pixels differ (0.004 %), all inside a 16×27 px patch at the top centre of the frame in the old capture only; the rendered cubes are pixel-identical |
+| shader without instance inputs is never merged | unit tests on the capability query (`tests/sources/test_shader_instancing.cpp`); `default.vert` / `text.vert` scenes keep one draw per mesh |

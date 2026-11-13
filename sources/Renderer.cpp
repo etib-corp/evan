@@ -110,6 +110,9 @@ namespace evan
 		///< draws front-to-back and alpha-blended draws back-to-front.
 		float depth			= 0.0f;
 		glm::mat4 transform = glm::mat4(1.0f);
+		///< Whether the shader of this draw consumes the per-instance model
+		///< matrix, which is what makes merging a run of draws correct.
+		bool instanceInputs = false;
 		///< Sort key resolved once per frame before ordering: opaque/alpha
 		///< partition, depth order, batching state and a unique tiebreak.
 		evan::DrawSortKey key {};
@@ -133,6 +136,11 @@ namespace evan
 		///< Flattened mesh list of the current frame (raw pointers; the
 		///< registry keeps the objects alive for the frame's duration).
 		std::vector<GPUMesh *> meshes;
+
+		///< World transform of each flattened mesh, parallel to meshes.
+		///< A mesh may be shared between objects, so its transform belongs to
+		///< the object that registered it, not to the mesh itself.
+		std::vector<glm::mat4> transforms;
 
 		///< View list of the current multiview pass.
 		std::vector<utility::graphic::ViewF> views;
@@ -221,6 +229,11 @@ void evan::Renderer::destroy(VkDevice device)
 			object->destroy(device);
 		});
 	_objects.clear();
+
+	// The objects above released their meshes. Entries left in the geometry
+	// cache would only be expired weak references to the destroyed device
+	// allocations, so drop them explicitly.
+	_deviceContext->getGeometryCache().clear();
 
 	this->getLogger().info() << "Destroying descriptor pool...";
 	vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
@@ -356,16 +369,23 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// completed now; fold them into the statistics without blocking.
 	this->readGpuTimestamps(frame);
 
-	// Flatten the registered meshes into the frame scratch once: the vector
-	// keeps its capacity across frames and raw pointers avoid copying every
+	// Flatten the registered meshes into the frame scratch once: the vectors
+	// keep their capacity across frames and raw pointers avoid copying every
 	// shared_ptr per view. The registry keeps the objects alive for the whole
-	// frame.
-	std::vector<GPUMesh *> &meshes = _drawScratch->meshes;
+	// frame. The transform is read from the object, not from the mesh: one
+	// GPUMesh may be shared by several objects, each with its own transform.
+	std::vector<GPUMesh *> &meshes	   = _drawScratch->meshes;
+	std::vector<glm::mat4> &transforms = _drawScratch->transforms;
 	meshes.clear();
+	transforms.clear();
 	_objects.forEach(
-		[&meshes](std::size_t, const std::shared_ptr<RenderObject> &object) {
+		[&meshes, &transforms](std::size_t,
+							   const std::shared_ptr<RenderObject> &object) {
+			const glm::mat4 &transform = object->getTransform();
+
 			for (const auto &mesh: object->getMeshes()) {
 				meshes.push_back(mesh.get());
+				transforms.push_back(transform);
 			}
 		});
 
@@ -494,7 +514,8 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 			frame.resetCommandBuffer(0);
 			this->recordCommandBuffer(swapchainContext.getRenderPass(),
 									  imageSet.getFramebuffer(acquiredImage[s]),
-									  imageSet.getExtent(), 0, views, meshes);
+									  imageSet.getExtent(), 0, views, meshes,
+									  transforms);
 		}
 
 		VkPipelineStageFlags waitStages[] = {
@@ -549,7 +570,7 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 					imageSet.getFramebuffer(acquiredImage[s]),
 					imageSet.getExtent(), i,
 					std::span<const utility::graphic::ViewF>(&view.view, 1),
-					meshes);
+					meshes, transforms);
 			}
 
 			VkPipelineStageFlags waitStages[] = {
@@ -1097,7 +1118,7 @@ void evan::Renderer::recordCommandBuffer(
 	VkRenderPass renderPass, VkFramebuffer swapChainFramebuffer,
 	VkExtent2D swapChainExtent, std::size_t viewSlot,
 	std::span<const utility::graphic::ViewF> views,
-	std::span<GPUMesh *const> meshes)
+	std::span<GPUMesh *const> meshes, std::span<const glm::mat4> transforms)
 {
 	if (isDrawLogEnabled()) {
 		this->getLogger().debug()
@@ -1219,12 +1240,15 @@ void evan::Renderer::recordCommandBuffer(
 	drawList.clear();
 	drawList.reserve(meshes.size());
 
-	for (const auto &mesh: meshes) {
+	for (std::size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+		const GPUMesh *mesh		   = meshes[meshIndex];
+		const glm::mat4 &transform = transforms[meshIndex];
+
 		// Geometry is local-space and the model matrix carries the pose, so
 		// culling and depth sorting must use the transformed bounds: the local
 		// box of every mesh of a kind sits at the same place.
 		const utility::math::AabbF bounds =
-			transformedBounds(mesh->getBounds(), mesh->getTransform());
+			transformedBounds(mesh->getBounds(), transform);
 
 		if (_cullingEnabled) {
 			if (!bounds.isEmpty()) {
@@ -1322,6 +1346,12 @@ void evan::Renderer::recordCommandBuffer(
 			continue;
 		}
 
+		// Only a shader that declares the per-instance matrix can be merged
+		// into an instanced draw: a shader that ignores it would place every
+		// instance of the run at the same place.
+		const auto shader		  = _ressourceManager->getShader(pipelineKey);
+		const bool instanceInputs = shader && shader->declaresInstanceInputs();
+
 		const auto &descriptorSets = material->getDescriptorSets();
 		if (_currentFrameIndex >= descriptorSets.size()) {
 			++stats.skippedMeshes;
@@ -1348,7 +1378,7 @@ void evan::Renderer::recordCommandBuffer(
 		drawList.push_back(
 			{ pipelineKey, materialID, blendMode, pipeline, layoutIt->second,
 			  descriptorSets[_currentFrameIndex], vertexBuffer, indexBuffer,
-			  mesh->getIndexCount(), depth, mesh->getTransform() });
+			  mesh->getIndexCount(), depth, transform, instanceInputs });
 	}
 
 	// Depth buckets are normalized against the visible depth range so that the
@@ -1477,10 +1507,11 @@ void evan::Renderer::recordCommandBuffer(
 
 		for (std::size_t i = begin; i < end;) {
 			// Consecutive items sharing pipeline, material and geometry are
-			// merged into a single instanced draw when batching is enabled;
-			// each mesh keeps its own transform slot either way.
+			// merged into a single instanced draw when batching is enabled and
+			// the shader consumes the instance matrix; each mesh keeps its own
+			// transform slot either way.
 			std::size_t runEnd = i + 1;
-			if (_mergeIdenticalRuns) {
+			if (_mergeIdenticalRuns && drawList[i].instanceInputs) {
 				while (
 					runEnd < end
 					&& drawList[runEnd].pipelineKey == drawList[i].pipelineKey

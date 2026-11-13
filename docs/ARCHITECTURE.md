@@ -14,6 +14,8 @@ graph TD
 
     Renderer --> RenderObject[RenderObject]
     RenderObject --> GPUMesh[GPUMesh]
+    Device --> GeometryCache[GeometryCache]
+    GeometryCache -.-> GPUMesh
     Renderer --> MaterialManager[RessourceManager]
     MaterialManager --> GPUMaterial[GPUMaterial]
 
@@ -25,6 +27,9 @@ graph TD
 - **Device & swapchain** manage Vulkan resources and frame ownership.
 - **Renderer** owns the registry of render objects and their GPU meshes, and
   draws them each frame; GPU materials are managed by the `RessourceManager`.
+- **Geometry cache** is owned by the device context and hands out one shared
+  `GPUMesh` per mesh content and material, so objects built from the same mesh
+  share their vertex and index buffers instead of uploading them once each.
 
 ## Frame Lifecycle
 

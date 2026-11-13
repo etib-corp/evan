@@ -400,8 +400,15 @@ namespace evan
 		 * Merging is only correct with a vertex shader that consumes the
 		 * per-instance matrix (locations 3 to 6): such a shader places each
 		 * instance at its own transform, while a shader ignoring the instance
-		 * data would draw every instance of the run at the same place. Disabled
-		 * by default.
+		 * data would draw every instance of the run at the same place. The
+		 * renderer therefore merges a run only when the bound shader declares
+		 * that matrix (see `GPUShader::declaresInstanceInputs`), so enabling
+		 * this flag is safe for every shader and only shaders that opt in
+		 * through their input interface are batched.
+		 *
+		 * Enabled by default: the geometry cache makes objects built from the
+		 * same mesh share their buffers, and this flag turns that sharing into
+		 * a single draw.
 		 *
 		 * @param enabled True to merge identical meshes into instanced draws.
 		 */
@@ -693,13 +700,17 @@ namespace evan
 		 * any of them can see it.
 		 * @param meshes The frame's flattened mesh list (frame scratch), one
 		 * entry per mesh of every registered object in registry order.
+		 * @param transforms The world transform of each flattened mesh,
+		 * parallel to @p meshes. It belongs to the object that registered the
+		 * mesh, because one mesh may be shared between several objects.
 		 */
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
 								 VkExtent2D swapChainExtent,
 								 std::size_t viewSlot,
 								 std::span<const utility::graphic::ViewF> views,
-								 std::span<GPUMesh *const> meshes);
+								 std::span<GPUMesh *const> meshes,
+								 std::span<const glm::mat4> transforms);
 
 		/**
 		 * @brief Emits the aggregated statistics record when a window is due.
@@ -816,9 +827,10 @@ namespace evan
 		/**
 		 * @brief Whether consecutive identical meshes are merged into a single
 		 * instanced draw. The per-object transform is uploaded to the GPU
-		 * whether or not this is set; see setInstancingEnabled.
+		 * whether or not this is set; see setInstancingEnabled. Merging also
+		 * requires the bound shader to declare the instance matrix.
 		 */
-		bool _mergeIdenticalRuns = false;
+		bool _mergeIdenticalRuns = true;
 
 		/**
 		 * @brief Whether draws are batched through an indirect draw buffer.
