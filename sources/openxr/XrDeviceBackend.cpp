@@ -62,6 +62,13 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
 	this->createSession();
+
+	if (_session != XR_NULL_HANDLE && _instanceFunctions.hasPassthrough()
+		&& _systemSupportsPassthrough) {
+		_passthrough = std::make_unique<evan::XrPassthrough>(
+			_session, _instanceFunctions.passthrough);
+	}
+
 	this->createVisualizedSpace();
 
 	_handActionSubactionPath[LEFT_HAND_INDEX] =
@@ -679,6 +686,48 @@ bool evan::XrDeviceBackend::isARCapable() const noexcept
 				XR_ENVIRONMENT_BLEND_MODE_ADDITIVE));
 }
 
+bool evan::XrDeviceBackend::isARSupported() const noexcept
+{
+	return _passthrough != nullptr && _systemSupportsPassthrough
+		&& hasPassthroughExtension() && _instanceFunctions.hasPassthrough();
+}
+
+bool evan::XrDeviceBackend::isAREnabled() const noexcept
+{
+	return _arEnabled;
+}
+
+evan::Error evan::XrDeviceBackend::setAREnabled(bool enabled)
+{
+	if (!enabled) {
+		if (_passthrough != nullptr) {
+			const Error result = _passthrough->stop();
+			_arEnabled		   = _passthrough->isRunning();
+			return result;
+		}
+		_arEnabled = false;
+		return Error::Ok;
+	}
+
+	if (!_sessionRunning) {
+		this->getLogger().warning()
+			<< "Cannot enable AR before the OpenXR session is running.";
+		return Error::NotReady;
+	}
+	if (!isARSupported()) {
+		return Error::Unsupported;
+	}
+
+	const Error result = _passthrough->start();
+	_arEnabled		   = _passthrough->isRunning();
+	return result;
+}
+
+evan::XrPassthrough *evan::XrDeviceBackend::getPassthrough() noexcept
+{
+	return _passthrough.get();
+}
+
 evan::Error
 	evan::XrDeviceBackend::setEnvironmentBlendMode(XrEnvironmentBlendMode mode)
 {
@@ -789,14 +838,32 @@ void evan::XrDeviceBackend::getSystem()
 		return;
 	}
 
+	XrSystemPassthroughProperties2FB passthroughProperties {
+		XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES2_FB
+	};
+	const bool queryPassthrough = _instanceFunctions.hasPassthrough();
+
 	XrSystemProperties properties { XR_TYPE_SYSTEM_PROPERTIES };
+	if (queryPassthrough) {
+		properties.next = &passthroughProperties;
+	}
+
 	result = xrGetSystemProperties(_XrInstance, _systemId, &properties);
 	if (result != XR_SUCCESS) {
 		this->getLogger().warning()
 			<< "Failed to get OpenXR system properties.";
+		_systemSupportsPassthrough = false;
 		return;
 	}
+
+	_systemSupportsPassthrough = queryPassthrough
+		&& (passthroughProperties.capabilities
+			& XR_PASSTHROUGH_CAPABILITY_BIT_FB)
+			!= 0;
+
 	this->getLogger().info() << "OpenXR system: " << properties.systemName;
+	this->getLogger().info() << "Passthrough support: "
+							 << (_systemSupportsPassthrough ? "yes" : "no");
 }
 
 void evan::XrDeviceBackend::createSession()

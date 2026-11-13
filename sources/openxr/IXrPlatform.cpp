@@ -65,7 +65,9 @@ std::vector<std::shared_ptr<utility::event::Event>>
 std::shared_ptr<evan::ADeviceBackend>
 	evan::IXrPlatform::createDeviceBackend() const
 {
-	return std::make_shared<XrDeviceBackend>(*this);
+	const auto backend = std::make_shared<XrDeviceBackend>(*this);
+	_deviceBackend	   = backend;
+	return backend;
 }
 
 std::shared_ptr<evan::ASwapchainContext>
@@ -137,4 +139,24 @@ void evan::IXrPlatform::processSessionStateChangedEvent(
 		default:
 			break;
 	}
+}
+
+[[nodiscard]] bool evan::IXrPlatform::isAREnabled() const
+{
+	const auto backend = _deviceBackend.lock();
+	return backend != nullptr && backend->isAREnabled();
+}
+
+[[nodiscard]] evan::Error evan::IXrPlatform::setAREnabled(bool enabled)
+{
+	if (auto deviceBackend = _deviceBackend.lock()) {
+		return deviceBackend->setAREnabled(enabled);
+	}
+	return evan::Error::NotReady;
+}
+
+bool evan::IXrPlatform::isARSupported() const
+{
+	const auto backend = _deviceBackend.lock();
+	return backend != nullptr && backend->isARSupported();
 }
