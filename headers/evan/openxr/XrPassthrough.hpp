@@ -77,7 +77,7 @@ namespace evan
 		 *
 		 * Not owned by this subsystem; the backend keeps it alive.
 		 */
-		XrSession _session = XR_NULL_SESSION;
+		XrSession _session = XR_NULL_HANDLE;
 
 		/**
 		 * @brief Loaded XR_FB_passthrough function pointers.
