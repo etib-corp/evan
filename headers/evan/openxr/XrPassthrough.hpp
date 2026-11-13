@@ -72,7 +72,7 @@ namespace evan
 		[[nodiscard]] XrPassthroughLayerFB getLayer() const noexcept;
 
 		private:
-		XrSession _session = XR_NULL_SESSION;
+		XrSession _session = XR_NULL_HANDLE;
 		XrInstanceFunctions::Passthrough _functions;
 		XrPassthroughFB _passthrough = XR_NULL_HANDLE;
 		XrPassthroughLayerFB _layer	 = XR_NULL_HANDLE;

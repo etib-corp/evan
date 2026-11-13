@@ -22,7 +22,7 @@ evan::XrPassthrough::~XrPassthrough()
 
 bool evan::XrPassthrough::isSupported() const noexcept
 {
-	return _session != XR_NULL_SESSION && _functions.isComplete();
+	return _session != XR_NULL_HANDLE && _functions.isComplete();
 }
 
 evan::Error evan::XrPassthrough::start()

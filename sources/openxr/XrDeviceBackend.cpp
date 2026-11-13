@@ -63,7 +63,7 @@ evan::XrDeviceBackend::XrDeviceBackend(const IPlatform &platform)
 	this->createLogicalDevice();
 	this->createSession();
 
-	if (_session != XR_NULL_SESSION && _instanceFunctions.hasPassthrough()
+	if (_session != XR_NULL_HANDLE && _instanceFunctions.hasPassthrough()
 		&& _systemSupportsPassthrough) {
 		_passthrough = std::make_unique<evan::XrPassthrough>(
 			_session, _instanceFunctions.passthrough);
