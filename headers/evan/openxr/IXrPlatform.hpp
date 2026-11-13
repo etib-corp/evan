@@ -13,6 +13,7 @@
 #include "evan/openxr/XrSwapchainContext.hpp"
 
 #include <iostream>
+#include <memory>
 
 namespace evan
 {
@@ -172,6 +173,43 @@ namespace evan
 			_options.enableArExtensions = enabled;
 		}
 
+		/**
+		 * @brief Checks if the runtime can start passthrough AR.
+		 *
+		 * This function returns whether the OpenXR runtime, the loaded
+		 * passthrough functions and the hardware report AR support.
+		 *
+		 * @return true when AR can be enabled, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isARSupported() const override;
+
+		/**
+		 * @brief Checks if AR features are currently enabled on the platform.
+		 *
+		 * This function returns whether AR features are currently enabled on
+		 * the OpenXR platform. When enabled, the platform may utilize AR
+		 * features and extensions during runtime.
+		 *
+		 * @return true if AR features are enabled, false otherwise.
+		 */
+		[[nodiscard]] virtual bool isAREnabled() const override;
+
+		/**
+		 * @brief Enable or disable AR features on the platform.
+		 *
+		 * This function allows the application to enable or disable AR
+		 * features on the OpenXR platform. When enabled, the platform may
+		 * utilize AR features and extensions during runtime.
+		 *
+		 * @param enabled A boolean value indicating whether to enable or
+		 * disable AR features.
+		 *
+		 * @return Error::Unsupported if the platform does not support AR
+		 * features, Error::NotReady if the session is not running, or
+		 * Error::Ok if the operation was successful.
+		 */
+		virtual Error setAREnabled(bool enabled) override;
+
 		protected:
 		/**
 		 * @brief Process an OpenXR session state change event.
@@ -207,5 +245,15 @@ namespace evan
 		 * swapchain context created from this platform.
 		 */
 		OpenXrOptions _options;
+
+		/**
+		 * Weak pointer to the associated XrDeviceBackend.
+		 *
+		 * This weak pointer is used to access the device backend associated
+		 * with this platform. It allows the platform to interact with the
+		 * device backend without creating a strong ownership relationship,
+		 * preventing potential circular dependencies.
+		 */
+		mutable std::weak_ptr<XrDeviceBackend> _deviceBackend;
 	};
 }	 // namespace evan
