@@ -72,10 +72,37 @@ namespace evan
 		[[nodiscard]] XrPassthroughLayerFB getLayer() const noexcept;
 
 		private:
-		XrSession _session = XR_NULL_HANDLE;
+		/**
+		 * @brief OpenXR session that owns the passthrough objects.
+		 *
+		 * Not owned by this subsystem; the backend keeps it alive.
+		 */
+		XrSession _session = XR_NULL_SESSION;
+
+		/**
+		 * @brief Loaded XR_FB_passthrough function pointers.
+		 *
+		 * All pointers are null when the extension is unavailable.
+		 */
 		XrInstanceFunctions::Passthrough _functions;
+
+		/**
+		 * @brief Passthrough feature handle.
+		 *
+		 * XR_NULL_HANDLE while stopped; created by start().
+		 */
 		XrPassthroughFB _passthrough = XR_NULL_HANDLE;
-		XrPassthroughLayerFB _layer	 = XR_NULL_HANDLE;
-		bool _running				 = false;
+
+		/**
+		 * @brief Passthrough layer handle submitted by AR-102.
+		 *
+		 * XR_NULL_HANDLE while stopped; valid while isRunning() is true.
+		 */
+		XrPassthroughLayerFB _layer = XR_NULL_HANDLE;
+
+		/**
+		 * @brief Whether the passthrough feature and layer are running.
+		 */
+		bool _running = false;
 	};
 }	 // namespace evan
