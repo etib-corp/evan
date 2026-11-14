@@ -160,3 +160,32 @@ scripts/run-stress.sh --quick
 
 Don't commit and don't push on any branch if it is not clearly asked by a human. Agents should only commit and push when explicitly instructed to do so.
 
+
+## Agent tooling
+
+`AGENTS.md` is the single source of instructions. Skills and subagents live
+under `.agents/`; Claude Code reads them through symlinks, so there is one
+copy of everything:
+
+```text
+AGENTS.md
+CLAUDE.md        -> AGENTS.md
+.agents/skills/  one directory per skill, each with a SKILL.md
+.agents/agents/  one Markdown file per subagent
+.claude/skills   -> ../.agents/skills
+.claude/agents   -> ../.agents/agents
+```
+
+Edit the files under `.agents/`, never through `.claude/`. On Windows, clone
+with `git config core.symlinks true` so the links are created.
+
+| Skill | Use it to |
+| --- | --- |
+| `build-and-test` | Configure one platform/backend pair, build, test, format. |
+| `add-source-file` | Add a class or a test and register it in the explicit lists. |
+| `stress-test` | Measure renderer limits and compare performance. |
+
+| Subagent | Use it to |
+| --- | --- |
+| `build-verifier` | Build and test, and get a short report. |
+| `convention-reviewer` | Check a change against this file. |

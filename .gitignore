@@ -5,3 +5,6 @@ build/
 # Android example assets (large binaries, provided out of band)
 examples/OpenXR-android-base/app/assets/
 __pycache__/
+# Claude Code local files
+.claude/settings.local.json
+.claude/worktrees/
