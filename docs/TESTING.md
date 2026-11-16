@@ -83,6 +83,19 @@ the reports to Codecov (see the `coverage` job in
 Codecov merges the per-OS uploads for a commit, so platform-specific source
 files get covered by the OS that compiles them.
 
+Every job produces a single report whose paths are already relative to the
+repository root (`coverage.info` on Linux/macOS, `coverage.xml` on Windows), so
+Codecov matches the files directly. `codecov.yml` only rewrites the absolute
+`D:/...` paths that OpenCppCoverage embeds in its Cobertura report. On Linux the
+report is built from an `lcov --include` allowlist (`sources/` and `headers/`)
+rather than `--no-external`, which would drop every file outside the scanned
+build directory — that is, all of EVAN's own code.
+
+Uploads need a `CODECOV_TOKEN` repository secret: `main` is a protected branch
+and Codecov refuses tokenless uploads for protected branches. The upload step
+keeps `fail_ci_if_error: false`, so a missing token does not fail the job — it
+silently produces no report, so check the log rather than the job status.
+
 ### Why these tools on each platform
 
 There is no single portable C++ coverage collector, so each platform uses the

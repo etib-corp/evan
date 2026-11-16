@@ -106,17 +106,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: GLFW Linux
+          # The names are passed to the Codecov CLI as `--name <value>` without
+          # quoting, so they must not contain spaces.
+          - name: GLFW-Linux
             engine-backend: glfw
             operating-system: linux
             runner: ubuntu-latest
             configure_flags: "-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage"
-          - name: OpenXR Linux
+          - name: OpenXR-Linux
             engine-backend: openxr
             operating-system: linux
             runner: ubuntu-latest
             configure_flags: "-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage"
-          - name: GLFW macOS
+          - name: GLFW-macOS
             engine-backend: glfw
             operating-system: macos
             runner: macos-latest
@@ -128,7 +130,7 @@ jobs:
           # compiler/linker flags are needed on Windows. The flags must stay
           # undefined there: passing an empty CMAKE_CXX_FLAGS drops the MSVC
           # defaults (/DWIN32 /D_WINDOWS /W3 /GR /EHsc).
-          - name: GLFW Windows
+          - name: GLFW-Windows
             engine-backend: glfw
             operating-system: windows
             runner: windows-latest
@@ -188,9 +190,12 @@ jobs:
 
       - name: Run tests under OpenCppCoverage
         if: matrix.operating-system == 'windows'
+        # --sources accepts several paths and acts as an allowlist, so instrument
+        # EVAN's translation units and its headers only.
         run: >
           & "C:\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
           --sources ${{ github.workspace }}\sources
+          --sources ${{ github.workspace }}\headers
           --cover_children
           --export_type cobertura:${{ github.workspace }}\coverage.xml
           --
@@ -201,15 +206,23 @@ jobs:
 
       - name: Generate coverage report (Linux)
         if: matrix.operating-system == 'linux'
-        run: >
-          lcov
-          --capture
-          --directory ${{ github.workspace }}/build
-          --no-external
-          --ignore-errors unused
-          --exclude '*/_deps/*'
-          --exclude '*/tests/*'
-          --exclude '*/googletest*'
+        run: |
+          # Measure EVAN only: an include allowlist drops the toolchain
+          # headers, third_party/, build/_deps/ and VULKAN_SDK/ (downloaded
+          # inside the workspace) without relying on --no-external, which
+          # treats every file outside the scanned build directory as external
+          # and therefore discards all of EVAN's own sources.
+          lcov --capture \
+            --directory "${{ github.workspace }}/build" \
+            --include "${{ github.workspace }}/sources/*" \
+            --include "${{ github.workspace }}/headers/*" \
+            --ignore-errors unused \
+            --output-file coverage.info
+          # lcov 2.x writes to stdout when no output file is given, and its
+          # report keeps absolute paths whereas Codecov expects paths relative
+          # to the repository root.
+          sed -i.bak "s#^SF:${{ github.workspace }}/#SF:#" coverage.info
+          rm -f coverage.info.bak
 
       - name: Generate coverage report (macOS)
         if: matrix.operating-system == 'macos'
@@ -221,10 +234,25 @@ jobs:
             -format=lcov \
             -ignore-filename-regex='.*/(third_party|_deps|tests|examples)/.*' \
             > "${{ github.workspace }}/coverage.info"
+          # Codecov expects paths relative to the repository root.
+          sed -i.bak "s#^SF:${{ github.workspace }}/#SF:#" "${{ github.workspace }}/coverage.info"
+          rm -f "${{ github.workspace }}/coverage.info.bak"
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-${{ matrix.name }}
+          path: ${{ matrix.operating-system == 'windows' && 'coverage.xml' || 'coverage.info' }}
+          # The Codecov upload is non-fatal, so a report that was never written
+          # would otherwise only show up as missing coverage on Codecov.
+          if-no-files-found: error
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5.0.0
         with:
+          # `main` is a protected branch, so Codecov rejects tokenless
+          # uploads. Set the repository's upload token as CODECOV_TOKEN.
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ matrix.operating-system == 'windows' && 'coverage.xml' || 'coverage.info' }}
           name: ${{ matrix.name }}
           fail_ci_if_error: false
