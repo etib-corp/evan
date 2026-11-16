@@ -5,12 +5,18 @@
 # Runs the macOS GLFW PoC example with EVAN_POC_MESHES=N for each N, collects
 # the `evan stats:` report windows emitted by the P2-02 instrumentation and
 # prints the averaged fields the trigger table in
-# docs/DESIGN_P3_OPTIMIZATIONS.md §4 needs (rec, submit, wait, ubo, pres,
-# gpu pass0, draws calls/pso/ds, mesh_churn, uploadwaits).
+# docs/DESIGN_P3_OPTIMIZATIONS.md §4 needs (rec, recbuild, recenc, submit,
+# wait, ubo, pres, gpu pass0, draws calls/pso/ds, mesh_churn, uploadwaits).
 #
-# The example exposes two workload knobs:
-#   EVAN_POC_MESHES=N   number of cubes to spawn (default 0 = empty scene)
-#   EVAN_POC_FRAMES=M   stop after M frames and exit (default 0 = until close)
+# `rec` is split into `recbuild` (culling, material resolution, sort key,
+# sort) and `recenc` (state binding and draw emission), which is the split
+# the per-draw work of issue #176 is measured against.
+#
+# The example exposes three workload knobs:
+#   EVAN_POC_MESHES=N        number of cubes to spawn (default 0 = empty scene)
+#   EVAN_POC_FRAMES=M        stop after M frames and exit (default 0 = until close)
+#   EVAN_POC_UNIQUE_MESHES=1 give every cube its own geometry, so the draws
+#                            cannot be merged (default 0 = one shared mesh)
 #
 # Each reported window is a *sum* over the window (except the cpu_ms/gpu_ms
 # phases, which are averages), so the script divides the counters by the
@@ -25,6 +31,8 @@
 #                         (default: <build-root>/examples/GLFW-macos-poc)
 #   --exe NAME            Executable name (default: GLFW-macos-poc)
 #   --mesh-counts "A B"   Object counts to run (default: "100 1000")
+#   --unique-meshes       Set EVAN_POC_UNIQUE_MESHES=1: one distinct mesh per
+#                         cube, so no draw can be merged (per-draw workload)
 #   --interval N          EVAN_STATS_INTERVAL, frames per window (default: 60)
 #   --warmup N            Windows to discard as warm-up (default: 2)
 #   --windows N           Report windows to target per run (default: 5); it
@@ -61,6 +69,7 @@ BUILD_ROOT="$REPO_ROOT/build"
 EXAMPLE_DIR=""
 EXE_NAME="GLFW-macos-poc"
 MESH_COUNTS="100 1000"
+UNIQUE_MESHES=0
 INTERVAL=60
 WARMUP_WINDOWS=2
 KEEP_WINDOWS=5
@@ -112,6 +121,10 @@ while [ $# -gt 0 ]; do
 			require_value "$1" $#
 			MESH_COUNTS="$2"
 			shift 2
+			;;
+		--unique-meshes)
+			UNIQUE_MESHES=1
+			shift
 			;;
 		--interval)
 			require_value "$1" $#
@@ -254,7 +267,7 @@ if [ "$ENV_INFO" -eq 1 ]; then
 fi
 
 SUMMARY_TSV="$OUT_DIR/summary.tsv"
-printf 'n\twindows\tframes\tflush\tpre\tacq\twait\tubo\trec\tsubmit\trenderwait\tpres\tpost\tgpu_pass0\ttotal\tvis\tculled\tskip\tdraw_calls\tinstanced\tpso\tds\tsync_calls\tsync_skip\tchurn_new\tchurn_gone\tuploadwaits\tdropped\n' > "$SUMMARY_TSV"
+printf 'n\twindows\tframes\tflush\tpre\tacq\twait\tubo\trec\trecbuild\trecenc\tsubmit\trenderwait\tpres\tpost\tgpu_pass0\ttotal\tvis\tculled\tskip\tdraw_calls\tinstanced\tpso\tds\tsync_calls\tsync_skip\tchurn_new\tchurn_gone\tuploadwaits\tdropped\n' > "$SUMMARY_TSV"
 
 FAILURES=0
 RUNS=0
@@ -278,6 +291,7 @@ run_single() {
 			EVAN_STATS=1 \
 			EVAN_STATS_INTERVAL="$INTERVAL" \
 			EVAN_POC_MESHES="$mesh_count" \
+			EVAN_POC_UNIQUE_MESHES="$UNIQUE_MESHES" \
 			EVAN_POC_FRAMES="$FRAMES" \
 			UTILITY_LOG_LEVEL=info \
 			NO_COLOR=1 \
@@ -374,7 +388,7 @@ run_single() {
 
 		BEGIN {
 			FS = "|"
-			n_avg = split("flush pre acq wait ubo rec submit renderwait pres post gpu_pass0", avg, " ")
+			n_avg = split("flush pre acq wait ubo rec recbuild recenc submit renderwait pres post gpu_pass0", avg, " ")
 			n_cnt = split("total vis culled skip draw_calls instanced pso ds sync_calls sync_skip churn_new churn_gone uploadwaits", cnt, " ")
 
 			map["flush"]       = "cpu_ms(avg).flush"
@@ -383,6 +397,8 @@ run_single() {
 			map["wait"]        = "cpu_ms(avg).wait"
 			map["ubo"]         = "cpu_ms(avg).ubo"
 			map["rec"]         = "cpu_ms(avg).rec"
+			map["recbuild"]    = "cpu_ms(avg).recbuild"
+			map["recenc"]      = "cpu_ms(avg).recenc"
 			map["submit"]      = "cpu_ms(avg).submit"
 			map["renderwait"]  = "cpu_ms(avg).renderwait"
 			map["pres"]        = "cpu_ms(avg).pres"
@@ -505,29 +521,35 @@ fi
 {
 	echo "### PoC results"
 	echo ""
+	if [ "$UNIQUE_MESHES" -eq 1 ]; then
+		echo '> workload: `EVAN_POC_UNIQUE_MESHES=1`, one distinct mesh per cube (per-draw baseline)'
+	else
+		echo '> workload: one shared mesh per cube (mergeable)'
+	fi
+	echo ""
 	if [ -s "$OUT_DIR/environment.txt" ]; then
 		sed 's/^/> /' "$OUT_DIR/environment.txt"
 		echo ""
 	fi
 	awk -F'\t' '
 		NR == 1 {
-			print "| N | windows | frames/window | rec (ms) | submit (ms) | wait (ms) | ubo (ms) | pres (ms) | gpu pass0 (ms) | draws calls | pso | ds | mesh_churn (per frame) | uploadwaits | vis | culled |"
-			print "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+			print "| N | windows | frames/window | rec (ms) | recbuild (ms) | recenc (ms) | submit (ms) | wait (ms) | ubo (ms) | pres (ms) | gpu pass0 (ms) | draws calls | pso | ds | mesh_churn (per frame) | uploadwaits | vis | culled |"
+			print "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
 			next
 		}
 		{
-			gpu = $14
+			gpu = $16
 			churn = "n/a"
-			if ($25 != "n/a" && $26 != "n/a")
-				churn = sprintf("+%.1f/-%.1f", $25, $26)
-			printf "| %s | %s | %.0f | %.2f | %.2f | %.2f | %.2f | %.2f | ",
-				$1, $2, $3 / $2, $9, $10, $7, $8, $12
+			if ($27 != "n/a" && $28 != "n/a")
+				churn = sprintf("+%.1f/-%.1f", $27, $28)
+			printf "| %s | %s | %.0f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | ",
+				$1, $2, $3 / $2, $9, $10, $11, $12, $7, $8, $14
 			if (gpu == "n/a")
 				printf "n/a | "
 			else
 				printf "%.2f | ", gpu
 			printf "%.0f | %.0f | %.0f | %s | %.0f | %.0f | %.0f |\n",
-				$19, $21, $22, churn, $27, $16, $17
+				$21, $23, $24, churn, $29, $18, $19
 		}
 	' "$SUMMARY_TSV"
 	echo ""
@@ -544,8 +566,9 @@ awk -F'\t' -v window_label="$WINDOW_LABEL" -v interval="$INTERVAL" '
 	NR == 1 { next }
 	{
 		flush = $4; pre = $5; acq = $6; wait = $7; ubo = $8; rec = $9
-		submit = $10; renderwait = $11; pres = $12; post = $13
-		calls = $19; ds = $22; uploadwaits = $27; dropped = $28; windows = $2
+		recbuild = $10; recenc = $11; submit = $12; renderwait = $13
+		pres = $14; post = $15
+		calls = $21; ds = $24; uploadwaits = $29; dropped = $30; vis = $18; windows = $2
 
 		measured = flush + pre + acq + wait + ubo + rec + submit + pres + post
 		if (renderwait != "n/a")
@@ -559,6 +582,10 @@ awk -F'\t' -v window_label="$WINDOW_LABEL" -v interval="$INTERVAL" '
 		printf "  rec share of measured CPU frame: %.1f %% (WS4 trigger is per-view/XR stereo: > ~15 %%)\n", rec_share
 		printf "  wait+renderwait share:           %.1f %% (WS5 trigger: these dominate the frame)\n", wait_share
 		printf "  descriptor binds per frame:      %.0f (WS6 trigger: grows with material count)\n", ds
+		if (rec != "n/a" && recbuild != "n/a" && rec > 0)
+			printf "  recbuild share of rec:           %.1f %% (per-draw target: <= 25 %%)\n", 100 * recbuild / rec
+		if (rec != "n/a" && vis > 0)
+			printf "  rec per mesh:                    %.2f us (per-draw target: <= 3.0 us when draws == meshes)\n", rec * 1000 / vis
 
 		if (calls <= 0)
 			printf "  warning: no draw calls — the workload did not render (check shaders/)\n"
