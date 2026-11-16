@@ -37,6 +37,7 @@ set(EVAN_SOURCES_OPENXR
     sources/openxr/XrDeviceBackend.cpp
     sources/openxr/XrError.cpp
     sources/openxr/XrManageActions.cpp
+    sources/openxr/XrPassthrough.cpp
     sources/openxr/XrSwapchainContext.cpp
     sources/openxr/XrSwapchainImage.cpp
     sources/openxr/actions/AXrAction.cpp

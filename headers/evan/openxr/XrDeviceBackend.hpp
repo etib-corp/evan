@@ -11,11 +11,13 @@
 #include "evan/openxr/OpenXrOptions.hpp"
 #include "evan/openxr/XrExtensions.hpp"
 #include "evan/openxr/XrManageActions.hpp"
+#include "evan/openxr/XrPassthrough.hpp"
 
 #include "evan/ADeviceBackend.hpp"
 
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <span>
@@ -449,6 +451,39 @@ namespace evan
 		[[nodiscard]] bool isARCapable() const noexcept;
 
 		/**
+		 * @brief Whether this backend can currently start passthrough AR.
+		 *
+		 * Requires the passthrough extension, the loaded function pointers
+		 * and the runtime passthrough capability.
+		 *
+		 * @return True when AR can be enabled.
+		 */
+		[[nodiscard]] bool isARSupported() const noexcept;
+
+		/**
+		 * @brief Whether passthrough AR is currently running.
+		 *
+		 * @return True after a successful setAREnabled(true).
+		 */
+		[[nodiscard]] bool isAREnabled() const noexcept;
+
+		/**
+		 * @brief Starts or stops passthrough AR.
+		 *
+		 * @param enabled True to start passthrough, false to stop it.
+		 * @return Error::Ok, Error::Unsupported when AR is unavailable, or
+		 * Error::NotReady when the session is not running.
+		 */
+		Error setAREnabled(bool enabled);
+
+		/**
+		 * @brief The passthrough subsystem owned by this backend.
+		 *
+		 * @return The subsystem, or nullptr when passthrough is unavailable.
+		 */
+		[[nodiscard]] XrPassthrough *getPassthrough() noexcept;
+
+		/**
 		 * @brief Sets the environment blend mode for the OpenXR system.
 		 *
 		 * @param mode The desired environment blend mode to set for the
@@ -744,5 +779,20 @@ namespace evan
 		 */
 		XrEnvironmentBlendMode _environmentBlendMode =
 			XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+
+		/**
+		 * @brief Whether the runtime reports passthrough hardware support.
+		 */
+		bool _systemSupportsPassthrough = false;
+
+		/**
+		 * @brief The OpenXR passthrough interface for AR functionality.
+		 */
+		std::unique_ptr<XrPassthrough> _passthrough;
+
+		/**
+		 * @brief Whether passthrough AR is currently running.
+		 */
+		bool _arEnabled = false;
 	};
 }	 // namespace evan
