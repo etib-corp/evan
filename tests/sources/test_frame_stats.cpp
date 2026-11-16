@@ -84,6 +84,8 @@ namespace xider::tests
 		stats.frames	   = 7;
 		stats.drawCalls	   = 42;
 		stats.record.add(1234);
+		stats.recordBuild.add(1000);
+		stats.recordEncode.add(2000);
 
 		stats.resetWindow();
 
@@ -92,6 +94,35 @@ namespace xider::tests
 		EXPECT_EQ(stats.frames, 0u);
 		EXPECT_EQ(stats.drawCalls, 0u);
 		EXPECT_EQ(stats.record.samples, 0u);
+		EXPECT_EQ(stats.recordBuild.samples, 0u);
+		EXPECT_EQ(stats.recordEncode.samples, 0u);
+	}
+
+	/**
+	 * @brief The record phase is split into a build and an encode sample, and
+	 * both are timers of their own.
+	 */
+	TEST(FrameStatsTest, RecordSplitAccumulatesItsTwoHalves)
+	{
+		evan::FrameStats stats;
+
+		stats.enabled = true;
+		{
+			evan::ScopedTimer build	 = stats.timer(stats.recordBuild);
+			evan::ScopedTimer encode = stats.timer(stats.recordEncode);
+		}
+
+		EXPECT_EQ(stats.recordBuild.samples, 1u);
+		EXPECT_EQ(stats.recordEncode.samples, 1u);
+		EXPECT_EQ(stats.record.samples, 0u);
+
+		// The two halves survive a window reset the same way every other
+		// phase does: sample count cleared, last sample kept.
+		const uint64_t lastBuild = stats.recordBuild.lastNs;
+		stats.resetWindow();
+		EXPECT_EQ(stats.recordBuild.samples, 0u);
+		EXPECT_EQ(stats.recordBuild.lastNs, lastBuild);
+		EXPECT_EQ(stats.recordEncode.samples, 0u);
 	}
 
 	/**
