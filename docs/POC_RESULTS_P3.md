@@ -239,3 +239,76 @@ disappears (Release, same machine, `pass0` still in the table above):
 | steady `mesh_churn +0/-0`, `uploadwaits` = 0 | +0/-0, 0 |
 | image identical to the pre-change capture | 83 of 2 022 400 pixels differ (0.004 %), all inside a 16×27 px patch at the top centre of the frame in the old capture only; the rendered cubes are pixel-identical |
 | shader without instance inputs is never merged | unit tests on the capability query (`tests/sources/test_shader_instancing.cpp`); `default.vert` / `text.vert` scenes keep one draw per mesh |
+
+## 9. Draw-list build and per-draw recording (2026-11-13)
+
+§8 left the per-draw workload unmeasured: sharing one `GPUMesh` between the
+objects made the draw count collapse, so the scene never exercised the
+per-draw path that real content hits. This section records the same harness
+with the `EVAN_POC_UNIQUE_MESHES` knob (one distinct mesh per cube, so the
+draw count cannot fall) plus the split of `rec` into `recbuild`/`recenc`.
+
+**What changed.**
+
+- `rec` is reported as `recbuild` (frustum setup, culling, material
+  resolution, sort-key finalization, sort) and `recenc` (instance-matrix pass,
+  state binds, draw emission); the remainder is the command-buffer/render-pass
+  prologue and `RessourceManager::sync()`.
+- Materials are resolved once into a cache indexed by material ID (flat for
+  the dense provider range, a small map for variant IDs) and invalidated by a
+  new `RessourceManager::getMaterialGeneration()` counter, so a draw no longer
+  costs four hash/map lookups.
+- The world-space AABB, its centre and its radius are transformed once per
+  object per frame (`Renderer::drawFrame`) instead of once per object per
+  view.
+- The sort orders a `uint32_t` index array over a parallel key array and
+  permutes the draw list once, instead of moving the items (each carrying a
+  `glm::mat4`) through every comparison and swap. The run length of each draw
+  is resolved during that permutation, so the encode loop jumps from run head
+  to run head.
+- The instance matrices are written in one contiguous pass over the recording
+  order, and the per-item loop no longer re-reads the instance buffer handle,
+  the dynamic offset or the pipeline layout.
+
+**Method.** Same machine and configuration as §1 (Debug, validation on,
+800×600, single view, `EVAN_STATS_INTERVAL=60`, 5 kept windows). The two
+builds were measured back to back in one session; the host was not idle.
+`EVAN_POC_UNIQUE_MESHES=1` is new, so the "before" column is the previous
+renderer running today's workload.
+
+### 9.1 `EVAN_POC_UNIQUE_MESHES=1`, N=1000 (1000 draws/frame)
+
+| build | `rec` (ms) | `recbuild` (ms) | `recenc` (ms) | `rec`/draw | `pso`/`ds` | `draws` |
+| --- | --- | --- | --- | --- | --- | --- |
+| before | 6.28–6.41 | – | – | 6.3–6.4 µs | 1 / 1 | 1000 |
+| after | 2.25–2.32 | 0.56 | 1.57–1.62 | 2.3 µs | 1 / 1 | 1000 |
+
+### 9.2 Mergeable workload, N=1000 (1 draw/frame)
+
+| build | `rec` (ms) | `recbuild` (ms) | `recenc` (ms) | `draws` | `inst` | `pso`/`ds` |
+| --- | --- | --- | --- | --- | --- | --- |
+| before | 4.75–5.10 | – | – | 1 | 1 | 1 / 1 |
+| after | 0.61 | 0.58 | 0.01 | 1 | 1 | 1 / 1 |
+
+The tables above are the last of several runs; every repeat of the unique
+workload stayed within 2.25–2.88 ms (2.3–2.9 µs per draw) and every repeat of
+the mergeable one within 0.61–0.80 ms, so the spread is host load, not a
+regression between runs.
+
+### 9.3 Acceptance
+
+| Criterion | Result |
+| --- | --- |
+| unique N=1000 `rec`/draw ≤ 3.0 µs (from 5.36) | 2.3 µs (2.3–2.9 across runs) |
+| unique N=1000 `rec` ≤ 3.5 ms | 2.25–2.32 ms |
+| unique N=1000 `recbuild` ≤ 25 % of `rec` | 24.6 % (20.5–24.6 % across runs) |
+| mergeable N=1000 `draws` ≤ 2, `rec` ≤ 1.0 ms | 1 draw, 0.61 ms |
+| draw order unchanged | the sorted list (sequence, blend mode, pipeline, material, vertex/index buffer, depth bucket) is identical to the previous renderer for 40 shared-mesh and 40 unique-mesh objects |
+| culling counters unchanged | `vis` = 1000 and `culled` = 0 per frame on both workloads, same as before |
+| `ctest` green | 388/388 |
+
+The remaining per-draw cost is almost entirely `recenc` (1.57–1.62 ms for
+1000 draws, i.e. ~1.6 µs per draw at `-O0` with validation active). It is now
+the dominant term, which is consistent with the validation-layer overhead
+noted in §5: the Release/validation-off control is the next measurement, not
+another change to the shared per-item code.

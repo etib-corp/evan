@@ -27,7 +27,7 @@ Every 60 frames one line is logged (nothing is logged per frame, never per
 mesh):
 
 ```
-evan stats: frames=120 | cpu_ms(avg): flush=0.01 pre=0.02 acq=0.05 wait=1.02 ubo=0.01 rec=0.84 submit=0.03 renderwait=-- pres=0.04 post=0.00 | gpu_ms(avg): pass0=3.21 pass1=3.19 | meshes: total=1000 vis=998 culled=2 skip=0 | draws: calls=998 inst=420 pso=12 ds=12 | sync: calls=240 skip=238 | mesh_churn: +12/-12 | uploadwaits=1
+evan stats: frames=120 | cpu_ms(avg): flush=0.01 pre=0.02 acq=0.05 wait=1.02 ubo=0.01 rec=0.84 recbuild=0.31 recenc=0.48 submit=0.03 renderwait=-- pres=0.04 post=0.00 | gpu_ms(avg): pass0=3.21 pass1=3.19 | meshes: total=1000 vis=998 culled=2 skip=0 | draws: calls=998 inst=420 pso=12 ds=12 | sync: calls=240 skip=238 | mesh_churn: +12/-12 | uploadwaits=1
 ```
 
 Reading the line:
@@ -39,6 +39,13 @@ Reading the line:
     `ubo`/`rec`/`submit`: per-view uniform update, recording and queue submit;
     `renderwait`: OpenXR end-of-frame wait; `pres`: present/`xrEndFrame`;
     `post`: OpenXR postprocess.
+  - `recbuild`/`recenc`: the two halves of `rec`. `recbuild` covers producing
+    the ordered draw list (culling, material resolution, sort-key
+    finalization, sort); `recenc` covers turning it into commands (state
+    binding and `vkCmdDrawIndexed*`). The difference between `rec` and
+    `recbuild + recenc` is the command-buffer/render-pass prologue and
+    `RessourceManager::sync()`. A large `recbuild` share means the cost is in
+    the per-item CPU work, not in the draw commands.
 - `gpu_ms(avg)` — per-pass GPU time from timestamp queries (`pass0`/`pass1`
   are view slots; in multiview the single pass covers both eyes). `--` means
   the device/report has no sample; with stats on, the first frames after a
@@ -54,7 +61,9 @@ How to read a frame:
 
 - **CPU-bound**: `rec` (plus `sync` counters) dominates and `wait` is small —
   the renderer cannot record draws fast enough; look at the draw counters
-  (`calls`, `pso`, `ds`) and the audit's P0/P1 CPU findings.
+  (`calls`, `pso`, `ds`) and the audit's P0/P1 CPU findings. Split it with
+  `recbuild`/`recenc`: a large `recbuild` is draw-list work that scales with
+  the mesh count, a large `recenc` scales with the draw count.
 - **GPU-bound**: `gpu_ms` ≈ the frame budget while CPU phases are small —
   confirm with the GPU tools below (fill rate, bandwidth, draw-call count).
 - **Serialized**: large `wait` + `renderwait` while `rec` is small — the
@@ -134,6 +143,7 @@ Run it by hand with the same knobs:
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
 | `EVAN_POC_MESHES` | `0` | Cubes to spawn: one shared local-space mesh, one `Primitive` per object, placed on a grid in front of the camera through `Engine::setObjectTransform`. `0` keeps the empty scene. |
+| `EVAN_POC_UNIQUE_MESHES` | `0` | `1` perturbs one vertex of every cube, so the geometry cache can no longer share one `GPUMesh` between the objects and the scene keeps one draw per mesh. This is the per-draw workload: the draw count cannot fall, so only the per-draw CPU cost matters. |
 | `EVAN_POC_FRAMES` | `0` | Stop after that many frames and exit (`0` runs until the window is closed). Needed for a reproducible run that flushes its log. |
 
 ```sh
@@ -142,6 +152,19 @@ EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
   EVAN_POC_MESHES=1000 EVAN_POC_FRAMES=420 \
   UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-poc
 ```
+
+The per-draw baseline adds the knob that defeats geometry sharing:
+
+```sh
+cd build/examples/GLFW-macos-poc
+EVAN_STATS=1 EVAN_STATS_INTERVAL=60 EVAN_POC_MESHES=1000 \
+  EVAN_POC_UNIQUE_MESHES=1 EVAN_POC_FRAMES=420 \
+  UTILITY_LOG_LEVEL=info NO_COLOR=1 ./GLFW-macos-poc
+```
+
+`scripts/run-poc.sh --unique-meshes` runs the same workload through the
+harness and reports `recbuild`/`recenc` next to `rec`, plus the two per-draw
+checks (`recbuild <= 25 % of rec`, `rec per mesh <= 3.0 us`).
 
 `UTILITY_LOG_LEVEL=info` matters in release builds (which suppress `info`)
 and in debug builds (which otherwise log every vertex); `NO_COLOR=1` keeps the
@@ -161,6 +184,7 @@ Fill the table (averages over the steady-state windows, churn-free ones):
 | Metric | N=100 | N=1000 |
 | ------ | ----- | ------ |
 | `rec` (ms) | | |
+| `recbuild` / `recenc` (ms) | | |
 | `wait` (ms) | | |
 | `gpu_ms` pass0 / pass1 | | |
 | `draws.calls` / `inst` | | |
@@ -174,6 +198,9 @@ Variations worth running through the same harness (exported variables are
 inherited by the example):
 
 - `EVAN_MSAA=4` vs `EVAN_MSAA=1` — bandwidth cost of multisampling.
+- `--unique-meshes` on the same N — the mergeable and the per-draw workloads
+  side by side, which separates the `recenc` term (per draw) from the
+  `recbuild` term (per mesh).
 - `EVAN_DEBUG_DISABLE_CULLING=1` — culling effect at N=1000.
 - `--mesh-counts "100 1000 5000"` — draw-call scaling on the same machine.
 - The OpenXR stereo build — the only configuration that gives WS4 its
