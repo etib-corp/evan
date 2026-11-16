@@ -64,6 +64,7 @@ void evan::RessourceManager::cleanup()
 	_materials.clear();
 	_textures.clear();
 	_shaders.clear();
+	++_materialGeneration;
 }
 
 void evan::RessourceManager::init(std::shared_ptr<Renderer> renderer)
@@ -181,6 +182,9 @@ void evan::RessourceManager::sync(bool refresh)
 
 	_syncedVersion = version;
 	_synchronized  = true;
+	// The pass may have created or updated materials, hence new descriptor
+	// sets and possibly new pipeline selections.
+	++_materialGeneration;
 }
 
 uint32_t
@@ -238,6 +242,7 @@ uint32_t
 	_materials[variantID] = std::make_shared<GPUMaterial>(
 		_deviceContext, *renderer, *materialIt->second, shaderID);
 	_materialVariants[key] = variantID;
+	++_materialGeneration;
 
 	this->getLogger().info()
 		<< "Created material variant " << variantID << " for material "
@@ -288,4 +293,9 @@ const std::unordered_map<uint32_t, std::shared_ptr<evan::GPUShader>> &
 	evan::RessourceManager::getShaders() const
 {
 	return _shaders;
+}
+
+uint64_t evan::RessourceManager::getMaterialGeneration() const noexcept
+{
+	return _materialGeneration;
 }

@@ -154,6 +154,8 @@ namespace evan
 		PhaseStats acquire;			 ///< Swapchain image acquire (all sets).
 		PhaseStats updateUniform;	 ///< Per-view uniform buffer updates.
 		PhaseStats record;			 ///< Per-view command recording.
+		PhaseStats recordBuild;		 ///< record: draw-list build and sort.
+		PhaseStats recordEncode;	 ///< record: state binds and draw emission.
 		PhaseStats submit;			 ///< Per-view queue submissions.
 		PhaseStats renderWait;		 ///< OpenXR end-of-frame fence wait.
 		PhaseStats present;			 ///< Present/composition (all sets).

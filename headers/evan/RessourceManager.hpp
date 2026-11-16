@@ -175,6 +175,24 @@ namespace evan
 		std::shared_ptr<GPUShader> getShader(uint32_t id) const;
 
 		/**
+		 * @brief Counter that changes whenever cached material state may
+		 * have changed.
+		 *
+		 * Resolving a material for recording means a hash lookup for the
+		 * material, the shader, the pipeline and the pipeline layout, plus
+		 * reading the descriptor sets of the current frame slot. The renderer
+		 * caches that state per material id, so it needs a cheap way to know
+		 * when the cache went stale: this counter moves on every
+		 * synchronization pass that actually rebuilt or updated a material,
+		 * on every material variant creation and on cleanup(). A skipped
+		 * synchronization (the version short-circuit) leaves it untouched, so
+		 * a cache can outlive a frame and is only rebuilt when it must be.
+		 *
+		 * @return The current material generation.
+		 */
+		[[nodiscard]] uint64_t getMaterialGeneration() const noexcept;
+
+		/**
 		 * @brief Retrieves the map of all GPUShaders managed by the
 		 * RessourceManager.
 		 *
@@ -242,6 +260,12 @@ namespace evan
 		 * occurring mid-pass stays unseen and triggers another pass next sync.
 		 */
 		uint64_t _syncedVersion = 0;
+
+		/**
+		 * @brief Generation of the cached material state, see
+		 * getMaterialGeneration().
+		 */
+		uint64_t _materialGeneration = 0;
 
 		/**
 		 * @brief Whether at least one full synchronization pass has completed.

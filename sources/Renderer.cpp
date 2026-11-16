@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 #include <utility>
 
 namespace
@@ -35,6 +36,18 @@ namespace
 		std::size_t descriptorBinds = 0;
 		std::size_t skippedMeshes	= 0;
 	};
+
+	/**
+	 * @brief Highest material id the renderer caches in a flat array.
+	 *
+	 * Provider material ids are small sequential counters, but material
+	 * variants are allocated from RessourceManager::kFirstMaterialVariantID
+	 * (0x80000000) upward. Caching by id therefore needs two tiers: a flat,
+	 * id-indexed array for the dense range, and a small map for everything
+	 * above it, so a variant id never makes the renderer allocate a slot per
+	 * possible id.
+	 */
+	constexpr uint32_t kDenseMaterialIDCount = 1u << 16;
 
 	/**
 	 * @brief Whether verbose per-mesh draw logging is enabled.
@@ -113,9 +126,61 @@ namespace evan
 		///< Whether the shader of this draw consumes the per-instance model
 		///< matrix, which is what makes merging a run of draws correct.
 		bool instanceInputs = false;
-		///< Sort key resolved once per frame before ordering: opaque/alpha
-		///< partition, depth order, batching state and a unique tiebreak.
-		evan::DrawSortKey key {};
+		///< Length of the run of consecutive sorted draws sharing this item's
+		///< pipeline, material and geometry. Resolved while the sorted list is
+		///< built, so the encode loop never re-compares those fields: it walks
+		///< run heads and jumps by this length.
+		uint32_t runLength = 1;
+	};
+
+	/**
+	 * @brief World-space extents of one drawn mesh, computed once per frame.
+	 *
+	 * The model matrix of a mesh does not depend on the view, so the box of
+	 * its local bounds, its center and its bounding radius are transformed
+	 * once per object per frame and only tested per view. In stereo that
+	 * removes one matrix/box transform and one square root from every
+	 * per-view pass.
+	 */
+	struct MeshWorldBounds {
+		utility::math::AabbF box {};
+		glm::vec3 center { 0.0f };
+		float radius = 0.0f;
+
+		/**
+		 * @brief Whether the bounds are usable for culling.
+		 */
+		[[nodiscard]] bool isEmpty() const noexcept
+		{
+			return box.isEmpty();
+		}
+	};
+
+	/**
+	 * @brief Draw state of one material, resolved once per material change.
+	 *
+	 * Provider material IDs are dense, so most of these live in a flat vector
+	 * indexed by ID (variant IDs, allocated above that range, use a small
+	 * map). Resolving a material means a material lookup, a shader blend-mode
+	 * lookup, a pipeline lookup, a pipeline-layout lookup and a descriptor-set
+	 * read: four hash/map lookups per draw before this cache. The entry is
+	 * also the place where a material that cannot be drawn is recorded, so
+	 * the failure is not retried for every mesh using it.
+	 */
+	struct MaterialDrawState {
+		VkPipeline pipeline				= VK_NULL_HANDLE;
+		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+		///< Descriptor set of the material in each frame slot, so the cache
+		///< survives the rotation of the per-frame slots.
+		std::array<VkDescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets {};
+		std::size_t descriptorSetCount = 0;
+		uint32_t pipelineKey		   = 0;
+		evan::BlendMode blendMode	   = evan::BlendMode::Opaque;
+		bool instanceInputs			   = false;
+		///< Whether the material resolved into something drawable.
+		bool drawable = false;
+		///< Whether the entry was resolved for the current generation.
+		bool resolved = false;
 	};
 
 	/**
@@ -127,8 +192,18 @@ namespace evan
 	 * has one set of scratch per recorder.
 	 */
 	struct DrawListScratch {
-		///< One draw list per view slot.
+		///< One draw list per view slot, in the order the meshes were built.
 		std::array<std::vector<DrawItem>, MAX_SWAPCHAINS> drawLists;
+
+		///< The same draws in recording order: the sort permutes the list once
+		///< instead of moving the items through every comparison and swap.
+		std::array<std::vector<DrawItem>, MAX_SWAPCHAINS> sortedDrawLists;
+
+		///< Sort key of each draw of drawLists, parallel to it.
+		std::array<std::vector<evan::DrawSortKey>, MAX_SWAPCHAINS> drawKeys;
+
+		///< Draw-list indices, ordered by drawKeys.
+		std::array<std::vector<uint32_t>, MAX_SWAPCHAINS> drawOrder;
 
 		///< One frustum list per view slot.
 		std::array<std::vector<Frustum>, MAX_SWAPCHAINS> frustums;
@@ -142,8 +217,23 @@ namespace evan
 		///< the object that registered it, not to the mesh itself.
 		std::vector<glm::mat4> transforms;
 
+		///< World-space extents of each flattened mesh, parallel to meshes and
+		///< shared by every view of the frame.
+		std::vector<MeshWorldBounds> worldBounds;
+
 		///< View list of the current multiview pass.
 		std::vector<utility::graphic::ViewF> views;
+
+		///< Material draw state for the dense material id range, indexed by
+		///< material id.
+		std::vector<MaterialDrawState> materials;
+
+		///< Material draw state for ids above that range (material variants),
+		///< see kDenseMaterialIDCount.
+		std::unordered_map<uint32_t, MaterialDrawState> variantMaterials;
+
+		///< Material generation both caches above were resolved for.
+		uint64_t materialGeneration = 0;
 	};
 }	 // namespace evan
 
@@ -374,18 +464,31 @@ evan::Error evan::Renderer::drawFrame(const DeviceContext &deviceContext,
 	// shared_ptr per view. The registry keeps the objects alive for the whole
 	// frame. The transform is read from the object, not from the mesh: one
 	// GPUMesh may be shared by several objects, each with its own transform.
-	std::vector<GPUMesh *> &meshes	   = _drawScratch->meshes;
-	std::vector<glm::mat4> &transforms = _drawScratch->transforms;
+	// The world-space bounds are transformed here, once per object, because
+	// they are the same for every view: the per-view passes only test them.
+	std::vector<GPUMesh *> &meshes			  = _drawScratch->meshes;
+	std::vector<glm::mat4> &transforms		  = _drawScratch->transforms;
+	std::vector<MeshWorldBounds> &worldBounds = _drawScratch->worldBounds;
 	meshes.clear();
 	transforms.clear();
+	worldBounds.clear();
 	_objects.forEach(
-		[&meshes, &transforms](std::size_t,
-							   const std::shared_ptr<RenderObject> &object) {
+		[&meshes, &transforms, &worldBounds](
+			std::size_t, const std::shared_ptr<RenderObject> &object) {
 			const glm::mat4 &transform = object->getTransform();
 
 			for (const auto &mesh: object->getMeshes()) {
 				meshes.push_back(mesh.get());
 				transforms.push_back(transform);
+
+				MeshWorldBounds extent;
+				extent.box = transformedBounds(mesh->getBounds(), transform);
+				if (!extent.isEmpty()) {
+					const auto center = extent.box.center();
+					extent.center	  = glm::vec3(center.x, center.y, center.z);
+					extent.radius	  = extent.box.radius();
+				}
+				worldBounds.push_back(extent);
 			}
 		});
 
@@ -1210,442 +1313,548 @@ void evan::Renderer::recordCommandBuffer(
 	DrawStats stats {};
 	stats.totalMeshes = meshes.size();
 
-	// A pass covers one view in the fallback path and every eye in multiview
-	// mode. Culling must keep a mesh visible for any covered view, and the
-	// depth order is measured from the eye midpoint (a heuristic; the depth
-	// buckets make the exact reference point non-critical).
-	std::vector<Frustum> &frustums = _drawScratch->frustums[viewSlot];
-	frustums.clear();
-	frustums.reserve(views.size());
-	glm::vec3 cameraPos(0.0f);
-	for (const auto &view: views) {
-		frustums.push_back(Frustum::fromViewProjection(
-			view.getProjectionMatrix() * view.toViewMatrix()));
-
-		const auto cameraPosition = view.getPose().getPosition();
-		cameraPos +=
-			glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-	}
-	if (!views.empty()) {
-		cameraPos /= static_cast<float>(views.size());
-	}
-
-	const uint32_t dynamicOffset =
-		static_cast<uint32_t>(viewSlot * frame.getUniformBufferAlignedSize());
-
-	// Build the draw list: cull, resolve each mesh's pipeline, material and
-	// descriptor state once, then sort so consecutive draws share GPU state.
-	// The list is reused across frames (per view slot) with its capacity kept.
 	std::vector<DrawItem> &drawList = _drawScratch->drawLists[viewSlot];
-	drawList.clear();
-	drawList.reserve(meshes.size());
+	// Recording order: filled by the permutation below, so the sort never
+	// moves the items themselves (each carries its model matrix).
+	std::vector<DrawItem> &recordList = _drawScratch->sortedDrawLists[viewSlot];
+	// Number of leading draws of recordList that are opaque; resolved by the
+	// build phase so the encode phase only walks two contiguous ranges.
+	std::size_t opaqueCount = 0;
 
-	for (std::size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
-		const GPUMesh *mesh		   = meshes[meshIndex];
-		const glm::mat4 &transform = transforms[meshIndex];
+	{
+		evan::ScopedTimer buildTimer = _stats.timer(_stats.recordBuild);
 
-		// Geometry is local-space and the model matrix carries the pose, so
-		// culling and depth sorting must use the transformed bounds: the local
-		// box of every mesh of a kind sits at the same place.
-		const utility::math::AabbF bounds =
-			transformedBounds(mesh->getBounds(), transform);
+		// A pass covers one view in the fallback path and every eye in
+		// multiview mode. Culling must keep a mesh visible for any covered
+		// view, and the depth order is measured from the eye midpoint (a
+		// heuristic; the depth buckets make the exact reference point
+		// non-critical).
+		std::vector<Frustum> &frustums = _drawScratch->frustums[viewSlot];
+		frustums.clear();
+		frustums.reserve(views.size());
+		glm::vec3 cameraPos(0.0f);
+		for (const auto &view: views) {
+			frustums.push_back(Frustum::fromViewProjection(
+				view.getProjectionMatrix() * view.toViewMatrix()));
 
-		if (_cullingEnabled) {
-			if (!bounds.isEmpty()) {
-				if (_maxDrawDistance > 0.0f) {
-					const glm::vec3 center(bounds.center().x, bounds.center().y,
-										   bounds.center().z);
-					if (glm::distance(cameraPos, center) - bounds.radius()
-						> _maxDrawDistance) {
+			const auto cameraPosition = view.getPose().getPosition();
+			cameraPos +=
+				glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+		}
+		if (!views.empty()) {
+			cameraPos /= static_cast<float>(views.size());
+		}
+
+		// Build the draw list: cull, resolve each mesh's pipeline, material
+		// and descriptor state through the material cache, then sort so
+		// consecutive draws share GPU state. The list is reused across frames
+		// (per view slot) with its capacity kept.
+		drawList.clear();
+		drawList.reserve(meshes.size());
+
+		std::vector<MaterialDrawState> &materials = _drawScratch->materials;
+		std::unordered_map<uint32_t, MaterialDrawState> &variantMaterials =
+			_drawScratch->variantMaterials;
+		const uint64_t materialGeneration =
+			_ressourceManager->getMaterialGeneration();
+		if (materialGeneration != _drawScratch->materialGeneration) {
+			materials.clear();
+			variantMaterials.clear();
+			_drawScratch->materialGeneration = materialGeneration;
+		}
+
+		// Resolves what recording one material needs: its pipeline, pipeline
+		// layout, blend mode, descriptor sets and whether its shader consumes
+		// the instance matrix. Material IDs are dense, so the result is kept
+		// per ID and reused by every mesh of the material, in every view,
+		// until the material state changes. A material that cannot be drawn
+		// is cached as such, instead of repeating the failed lookups per mesh.
+		const auto resolveMaterial = [this](uint32_t materialID,
+											MaterialDrawState &state) {
+			state.resolved = true;
+			state.drawable = false;
+
+			const auto material = _ressourceManager->getMaterial(materialID);
+			if (!material) {
+				if (isDrawLogEnabled()) {
+					this->getLogger().debug()
+						<< "Material with ID " << materialID
+						<< " not found! Skipping its meshes.";
+				}
+				return;
+			}
+
+			state.pipelineKey = material->getShaderID();
+			// Opaque and blended draws of the same shader use different
+			// pipelines, so the variant has to be resolved before recording.
+			// An explicit per-shader override wins over the material alpha
+			// mode.
+			const bool alpha = material->getBlendMode() == BlendMode::Alpha
+				|| this->getShaderBlendMode(state.pipelineKey)
+					== BlendMode::Alpha;
+			state.blendMode = alpha ? BlendMode::Alpha : BlendMode::Opaque;
+			state.pipeline =
+				this->pipelineFor(state.pipelineKey, state.blendMode);
+			if (state.pipeline == VK_NULL_HANDLE) {
+				if (isDrawLogEnabled()) {
+					this->getLogger().debug()
+						<< "No pipeline found for shader ID: "
+						<< state.pipelineKey << " (blend mode "
+						<< (alpha ? "alpha" : "opaque")
+						<< "). Skipping its meshes.";
+				}
+				return;
+			}
+
+			const auto layoutIt = _pipelineLayouts.find(state.pipelineKey);
+			if (layoutIt == _pipelineLayouts.end()) {
+				if (isDrawLogEnabled()) {
+					this->getLogger().debug()
+						<< "No pipeline layout found for shader ID: "
+						<< state.pipelineKey << ". Skipping its meshes.";
+				}
+				return;
+			}
+			state.pipelineLayout = layoutIt->second;
+
+			// Only a shader that declares the per-instance matrix can be
+			// merged into an instanced draw: a shader that ignores it would
+			// place every instance of the run at the same place.
+			const auto shader = _ressourceManager->getShader(state.pipelineKey);
+			state.instanceInputs = shader && shader->declaresInstanceInputs();
+
+			const auto &descriptorSets = material->getDescriptorSets();
+			state.descriptorSetCount   = descriptorSets.size();
+			for (std::size_t slot = 0; slot < state.descriptorSets.size();
+				 ++slot) {
+				state.descriptorSets[slot] = slot < descriptorSets.size()
+					? descriptorSets[slot]
+					: VK_NULL_HANDLE;
+			}
+			state.drawable = true;
+		};
+
+		// Depth range of the visible draws, accumulated while the list is
+		// built instead of in an extra pass over it.
+		float nearestDepth	= kUnknownDepth;
+		float farthestDepth = 0.0f;
+
+		for (std::size_t meshIndex = 0; meshIndex < meshes.size();
+			 ++meshIndex) {
+			const GPUMesh *mesh		   = meshes[meshIndex];
+			const glm::mat4 &transform = transforms[meshIndex];
+
+			// Geometry is local-space and the model matrix carries the pose,
+			// so culling and depth sorting must use the transformed bounds:
+			// the local box of every mesh of a kind sits at the same place.
+			// The world-space box is computed once per object per frame
+			// (drawFrame), because it does not depend on the view.
+			const MeshWorldBounds &extent =
+				_drawScratch->worldBounds[meshIndex];
+
+			if (_cullingEnabled) {
+				if (!extent.isEmpty()) {
+					if (_maxDrawDistance > 0.0f
+						&& glm::distance(cameraPos, extent.center)
+								- extent.radius
+							> _maxDrawDistance) {
+						++stats.culledMeshes;
+						continue;
+					}
+					// Conservative across the covered views: keeping a mesh
+					// that only one eye sees is correct, dropping it would
+					// not be.
+					bool intersectsAnyView = frustums.empty();
+					for (const auto &frustum: frustums) {
+						if (frustum.intersects(extent.box)) {
+							intersectsAnyView = true;
+							break;
+						}
+					}
+					if (!intersectsAnyView) {
 						++stats.culledMeshes;
 						continue;
 					}
 				}
-				// Conservative across the covered views: keeping a mesh that
-				// only one eye sees is correct, dropping it would not be.
-				bool intersectsAnyView = frustums.empty();
-				for (const auto &frustum: frustums) {
-					if (frustum.intersects(bounds)) {
-						intersectsAnyView = true;
-						break;
-					}
+			}
+			++stats.visibleMeshes;
+
+			const uint32_t materialID = mesh->getMaterialID();
+			if (isDrawLogEnabled()) {
+				this->getLogger().debug()
+					<< "Processing mesh with material ID: " << materialID;
+			}
+
+			MaterialDrawState *materialEntry = nullptr;
+			if (materialID < kDenseMaterialIDCount) {
+				if (static_cast<std::size_t>(materialID) >= materials.size()) {
+					materials.resize(static_cast<std::size_t>(materialID) + 1);
 				}
-				if (!intersectsAnyView) {
-					++stats.culledMeshes;
-					continue;
-				}
+				materialEntry = &materials[materialID];
+			} else {
+				materialEntry = &variantMaterials[materialID];
 			}
-		}
-		++stats.visibleMeshes;
-
-		if (isDrawLogEnabled()) {
-			this->getLogger().debug() << "Processing mesh with material ID: "
-									  << mesh->getMaterialID();
-		}
-		const auto materialID = mesh->getMaterialID();
-		const auto material	  = _ressourceManager->getMaterial(materialID);
-
-		if (!material) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug() << "Material with ID " << materialID
-										  << " not found! Skipping mesh.";
+			MaterialDrawState &materialState = *materialEntry;
+			if (!materialState.resolved) {
+				resolveMaterial(materialID, materialState);
 			}
-			continue;
-		}
-
-		const auto pipelineKey = material->getShaderID();
-		// Opaque and blended draws of the same shader use different
-		// pipelines, so the variant has to be resolved before recording. An
-		// explicit per-shader override wins over the material alpha mode.
-		const bool alpha = material->getBlendMode() == BlendMode::Alpha
-			|| this->getShaderBlendMode(pipelineKey) == BlendMode::Alpha;
-		const BlendMode blendMode =
-			alpha ? BlendMode::Alpha : BlendMode::Opaque;
-		const VkPipeline pipeline = this->pipelineFor(pipelineKey, blendMode);
-		if (pipeline == VK_NULL_HANDLE) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "No pipeline found for shader ID: " << pipelineKey
-					<< " (blend mode " << (alpha ? "alpha" : "opaque")
-					<< "). Skipping mesh.";
-			}
-			continue;
-		}
-		const auto layoutIt = _pipelineLayouts.find(pipelineKey);
-		if (layoutIt == _pipelineLayouts.end()) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "No pipeline layout found for shader ID: " << pipelineKey
-					<< ". Skipping mesh.";
-			}
-			continue;
-		}
-
-		const auto vertexBuffer = mesh->getVertexBuffer();
-		if (vertexBuffer == VK_NULL_HANDLE) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "Vertex buffer is null for mesh with material ID: "
-					<< materialID << ". Skipping mesh.";
-			}
-			continue;
-		}
-
-		const auto indexBuffer = mesh->getIndexBuffer();
-		if (indexBuffer == VK_NULL_HANDLE) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "Index buffer is null for mesh with material ID: "
-					<< materialID << ". Skipping mesh.";
-			}
-			continue;
-		}
-
-		// Only a shader that declares the per-instance matrix can be merged
-		// into an instanced draw: a shader that ignores it would place every
-		// instance of the run at the same place.
-		const auto shader		  = _ressourceManager->getShader(pipelineKey);
-		const bool instanceInputs = shader && shader->declaresInstanceInputs();
-
-		const auto &descriptorSets = material->getDescriptorSets();
-		if (_currentFrameIndex >= descriptorSets.size()) {
-			++stats.skippedMeshes;
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "No descriptor set for material ID " << materialID
-					<< " at frame index " << _currentFrameIndex
-					<< ". Skipping mesh.";
-			}
-			continue;
-		}
-
-		// Distance from the camera, used to order draws: front-to-back for
-		// opaque geometry so early depth testing rejects occluded fragments,
-		// back-to-front for blended geometry so compositing is correct. Meshes
-		// without usable bounds are treated as infinitely far away.
-		float depth = kUnknownDepth;
-		if (!bounds.isEmpty()) {
-			const glm::vec3 center(bounds.center().x, bounds.center().y,
-								   bounds.center().z);
-			depth = glm::distance(cameraPos, center);
-		}
-
-		drawList.push_back(
-			{ pipelineKey, materialID, blendMode, pipeline, layoutIt->second,
-			  descriptorSets[_currentFrameIndex], vertexBuffer, indexBuffer,
-			  mesh->getIndexCount(), depth, transform, instanceInputs });
-	}
-
-	// Depth buckets are normalized against the visible depth range so that the
-	// bucket count stays meaningful whatever the scene scale is. Draws landing
-	// in the same bucket keep their state ordering, which preserves the run
-	// merging used by instanced and indirect drawing.
-	float nearestDepth	= kUnknownDepth;
-	float farthestDepth = 0.0f;
-	for (const auto &item: drawList) {
-		if (item.depth < nearestDepth) {
-			nearestDepth = item.depth;
-		}
-		if (item.depth != kUnknownDepth && item.depth > farthestDepth) {
-			farthestDepth = item.depth;
-		}
-	}
-	const float depthSpan =
-		farthestDepth > nearestDepth ? farthestDepth - nearestDepth : 0.0f;
-	const bool frontToBack =
-		_opaqueSortMode == OpaqueSortMode::FrontToBack && depthSpan > 0.0f;
-
-	// Finalize the sort key once per draw. The depth bucket depends on the
-	// whole list (it is normalized against the visible range), so it is
-	// resolved here rather than while the list is built; the sort then compares
-	// keys and never recomputes anything.
-	for (std::size_t i = 0; i < drawList.size(); ++i) {
-		DrawItem &item = drawList[i];
-
-		item.key.blendMode	  = item.blendMode;
-		item.key.depth		  = item.depth;
-		item.key.pipelineKey  = item.pipelineKey;
-		item.key.materialID	  = item.materialID;
-		item.key.vertexBuffer = item.vertexBuffer;
-		item.key.indexBuffer  = item.indexBuffer;
-		// A disabled front-to-back ordering collapses every opaque draw into
-		// the same bucket, which leaves the state ordering in charge.
-		item.key.depthBucket = frontToBack
-			? opaqueDepthBucket(item.depth, nearestDepth, depthSpan,
-								kOpaqueDepthBucketCount)
-			: 0u;
-		// Unique draw-list position: the last key field, so the order is total
-		// and reproducible instead of depending on std::sort's tie-breaking.
-		item.key.sequence = static_cast<uint32_t>(i);
-	}
-
-	// Opaque draws come first, so the recording pass can walk two contiguous
-	// ranges. Inside a group, consecutive draws sharing pipeline, material and
-	// geometry stay adjacent for batching.
-	std::sort(drawList.begin(), drawList.end(),
-			  [](const DrawItem &lhs, const DrawItem &rhs) {
-				  return drawSortKeyLess(lhs.key, rhs.key);
-			  });
-
-	// Record the sorted draw list, re-binding state only when it changes.
-	VkPipeline boundPipeline			 = VK_NULL_HANDLE;
-	VkPipelineLayout boundPipelineLayout = VK_NULL_HANDLE;
-	VkDescriptorSet boundDescriptorSet	 = VK_NULL_HANDLE;
-	VkBuffer boundVertexBuffer			 = VK_NULL_HANDLE;
-	VkBuffer boundIndexBuffer			 = VK_NULL_HANDLE;
-	VkBuffer boundInstanceBuffer		 = VK_NULL_HANDLE;
-	uint32_t boundDynamicOffset			 = 0;
-	bool hasBoundState					 = false;
-	bool hasBoundInstanceBuffer			 = false;
-
-	const VkDeviceSize instanceBufferOffset =
-		viewSlot * frame.getInstanceBufferAlignedSize();
-	// Every mesh owns one transform slot, so the mapped pointer is always
-	// valid: the model matrix of a mesh is uploaded at its own slot and
-	// selected at draw time through firstInstance.
-	GPUInstance *instanceData =
-		static_cast<GPUInstance *>(frame.getInstanceBufferMapped(viewSlot));
-	uint32_t instanceCursor = 0;
-
-	const VkDeviceSize indirectBufferOffset =
-		viewSlot * frame.getIndirectBufferAlignedSize();
-	VkDrawIndexedIndirectCommand *indirectData = _indirectDrawingEnabled
-		? static_cast<VkDrawIndexedIndirectCommand *>(
-			  frame.getIndirectBufferMapped(viewSlot))
-		: nullptr;
-	uint32_t indirectCursor					   = 0;
-	uint32_t indirectPendingBase			   = 0;
-
-	const auto flushIndirect = [&]() {
-		if (!_indirectDrawingEnabled || indirectCursor == indirectPendingBase) {
-			return;
-		}
-		vkCmdDrawIndexedIndirect(
-			commandBuffer, frame.getIndirectBuffer(),
-			indirectBufferOffset
-				+ indirectPendingBase * sizeof(VkDrawIndexedIndirectCommand),
-			indirectCursor - indirectPendingBase,
-			static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand)));
-		indirectPendingBase = indirectCursor;
-	};
-
-	const auto emitDraw = [&](uint32_t indexCount, uint32_t instanceCount,
-							  uint32_t firstInstance) {
-		if (_indirectDrawingEnabled
-			&& indirectCursor
-				< static_cast<uint32_t>(MAX_INDIRECT_COMMANDS_PER_VIEW)) {
-			indirectData[indirectCursor++] = { indexCount, instanceCount, 0, 0,
-											   firstInstance };
-		} else {
-			vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, 0, 0,
-							 firstInstance);
-		}
-		++stats.drawCalls;
-	};
-
-	const auto recordRange = [&](std::size_t begin, std::size_t end) {
-		if (begin == end) {
-			return;
-		}
-
-		// Each pass starts from unbound state so its first draw rebinds the
-		// pipeline, the buffers and the descriptor set.
-		boundPipeline		   = VK_NULL_HANDLE;
-		boundPipelineLayout	   = VK_NULL_HANDLE;
-		boundDescriptorSet	   = VK_NULL_HANDLE;
-		boundVertexBuffer	   = VK_NULL_HANDLE;
-		boundIndexBuffer	   = VK_NULL_HANDLE;
-		boundInstanceBuffer	   = VK_NULL_HANDLE;
-		boundDynamicOffset	   = 0;
-		hasBoundState		   = false;
-		hasBoundInstanceBuffer = false;
-
-		for (std::size_t i = begin; i < end;) {
-			// Consecutive items sharing pipeline, material and geometry are
-			// merged into a single instanced draw when batching is enabled and
-			// the shader consumes the instance matrix; each mesh keeps its own
-			// transform slot either way.
-			std::size_t runEnd = i + 1;
-			if (_mergeIdenticalRuns && drawList[i].instanceInputs) {
-				while (
-					runEnd < end
-					&& drawList[runEnd].pipelineKey == drawList[i].pipelineKey
-					&& drawList[runEnd].materialID == drawList[i].materialID
-					&& drawList[runEnd].vertexBuffer == drawList[i].vertexBuffer
-					&& drawList[runEnd].indexBuffer
-						== drawList[i].indexBuffer) {
-					++runEnd;
-				}
-			}
-			const std::size_t runSize = runEnd - i;
-			const DrawItem &item	  = drawList[i];
-
-			const bool stateChanged = !hasBoundState
-				|| boundPipeline != item.pipeline
-				|| boundVertexBuffer != item.vertexBuffer
-				|| boundIndexBuffer != item.indexBuffer
-				|| boundDescriptorSet != item.descriptorSet
-				|| boundPipelineLayout != item.pipelineLayout
-				|| boundDynamicOffset != dynamicOffset;
-
-			if (stateChanged) {
-				flushIndirect();
+			if (!materialState.drawable) {
+				++stats.skippedMeshes;
+				continue;
 			}
 
-			if (!hasBoundState || boundPipeline != item.pipeline) {
+			const auto vertexBuffer = mesh->getVertexBuffer();
+			if (vertexBuffer == VK_NULL_HANDLE) {
+				++stats.skippedMeshes;
 				if (isDrawLogEnabled()) {
 					this->getLogger().debug()
-						<< "Binding pipeline for shader ID: "
-						<< item.pipelineKey;
+						<< "Vertex buffer is null for mesh with material ID: "
+						<< materialID << ". Skipping mesh.";
 				}
-				vkCmdBindPipeline(commandBuffer,
-								  VK_PIPELINE_BIND_POINT_GRAPHICS,
-								  item.pipeline);
-				boundPipeline = item.pipeline;
-				++stats.pipelineBinds;
-
-				glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
-				vkCmdPushConstants(commandBuffer, item.pipelineLayout,
-								   VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-								   sizeof(glm::vec4), &color);
+				continue;
 			}
 
-			if (!hasBoundState || boundVertexBuffer != item.vertexBuffer) {
-				VkDeviceSize offsets[] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &item.vertexBuffer,
-									   offsets);
-				boundVertexBuffer = item.vertexBuffer;
+			const auto indexBuffer = mesh->getIndexBuffer();
+			if (indexBuffer == VK_NULL_HANDLE) {
+				++stats.skippedMeshes;
 				if (isDrawLogEnabled()) {
 					this->getLogger().debug()
-						<< "Binding vertex buffer for ->..";
+						<< "Index buffer is null for mesh with material ID: "
+						<< materialID << ". Skipping mesh.";
 				}
+				continue;
 			}
 
-			if (!hasBoundState || boundIndexBuffer != item.indexBuffer) {
-				vkCmdBindIndexBuffer(commandBuffer, item.indexBuffer, 0,
-									 VK_INDEX_TYPE_UINT32);
-				boundIndexBuffer = item.indexBuffer;
-			}
-
-			if (!hasBoundState || boundDescriptorSet != item.descriptorSet
-				|| boundPipelineLayout != item.pipelineLayout
-				|| boundDynamicOffset != dynamicOffset) {
+			if (_currentFrameIndex >= materialState.descriptorSetCount) {
+				++stats.skippedMeshes;
 				if (isDrawLogEnabled()) {
 					this->getLogger().debug()
-						<< "Binding descriptor set for material ID: "
-						<< item.materialID;
+						<< "No descriptor set for material ID " << materialID
+						<< " at frame index " << _currentFrameIndex
+						<< ". Skipping mesh.";
 				}
-				vkCmdBindDescriptorSets(commandBuffer,
-										VK_PIPELINE_BIND_POINT_GRAPHICS,
-										item.pipelineLayout, 0, 1,
-										&item.descriptorSet, 1, &dynamicOffset);
-				boundDescriptorSet	= item.descriptorSet;
-				boundPipelineLayout = item.pipelineLayout;
-				boundDynamicOffset	= dynamicOffset;
-				++stats.descriptorBinds;
+				continue;
 			}
 
-			if (!hasBoundInstanceBuffer
-				|| boundInstanceBuffer != frame.getInstanceBuffer()) {
+			// Distance from the camera, used to order draws: front-to-back
+			// for opaque geometry so early depth testing rejects occluded
+			// fragments, back-to-front for blended geometry so compositing is
+			// correct. Meshes without usable bounds are treated as infinitely
+			// far away.
+			float depth = kUnknownDepth;
+			if (!extent.isEmpty()) {
+				depth = glm::distance(cameraPos, extent.center);
+			}
+			if (depth < nearestDepth) {
+				nearestDepth = depth;
+			}
+			if (depth != kUnknownDepth && depth > farthestDepth) {
+				farthestDepth = depth;
+			}
+
+			drawList.push_back(
+				{ materialState.pipelineKey, materialID,
+				  materialState.blendMode, materialState.pipeline,
+				  materialState.pipelineLayout,
+				  materialState.descriptorSets[_currentFrameIndex],
+				  vertexBuffer, indexBuffer, mesh->getIndexCount(), depth,
+				  transform, materialState.instanceInputs });
+		}
+
+		// Depth buckets are normalized against the visible depth range so that
+		// the bucket count stays meaningful whatever the scene scale is. Draws
+		// landing in the same bucket keep their state ordering, which
+		// preserves the run merging used by instanced and indirect drawing.
+		const float depthSpan =
+			farthestDepth > nearestDepth ? farthestDepth - nearestDepth : 0.0f;
+		const bool frontToBack =
+			_opaqueSortMode == OpaqueSortMode::FrontToBack && depthSpan > 0.0f;
+
+		// Finalize the sort key once per draw. The depth bucket depends on the
+		// whole list (it is normalized against the visible range), so it is
+		// resolved here rather than while the list is built; the sort then
+		// compares keys and never recomputes anything.
+		std::vector<DrawSortKey> &keys = _drawScratch->drawKeys[viewSlot];
+		keys.resize(drawList.size());
+		for (std::size_t i = 0; i < drawList.size(); ++i) {
+			const DrawItem &item = drawList[i];
+			DrawSortKey &key	 = keys[i];
+
+			key.blendMode	 = item.blendMode;
+			key.depth		 = item.depth;
+			key.pipelineKey	 = item.pipelineKey;
+			key.materialID	 = item.materialID;
+			key.vertexBuffer = item.vertexBuffer;
+			key.indexBuffer	 = item.indexBuffer;
+			// A disabled front-to-back ordering collapses every opaque draw
+			// into the same bucket, which leaves the state ordering in charge.
+			key.depthBucket = frontToBack
+				? opaqueDepthBucket(item.depth, nearestDepth, depthSpan,
+									kOpaqueDepthBucketCount)
+				: 0u;
+			// Unique draw-list position: the last key field, so the order is
+			// total and reproducible instead of depending on std::sort's
+			// tie-breaking.
+			key.sequence = static_cast<uint32_t>(i);
+		}
+
+		// Opaque draws come first, so the recording pass can walk two
+		// contiguous ranges. Inside a group, consecutive draws sharing
+		// pipeline, material and geometry stay adjacent for batching.
+		//
+		// The order is sorted through an index array: comparing and swapping
+		// 4-byte indices costs a fraction of moving the items, each of which
+		// carries its model matrix.
+		std::vector<uint32_t> &order = _drawScratch->drawOrder[viewSlot];
+		order.resize(drawList.size());
+		for (std::size_t i = 0; i < order.size(); ++i) {
+			order[i] = static_cast<uint32_t>(i);
+		}
+		std::sort(order.begin(), order.end(),
+				  [&keys](uint32_t lhs, uint32_t rhs) {
+					  return drawSortKeyLess(keys[lhs], keys[rhs]);
+				  });
+
+		// Permute the list once into recording order and resolve the runs
+		// while doing it: the run length is stored on every item of the run,
+		// so the encode loop never compares pipeline, material and geometry
+		// again.
+		recordList.clear();
+		recordList.reserve(drawList.size());
+		std::size_t runStart = 0;
+		for (const uint32_t index: order) {
+			DrawItem item  = drawList[index];
+			item.runLength = 1;
+			if (!recordList.empty()) {
+				const DrawItem &previous = recordList.back();
+				if (previous.pipelineKey == item.pipelineKey
+					&& previous.materialID == item.materialID
+					&& previous.vertexBuffer == item.vertexBuffer
+					&& previous.indexBuffer == item.indexBuffer) {
+					++recordList[runStart].runLength;
+					item.runLength = recordList[runStart].runLength;
+				} else {
+					runStart = recordList.size();
+				}
+			}
+			recordList.push_back(item);
+		}
+
+		while (opaqueCount < recordList.size()
+			   && recordList[opaqueCount].blendMode == BlendMode::Opaque) {
+			++opaqueCount;
+		}
+	}
+
+	{
+		evan::ScopedTimer encodeTimer = _stats.timer(_stats.recordEncode);
+
+		// Record the sorted draw list, re-binding state only when it changes.
+		VkPipeline boundPipeline		   = VK_NULL_HANDLE;
+		VkDescriptorSet boundDescriptorSet = VK_NULL_HANDLE;
+		VkBuffer boundVertexBuffer		   = VK_NULL_HANDLE;
+		VkBuffer boundIndexBuffer		   = VK_NULL_HANDLE;
+		bool hasBoundState				   = false;
+
+		const VkDeviceSize instanceBufferOffset =
+			viewSlot * frame.getInstanceBufferAlignedSize();
+		// The per-view uniform slot is a dynamic UBO offset: constant for
+		// every draw of this view.
+		const uint32_t dynamicOffset = static_cast<uint32_t>(
+			viewSlot * frame.getUniformBufferAlignedSize());
+		// Every mesh owns one transform slot, so the mapped pointer is always
+		// valid: the model matrix of a mesh is uploaded at its own slot and
+		// selected at draw time through firstInstance. The matrices are
+		// written in one contiguous pass over the recording order instead of
+		// inside each run, which keeps the writes sequential and out of the
+		// command-recording loop.
+		GPUInstance *instanceData =
+			static_cast<GPUInstance *>(frame.getInstanceBufferMapped(viewSlot));
+
+		// The frame sized the buffer for every registered mesh before
+		// recording, so this guard only catches a caller that grew the scene
+		// behind the renderer's back.
+		std::size_t drawableCount		   = recordList.size();
+		const std::size_t instanceCapacity = frame.getInstanceCapacity();
+		if (drawableCount > instanceCapacity) {
+			const std::size_t dropped = drawableCount - instanceCapacity;
+			this->getLogger().error()
+				<< "Instance buffer capacity exceeded (" << instanceCapacity
+				<< " per view). Skipping " << dropped << " meshes.";
+			stats.skippedMeshes += dropped;
+			drawableCount = instanceCapacity;
+		}
+		for (std::size_t i = 0; i < drawableCount; ++i) {
+			instanceData[i].model = recordList[i].transform;
+		}
+
+		const VkDeviceSize indirectBufferOffset =
+			viewSlot * frame.getIndirectBufferAlignedSize();
+		VkDrawIndexedIndirectCommand *indirectData = _indirectDrawingEnabled
+			? static_cast<VkDrawIndexedIndirectCommand *>(
+				  frame.getIndirectBufferMapped(viewSlot))
+			: nullptr;
+		uint32_t indirectCursor					   = 0;
+		uint32_t indirectPendingBase			   = 0;
+
+		const auto flushIndirect = [&]() {
+			if (!_indirectDrawingEnabled
+				|| indirectCursor == indirectPendingBase) {
+				return;
+			}
+			vkCmdDrawIndexedIndirect(
+				commandBuffer, frame.getIndirectBuffer(),
+				indirectBufferOffset
+					+ indirectPendingBase
+						* sizeof(VkDrawIndexedIndirectCommand),
+				indirectCursor - indirectPendingBase,
+				static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand)));
+			indirectPendingBase = indirectCursor;
+		};
+
+		const auto emitDraw = [&](uint32_t indexCount, uint32_t instanceCount,
+								  uint32_t firstInstance) {
+			if (_indirectDrawingEnabled
+				&& indirectCursor
+					< static_cast<uint32_t>(MAX_INDIRECT_COMMANDS_PER_VIEW)) {
+				indirectData[indirectCursor++] = { indexCount, instanceCount, 0,
+												   0, firstInstance };
+			} else {
+				vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, 0, 0,
+								 firstInstance);
+			}
+			++stats.drawCalls;
+		};
+
+		const auto recordRange = [&](std::size_t begin, std::size_t end) {
+			if (begin == end) {
+				return;
+			}
+
+			// Each pass starts from unbound state so its first draw rebinds
+			// the pipeline, the buffers and the descriptor set.
+			boundPipeline	   = VK_NULL_HANDLE;
+			boundDescriptorSet = VK_NULL_HANDLE;
+			boundVertexBuffer  = VK_NULL_HANDLE;
+			boundIndexBuffer   = VK_NULL_HANDLE;
+			hasBoundState	   = false;
+
+			// The instance buffer and its offset are the same for every draw
+			// of the view, so they are bound once per pass instead of being
+			// re-checked and re-bound from inside the item loop.
+			{
 				VkBuffer instanceBuffer		   = frame.getInstanceBuffer();
 				VkDeviceSize instanceOffsets[] = { instanceBufferOffset };
 				vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer,
 									   instanceOffsets);
-				boundInstanceBuffer	   = instanceBuffer;
-				hasBoundInstanceBuffer = true;
 			}
 
-			// The frame sized the buffer for every registered mesh before
-			// recording, so this guard only catches a caller that grew the
-			// scene behind the renderer's back.
-			if (instanceCursor + runSize > frame.getInstanceCapacity()) {
-				this->getLogger().error()
-					<< "Instance buffer capacity exceeded ("
-					<< frame.getInstanceCapacity() << " per view). Skipping "
-					<< runSize << " meshes.";
-				stats.skippedMeshes += runSize;
-				i			  = runEnd;
+			for (std::size_t i = begin; i < end;) {
+				const DrawItem &item = recordList[i];
+
+				// Runs were resolved while the sorted list was built, so the
+				// loop jumps from run head to run head instead of comparing
+				// pipeline, material and geometry for every item. Each mesh
+				// keeps its own transform slot either way, which is why the
+				// first instance of a run is the run's position in the list.
+				std::size_t runSize =
+					(_mergeIdenticalRuns && item.instanceInputs)
+					? static_cast<std::size_t>(item.runLength)
+					: 1u;
+				if (i + runSize > end) {
+					runSize = end - i;
+				}
+
+				// The dynamic offset is constant for the whole view and the
+				// pipeline layout follows the pipeline, so neither takes part
+				// in the per-item state comparison.
+				const bool stateChanged = !hasBoundState
+					|| boundPipeline != item.pipeline
+					|| boundVertexBuffer != item.vertexBuffer
+					|| boundIndexBuffer != item.indexBuffer
+					|| boundDescriptorSet != item.descriptorSet;
+
+				if (stateChanged) {
+					flushIndirect();
+				}
+
+				if (!hasBoundState || boundPipeline != item.pipeline) {
+					if (isDrawLogEnabled()) {
+						this->getLogger().debug()
+							<< "Binding pipeline for shader ID: "
+							<< item.pipelineKey;
+					}
+					vkCmdBindPipeline(commandBuffer,
+									  VK_PIPELINE_BIND_POINT_GRAPHICS,
+									  item.pipeline);
+					boundPipeline = item.pipeline;
+					++stats.pipelineBinds;
+
+					glm::vec4 color { 1.f, 1.f, 1.f, 1.f };
+					vkCmdPushConstants(commandBuffer, item.pipelineLayout,
+									   VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+									   sizeof(glm::vec4), &color);
+				}
+
+				if (!hasBoundState || boundVertexBuffer != item.vertexBuffer) {
+					VkDeviceSize offsets[] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1,
+										   &item.vertexBuffer, offsets);
+					boundVertexBuffer = item.vertexBuffer;
+					if (isDrawLogEnabled()) {
+						this->getLogger().debug()
+							<< "Binding vertex buffer for ->..";
+					}
+				}
+
+				if (!hasBoundState || boundIndexBuffer != item.indexBuffer) {
+					vkCmdBindIndexBuffer(commandBuffer, item.indexBuffer, 0,
+										 VK_INDEX_TYPE_UINT32);
+					boundIndexBuffer = item.indexBuffer;
+				}
+
+				if (!hasBoundState
+					|| boundDescriptorSet != item.descriptorSet) {
+					if (isDrawLogEnabled()) {
+						this->getLogger().debug()
+							<< "Binding descriptor set for material ID: "
+							<< item.materialID;
+					}
+					vkCmdBindDescriptorSets(
+						commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+						item.pipelineLayout, 0, 1, &item.descriptorSet, 1,
+						&dynamicOffset);
+					boundDescriptorSet = item.descriptorSet;
+					++stats.descriptorBinds;
+				}
+
+				if (isDrawLogEnabled()) {
+					this->getLogger().debug()
+						<< "Drawing indexed mesh with index count: "
+						<< item.indexCount
+						<< " and instance count: " << runSize;
+				}
+				emitDraw(item.indexCount, static_cast<uint32_t>(runSize),
+						 static_cast<uint32_t>(i));
+				if (runSize > 1) {
+					++stats.instancedDraws;
+				}
+
+				i += runSize;
 				hasBoundState = true;
-				continue;
 			}
-			for (std::size_t j = 0; j < runSize; ++j) {
-				instanceData[instanceCursor + j].model =
-					drawList[i + j].transform;
-			}
-			if (isDrawLogEnabled()) {
-				this->getLogger().debug()
-					<< "Drawing indexed mesh with index count: "
-					<< item.indexCount << " and instance count: " << runSize;
-			}
-			emitDraw(item.indexCount, static_cast<uint32_t>(runSize),
-					 instanceCursor);
-			if (runSize > 1) {
-				++stats.instancedDraws;
-			}
-			instanceCursor += static_cast<uint32_t>(runSize);
+		};
 
-			i			  = runEnd;
-			hasBoundState = true;
-		}
-	};
+		// Every opaque draw precedes every blended one: the split was resolved
+		// by the build phase, so both ranges are recorded in order without
+		// scanning the list again. The blended range shares the depth buffer
+		// with the opaque one but does not write to it.
+		const std::size_t opaqueEnd = std::min(opaqueCount, drawableCount);
+		recordRange(0, opaqueEnd);
+		recordRange(opaqueEnd, drawableCount);
 
-	// Every opaque draw precedes every blended one: find the split once, then
-	// record both ranges in order. The blended range shares the depth buffer
-	// with the opaque one but does not write to it.
-	std::size_t opaqueCount = 0;
-	while (opaqueCount < drawList.size()
-		   && drawList[opaqueCount].blendMode == BlendMode::Opaque) {
-		++opaqueCount;
+		flushIndirect();
 	}
-	recordRange(0, opaqueCount);
-	recordRange(opaqueCount, drawList.size());
-
-	flushIndirect();
 
 	// Fold the per-view draw counters into the statistics window; the
 	// EVAN_DEBUG_DRAW_LOG block below keeps reading the local values.
@@ -1703,6 +1912,8 @@ void evan::Renderer::reportStatsIfDue()
 		<< " wait=" << formatPhaseMs(_stats.inFlightWait)
 		<< " ubo=" << formatPhaseMs(_stats.updateUniform)
 		<< " rec=" << formatPhaseMs(_stats.record)
+		<< " recbuild=" << formatPhaseMs(_stats.recordBuild)
+		<< " recenc=" << formatPhaseMs(_stats.recordEncode)
 		<< " submit=" << formatPhaseMs(_stats.submit)
 		<< " renderwait=" << formatPhaseMs(_stats.renderWait)
 		<< " pres=" << formatPhaseMs(_stats.present)

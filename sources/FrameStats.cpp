@@ -47,6 +47,8 @@ void evan::FrameStats::resetWindow() noexcept
 	acquire.resetWindow();
 	updateUniform.resetWindow();
 	record.resetWindow();
+	recordBuild.resetWindow();
+	recordEncode.resetWindow();
 	submit.resetWindow();
 	renderWait.resetWindow();
 	present.resetWindow();

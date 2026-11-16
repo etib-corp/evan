@@ -135,6 +135,9 @@ namespace evan
 		// Frame-level CPU phases, one sample per frame (zero samples allowed)
 		PhaseStats transferFlush, preprocess, inFlightWait, acquire,
 			updateUniform, record, submit, renderWait, present, postprocess;
+		// The two halves of `record`: draw-list build (culling, material
+		// resolution, sort key, sort) and encode (state binds, draw emission)
+		PhaseStats recordBuild, recordEncode;
 
 		// Per view-slot detail (eye0 / eye1), MAX_SWAPCHAINS entries
 		std::array<PhaseStats, MAX_SWAPCHAINS> updateUniformView, recordView,
@@ -172,6 +175,8 @@ destructor perform one predictable branch and only call
 | `acquire` | around the whole acquire loop (`aquireImage` + `waitForImage`, one sample per frame) |
 | `updateUniform` | around `updateUniformBuffer`/`updateMultiviewUniformBuffer`, per view, also added to `updateUniformView[slot]` |
 | `record` | around `resetCommandBuffer` + `recordCommandBuffer` (therefore includes `RessourceManager::sync()`), per view, also `recordView[slot]` |
+| `recordBuild` | inside `recordCommandBuffer`, from the frustum setup to the end of the draw-list permutation: culling, material resolution, sort-key finalization and the sort |
+| `recordEncode` | inside `recordCommandBuffer`, around the instance-matrix pass, the state binds and the draw emission |
 | `submit` | around `vkQueueSubmit`, per view, also `submitView[slot]` |
 | `renderWait` | around the OpenXR end-of-frame `vkWaitForFences` (no samples on GLFW) |
 | `present` | around the whole `processFrame` loop (`xrEndFrame` / `vkQueuePresentKHR`) |
@@ -244,11 +249,15 @@ predictable branch; with stats on it is `fetch_add(relaxed)` (single-digit ns).
 - Line sketch (single record, average values in ms):
 
 ```
-evan stats: frames=120 | cpu_ms(avg): flush=0.01 pre=0.02 acq=0.05 wait=1.02 ubo=0.01 rec=0.84 submit=0.03 renderwait=-- pres=0.04 post=0.00 | gpu_ms(avg): pass0=3.21 pass1=3.19 | meshes: total=1000 vis=998 culled=2 skip=0 | draws: calls=998 inst=420 pso=12 ds=12 | sync: calls=240 skip=238 | mesh_churn: +12/-12 | uploadwaits=1
+evan stats: frames=120 | cpu_ms(avg): flush=0.01 pre=0.02 acq=0.05 wait=1.02 ubo=0.01 rec=0.84 recbuild=0.31 recenc=0.48 submit=0.03 renderwait=-- pres=0.04 post=0.00 | gpu_ms(avg): pass0=3.21 pass1=3.19 | meshes: total=1000 vis=998 culled=2 skip=0 | draws: calls=998 inst=420 pso=12 ds=12 | sync: calls=240 skip=238 | mesh_churn: +12/-12 | uploadwaits=1
 ```
 
   `--` marks phases with no samples on this backend (e.g. `renderwait` on
-  GLFW, `gpu` without timestamp support).
+  GLFW, `gpu` without timestamp support). `recbuild` and `recenc` are nested
+  inside `rec`; what they do not cover is the command-buffer/render-pass
+  prologue and `RessourceManager::sync()`. They exist because `rec` alone
+  cannot tell a per-mesh cost (draw-list build) from a per-draw cost (state
+  binds and draw commands), which is what the draw-scaling work tunes.
 - Structured access (the app-facing boundary, usable for a host-side debug
   overlay):
   - `const FrameStats &Renderer::getStats() const noexcept;`

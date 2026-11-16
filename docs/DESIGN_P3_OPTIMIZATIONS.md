@@ -160,6 +160,57 @@ startup `mesh_churn` from +1000 to +1.
 `GPUShader` each gain a member, which changes their class layout (AGENTS.md).
 `GPUMesh`'s public surface is untouched.
 
+### 3.1b WS1c — Draw-list build and per-draw recording (landed)
+
+**Current (before).** With geometry shared, the draw count stops falling, so
+the only remaining lever is the per-item work in the draw-list build and the
+per-draw work in the encode loop. Both were visible in `rec` but not separable
+from it, and the "many distinct meshes" case — real content, and the
+benchmark's per-draw variant — had no workload at all: sharing one `GPUMesh`
+made the draw count collapse before the per-draw cost could be measured.
+
+**Implemented.**
+
+1. **Measurement split.** `rec` is reported as `recbuild` (frustum setup,
+   culling, material resolution, sort-key finalization, sort) and `recenc`
+   (instance-matrix pass, state binds, draw emission), in `FrameStats`, in the
+   `evan stats:` line and in `scripts/run-poc.sh` (which also prints the
+   `recbuild`/`rec` share and `rec` per mesh).
+2. **Per-draw workload.** `EVAN_POC_UNIQUE_MESHES=1` perturbs one vertex per
+   cube in both PoC examples, so the geometry cache cannot share content and
+   the scene keeps one draw per mesh. `scripts/run-poc.sh --unique-meshes`
+   runs it.
+3. **Material cache.** `MaterialDrawState` holds pipeline, pipeline layout,
+   blend mode, descriptor set per frame slot and the instance-input
+   capability. It is stored in a flat vector indexed by material ID for the
+   dense provider range and in a small map for material variants, whose IDs
+   start at `RessourceManager::kFirstMaterialVariantID`, so an id never
+   forces an array of that size. Both are invalidated by the new
+   `RessourceManager::getMaterialGeneration()`, which moves on every
+   synchronization pass that touches materials, on material-variant creation
+   and on cleanup. N lookups per view become M per material change.
+4. **World bounds once per frame.** `drawFrame` transforms each mesh's local
+   bounds, centre and radius into `DrawListScratch::worldBounds`; every view
+   only tests them. Culling stays conservative across covered views.
+5. **Cheap sort.** Keys live in a parallel array, an index array is sorted, and
+   the draw list is permuted once into recording order. The run length of every
+   draw is resolved during that permutation, so the encode loop walks run heads
+   instead of comparing four batch fields per item.
+6. **Encode loop.** Instance matrices are written in one contiguous pass over
+   the recording order; the instance buffer and its offset, the dynamic UBO
+   offset and the pipeline layout are hoisted out of the per-item loop (the
+   layout follows the pipeline, so it no longer takes part in the state
+   comparison).
+
+**Why.** At N=1000 with 1000 draws, `rec` drops from 6.3–6.4 µs to 2.3 µs
+per draw, `recbuild` stays at ~25 % of `rec`, and the mergeable workload's
+`rec` drops from 4.75–5.10 ms to 0.61 ms with the draw count, the culling
+counters and the sorted draw order unchanged. Measurements in
+[`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §9.
+
+**Approval.** No public signature changes; `RessourceManager` gains one
+getter and one member (class layout) and `FrameStats` gains two `PhaseStats`.
+
 ### 3.2 WS2 — Dense object registry
 
 **Current.** `Renderer::_objects` is a `std::map<size_t, shared_ptr<RenderObject>>`
@@ -342,7 +393,7 @@ object, placed on a grid through `Engine::setObjectTransform`) and
 EVAN_STATS_INTERVAL=60`. Warm-up windows are dropped, the counters are divided
 by the window's `frames=` value (they are window sums, the `cpu_ms`/`gpu_ms`
 phases are already averages) and windows that still show mesh churn are
-skipped. Full record, per-window values and the environment: 
+skipped. Full record, per-window values and the environment:
 [`POC_RESULTS_P3.md`](POC_RESULTS_P3.md).
 
 Machine: Apple M3, macOS 27.2 (26B123), MoltenVK from Vulkan SDK 1.4.304.1,
@@ -493,6 +544,16 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   355/355 unit tests; macOS GLFW smoke run with `EVAN_STATS` (the macOS
   example registers no meshes — the mesh-populated example is Linux-only —
   so only the empty-draw-list path was exercised at runtime here).
+- **WS1c — draw-list build and per-draw recording: implemented
+  (2026-11-13).** `rec` split into `recbuild`/`recenc`; per-draw workload
+  (`EVAN_POC_UNIQUE_MESHES`) in both PoC examples and
+  `run-poc.sh --unique-meshes`; material cache keyed by
+  `RessourceManager::getMaterialGeneration()`; world bounds transformed once
+  per object per frame; index-array sort with the run length resolved during
+  the permutation; contiguous instance-matrix pass and hoisted per-view
+  handles. Validation: 388/388 unit tests, PoC runs on both workloads
+  (`POC_RESULTS_P3.md` §9), draw order compared item by item against the
+  previous renderer.
 - **WS2 — dense registry: implemented (2026-10-16).** `evan::ObjectRegistry<T>`
   (`headers/evan/ObjectRegistry.hpp`, header-only) replaces the
   `std::map<size_t, std::shared_ptr<RenderObject>>` registry: packed

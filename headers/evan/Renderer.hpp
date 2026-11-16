@@ -703,6 +703,12 @@ namespace evan
 		 * @param transforms The world transform of each flattened mesh,
 		 * parallel to @p meshes. It belongs to the object that registered the
 		 * mesh, because one mesh may be shared between several objects.
+		 *
+		 * @note The world-space extents used for culling are read from
+		 * `DrawListScratch::worldBounds`, parallel to @p meshes: `drawFrame`
+		 * transforms them once per object per frame because they do not depend
+		 * on the view, so it must keep that array in sync with the mesh list it
+		 * passes here.
 		 */
 		void recordCommandBuffer(VkRenderPass renderPass,
 								 VkFramebuffer swapChainFramebuffer,
