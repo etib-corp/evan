@@ -137,6 +137,72 @@ namespace
 	}
 
 	/**
+	 * @brief Builds a single-sided quad whose geometric front points away
+	 * from the camera.
+	 *
+	 * The winding is clockwise as seen from the camera, so the outward normal
+	 * is -Z and the default back-face culling drops it. The EVAN_POC_QUAD
+	 * workload marks its material double-sided (CullMode::None) and expects it
+	 * to appear anyway.
+	 *
+	 * @return A quad in world space, three units in front of the camera.
+	 */
+	utility::graphic::Mesh buildFacingAwayQuadMesh(void)
+	{
+		const utility::graphic::Color32Bit white(255, 255, 255, 255);
+		utility::graphic::Mesh mesh(std::vector<utility::graphic::VertexF> {},
+									std::vector<uint32_t> {});
+
+		const auto addVertex = [&](float x, float y, float u, float v) {
+			utility::graphic::VertexF vertex;
+			vertex.setPosition(utility::graphic::PositionF(x, y, -3.0f));
+			vertex.setNormal(utility::math::Vector3F { 0.0f, 0.0f, -1.0f });
+			vertex.setTextureCoordinates(utility::math::Vector2F { u, v });
+			vertex.setColor(white);
+			mesh.addVertex(vertex);
+		};
+
+		addVertex(-1.0f, -1.0f, 0.0f, 0.0f);
+		addVertex(-1.0f, 1.0f, 0.0f, 1.0f);
+		addVertex(1.0f, 1.0f, 1.0f, 1.0f);
+		addVertex(1.0f, -1.0f, 1.0f, 0.0f);
+
+		// Clockwise seen from the camera (+Z): the outward normal is -Z.
+		for (const uint32_t index: { 0u, 1u, 2u, 0u, 2u, 3u }) {
+			mesh.addIndex(index);
+		}
+
+		return mesh;
+	}
+
+	/**
+	 * @brief Registers the facing-away quad and marks its material
+	 * double-sided.
+	 *
+	 * It uses `default_material` and the `default` shader, so the override does
+	 * not affect the cube grid, which uses `mesh_material`.
+	 *
+	 * @param engine Engine that receives the object.
+	 * @param doubleSided Whether to override the material to CullMode::None.
+	 * With false the default back-face culling applies and the quad must not
+	 * appear, which is the other half of the A/B.
+	 */
+	void spawnFacingAwayQuad(evan::Engine &engine, bool doubleSided)
+	{
+		const std::size_t objectID = engine.addMesh(
+			buildFacingAwayQuadMesh(), "default_material", "default");
+		const bool cullOverrideApplied = doubleSided
+			&& engine.setMaterialCullMode("default_material",
+										  evan::CullMode::None);
+
+		std::cout << "PoC quad: object " << objectID
+				  << ", double-sided override "
+				  << (doubleSided ? (cullOverrideApplied ? "applied" : "failed")
+								  : "off")
+				  << '\n';
+	}
+
+	/**
 	 * @brief Registers @p count cubes on a grid in front of the camera.
 	 *
 	 * Every object owns its registry entry and its own transform. By default
@@ -224,10 +290,14 @@ int main(void)
 	// the window is closed" loop. EVAN_POC_FRAMES gives a run a fixed frame
 	// budget, which makes the stats report windows reproducible;
 	// EVAN_POC_UNIQUE_MESHES=1 switches the scene from one shared `GPUMesh` per
-	// content to one distinct mesh per object.
+	// content to one distinct mesh per object; EVAN_POC_QUAD=1 adds one
+	// single-sided quad whose material is drawn with CullMode::None.
 	const std::size_t meshCount = readCountEnv("EVAN_POC_MESHES", 0);
 	const std::size_t maxFrames = readCountEnv("EVAN_POC_FRAMES", 0);
 	const bool uniqueMeshes = readCountEnv("EVAN_POC_UNIQUE_MESHES", 0) != 0;
+	const bool facingQuad	= readCountEnv("EVAN_POC_QUAD", 0) != 0;
+	const bool quadDoubleSided =
+		readCountEnv("EVAN_POC_QUAD_DOUBLE_SIDED", 1) != 0;
 
 	auto platform =
 		std::make_shared<evan::LinuxDesktopPlatform>("linux poc", 800, 600);
@@ -239,6 +309,9 @@ int main(void)
 	evan::Engine engine(ressourceProvider, platform);
 
 	spawnCubeGrid(engine, meshCount, uniqueMeshes);
+	if (facingQuad) {
+		spawnFacingAwayQuad(engine, quadDoubleSided);
+	}
 
 	std::size_t frame = 0;
 
