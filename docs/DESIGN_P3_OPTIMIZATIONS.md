@@ -444,9 +444,10 @@ Caveats: `rec` is CPU-bound and inflates several-fold on a busy host (2.7 ms
 and 14.1 ms at N=100/N=1000 were observed at load average ~11), so record on
 an idle machine and compare runs from the same session; the desktop
 single-view build cannot answer WS4 by construction;
-back-face culling is disabled in the static pipeline state (the projection
-flips Y, so the front-face convention has to be settled before re-enabling
-it), which makes `pass0` a double-sided fill cost.
+back-face culling is static pipeline state
+(`VK_CULL_MODE_BACK_BIT` with `VK_FRONT_FACE_COUNTER_CLOCKWISE`) and is on by
+default, with a per-material `CullMode::None` escape hatch for double-sided
+content (see §9).
 
 ## 5. File-by-file change map
 
@@ -579,15 +580,47 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   which aborted the process on exit. The device is now captured at
   construction (and `destroy()` falls back to its argument), the render pass
   handle is reset, the pipeline no longer declares `VK_DYNAMIC_STATE_CULL_MODE`
-  (a Vulkan 1.3 / `VK_EXT_extended_dynamic_state` state that was never set —
-  culling is static `VK_CULL_MODE_NONE` for now), the descriptor pool is
-  created with `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` so
-  `GPUMaterial` may free its sets, and `Engine::setObjectTransform()` returns
-  `false` for an unknown object instead of dereferencing null. Validation runs
-  are clean and `run-poc.sh` finishes with no aborts. The `Renderer.cpp` part
-  of this list (static `VK_CULL_MODE_NONE`, no `VK_DYNAMIC_STATE_CULL_MODE`,
-  pool free flag) was dropped by the #170 merge and re-applied on
-  2026-10-31; the build now reports zero validation errors at N=100.
+  (a Vulkan 1.3 / `VK_EXT_extended_dynamic_state` state that was never set;
+  culling is now static `VK_CULL_MODE_BACK_BIT` with
+  `VK_FRONT_FACE_COUNTER_CLOCKWISE`, see the face-culling entry below), the
+  descriptor pool is created with
+  `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` so `GPUMaterial` may
+  free its sets, and `Engine::setObjectTransform()` returns `false` for an
+  unknown object instead of dereferencing null. Validation runs are clean and
+  `run-poc.sh` finishes with no aborts. The `Renderer.cpp` part of this list
+  (static `VK_CULL_MODE_NONE` at the time, no
+  `VK_DYNAMIC_STATE_CULL_MODE`, pool free flag) was dropped by the #170 merge
+  and re-applied on 2026-10-31; the cull mode itself was settled to
+  `VK_CULL_MODE_BACK_BIT` on 2026-11-17 (see the face-culling entry below).
+  The build now reports zero validation errors at N=100.
+- **Face-culling policy: implemented (2026-11-17).** `RenderSettings::cullMode`
+  (`CullMode { None, Back, Front }`, default `Back`) is applied at Renderer
+  construction and baked into every pipeline as static rasterization state,
+  so `VK_DYNAMIC_STATE_CULL_MODE` and its undefined-at-draw VUID are gone; the
+  only dynamic states left are viewport and scissor. The winding was settled
+  from the actual projection rather than assumed: `ViewF` flips Y for Vulkan
+  NDC, that flip cancels the framebuffer's Y-down convention, and the
+  counter-clockwise outside-facing winding used by the sample geometry is
+  therefore front-facing with `VK_FRONT_FACE_COUNTER_CLOCKWISE`
+  (`TestRenderSettings.SampleCubeOutwardWindingIsFrontFacing` reproduces the
+  projection and the sample cube). `Renderer::setMaterialCullMode()` and
+  `Engine::setMaterialCullMode()` are the per-material escape hatch for
+  double-sided content and are keyed by material ID, so they survive a
+  RessourceManager refresh; pipelines exist for all three cull modes.
+  `EVAN_CULL_MODE=none|back|front` overrides the setting for A/B runs.
+  Validation on macOS/MoltenVK: the N=1000 cube grid renders identically
+  with `none` and `back` (483 differing bytes out of 7.68 M in a full-window
+  capture, i.e. cursor/timing noise), the `EVAN_POC_QUAD=1` single-sided quad
+  appears with the `CullMode::None` override and disappears without it, the
+  `culled` mesh counter stays 0, and validation reports no VUIDs (only the
+  pre-existing `WARNING-Shader-OutputNotConsumed` performance messages).
+  `pass0` at N=1000 is 0.27 ms with `back` and 0.23 ms with `none` in the
+  final 8-window run (repeated 4-window runs ranged 0.28–0.51 ms vs
+  0.23–0.49 ms), so the `≤ 0.45 ms` acceptance holds but the delta stays
+  inside the GPU timer's noise: the cubes are ~13 px and the CPU records
+  draws ~10× more expensively than the GPU executes them, so the removed
+  double-sided fill is the win that #175's collapsed draw count makes visible,
+  not a CPU win.
 - **WS4–WS6: not started, kept deferred by the 2026-10-29 PoC (§4).** The
   desktop run triggers none of the three: WS4 stays serial (its trigger needs
   an XR stereo per-view `rec`), WS5 stays on binary fences (`wait` 0.02 ms,
