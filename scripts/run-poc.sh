@@ -12,11 +12,21 @@
 # sort) and `recenc` (state binding and draw emission), which is the split
 # the per-draw work of issue #176 is measured against.
 #
-# The example exposes three workload knobs:
+# The example exposes five workload knobs:
 #   EVAN_POC_MESHES=N        number of cubes to spawn (default 0 = empty scene)
 #   EVAN_POC_FRAMES=M        stop after M frames and exit (default 0 = until close)
 #   EVAN_POC_UNIQUE_MESHES=1 give every cube its own geometry, so the draws
 #                            cannot be merged (default 0 = one shared mesh)
+#   EVAN_POC_QUAD=1          add one single-sided quad whose material is
+#                            overridden to CullMode::None (default 0)
+#   EVAN_POC_QUAD_DOUBLE_SIDED=0
+#                            leave that quad under the default back-face
+#                            culling, so it must disappear (default 1 = apply
+#                            the double-sided override)
+#
+# The renderer-wide face-culling policy can be A/B measured without a rebuild:
+# EVAN_CULL_MODE=none|back|front selects the static pipeline state, while the
+# PoC quad's per-material override is independent of it.
 #
 # Each reported window is a *sum* over the window (except the cpu_ms/gpu_ms
 # phases, which are averages), so the script divides the counters by the
