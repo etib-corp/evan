@@ -143,7 +143,7 @@ evan::Engine::Engine(
 	_renderer = std::make_shared<Renderer>(
 		_deviceContext, _swapchainContext->getRenderPass(),
 		_swapchainContext->getMsaaSamples(), perFrameSlotCount,
-		_ressourceManager);
+		_ressourceManager, settings.cullMode);
 	_renderer->setOpaqueSortMode(settings.opaqueSort);
 	_ressourceManager->init(_renderer);
 }
@@ -342,6 +342,45 @@ void evan::Engine::setIndirectDrawingEnabled(bool enabled)
 bool evan::Engine::isIndirectDrawingEnabled() const
 {
 	return _renderer && _renderer->isIndirectDrawingEnabled();
+}
+
+bool evan::Engine::setMaterialCullMode(const std::string &materialName,
+									   CullMode cullMode)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot set face culling: renderer not initialized.";
+		return false;
+	}
+
+	const uint32_t materialID = _ressourceProvider->getMaterialID(materialName);
+	if (materialID == 0) {
+		this->getLogger().warning() << "Cannot set face culling: material '"
+									<< materialName << "' not found.";
+		return false;
+	}
+
+	_renderer->setMaterialCullMode(materialID, cullMode);
+	return true;
+}
+
+bool evan::Engine::clearMaterialCullMode(const std::string &materialName)
+{
+	if (!_renderer) {
+		this->getLogger().warning()
+			<< "Cannot clear face culling: renderer not initialized.";
+		return false;
+	}
+
+	const uint32_t materialID = _ressourceProvider->getMaterialID(materialName);
+	if (materialID == 0) {
+		this->getLogger().warning() << "Cannot clear face culling: material '"
+									<< materialName << "' not found.";
+		return false;
+	}
+
+	_renderer->clearMaterialCullMode(materialID);
+	return true;
 }
 
 utility::graphic::ViewF evan::Engine::getView(void) const

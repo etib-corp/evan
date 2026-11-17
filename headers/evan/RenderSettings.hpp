@@ -29,6 +29,70 @@ namespace evan
 	};
 
 	/**
+	 * @brief Which triangle faces the rasterizer discards.
+	 *
+	 * Face culling is static pipeline state: it is baked into every pipeline
+	 * the renderer creates and cannot be changed per draw without a new
+	 * pipeline. `VK_DYNAMIC_STATE_CULL_MODE` is deliberately not used, because
+	 * it belongs to `VK_EXT_extended_dynamic_state` (Vulkan 1.3), which the
+	 * device feature chain does not enable.
+	 *
+	 * @note This is not the frustum/distance culling controlled by
+	 * Renderer::setCullingEnabled(); that culling decides whether a mesh is
+	 * drawn at all, while this mode decides which faces of a drawn triangle
+	 * reach the framebuffer.
+	 */
+	enum class CullMode {
+		None,	 ///< Rasterize both faces: double-sided content.
+		Back,	 ///< Discard back faces; the default, and what is right for the
+				 ///< closed meshes of the samples.
+		Front	 ///< Discard front faces (inside-out content and debugging).
+	};
+
+	/**
+	 * @brief Front-face winding baked into every pipeline.
+	 *
+	 * View::getProjectionMatrix() flips Y for Vulkan NDC by default, which
+	 * keeps a Y-up world upright on the Y-down Vulkan framebuffer: a positive
+	 * world Y maps to a negative NDC Y, i.e. the top of the screen. The flip
+	 * cancels the framebuffer's own Y-down convention, so the
+	 * counter-clockwise, outside-facing winding of the sample meshes stays
+	 * counter-clockwise in framebuffer coordinates and is front-facing with
+	 * VK_FRONT_FACE_COUNTER_CLOCKWISE.
+	 *
+	 * Vulkan defines the polygon area in framebuffer coordinates as
+	 * `a = -1/2 * sum(x_i * y_{i+1} - x_{i+1} * y_i)`; a positive area is
+	 * front-facing for VK_FRONT_FACE_COUNTER_CLOCKWISE. This matches the
+	 * "counter-clockwise as seen from outside" geometry convention without
+	 * changing the viewport.
+	 *
+	 * @note Changing the projection to stop flipping Y (or using a negative
+	 * viewport height instead) changes this pairing; see
+	 * POC_RESULTS_P3.md §7.
+	 */
+	inline constexpr VkFrontFace kFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+	/**
+	 * @brief Maps a CullMode onto its static rasterization flag.
+	 *
+	 * @param mode The application-facing culling policy.
+	 * @return The matching VkCullModeFlags value.
+	 */
+	[[nodiscard]] inline constexpr VkCullModeFlags
+		toVkCullMode(CullMode mode) noexcept
+	{
+		switch (mode) {
+			case CullMode::None:
+				return VK_CULL_MODE_NONE;
+			case CullMode::Front:
+				return VK_CULL_MODE_FRONT_BIT;
+			case CullMode::Back:
+				break;
+		}
+		return VK_CULL_MODE_BACK_BIT;
+	}
+
+	/**
 	 * @brief Ordering strategy used for the opaque draws of a frame.
 	 */
 	enum class OpaqueSortMode {
@@ -246,5 +310,22 @@ namespace evan
 		 * @brief Ordering strategy for the opaque draws of a frame.
 		 */
 		OpaqueSortMode opaqueSort = OpaqueSortMode::FrontToBack;
+
+		/**
+		 * @brief Face-culling policy baked into the graphics pipelines.
+		 *
+		 * Defaults to back-face culling with the front face settled by
+		 * kFrontFace. Pass CullMode::None to rasterize both faces of every
+		 * mesh, or override the policy for a single material through
+		 * Renderer::setMaterialCullMode() (double-sided content, such as a
+		 * camera-facing quad).
+		 *
+		 * The pipelines are created with this mode when the Renderer is
+		 * constructed, so it is a construction-time setting. The
+		 * EVAN_CULL_MODE environment variable (`none`, `back`, `front`)
+		 * overrides it, which makes A/B measurements possible without a
+		 * rebuild.
+		 */
+		CullMode cullMode = CullMode::Back;
 	};
 }	 // namespace evan

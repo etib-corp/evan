@@ -185,6 +185,41 @@ namespace evan
 		[[nodiscard]] bool isIndirectDrawingEnabled() const;
 
 		/**
+		 * @brief Overrides face culling for every object using a material.
+		 *
+		 * The renderer-wide policy comes from RenderSettings::cullMode and
+		 * defaults to back-face culling. This override is the escape hatch for
+		 * double-sided content, such as a camera-facing quad: drawing it with
+		 * CullMode::None rasterizes both faces instead of dropping one.
+		 *
+		 * The override is applied by material name, so it also covers objects
+		 * added later with that material. It takes effect from the next
+		 * recorded frame; the pipelines of every culling mode already exist.
+		 *
+		 * @note The override is keyed by the uploaded material ID. An object
+		 * whose `addMesh` call created a shader variant of the material keeps
+		 * that variant's own ID and is not affected; override the variant by
+		 * its ID through Renderer::setMaterialCullMode() when that matters.
+		 *
+		 * @param materialName The provider material to override.
+		 * @param cullMode The face-culling mode used for that material.
+		 * @return True when the material was found and the override applied.
+		 *
+		 * @note Not to be confused with frustum and distance culling, which
+		 * Renderer::setCullingEnabled() controls.
+		 */
+		bool setMaterialCullMode(const std::string &materialName,
+								 CullMode cullMode);
+
+		/**
+		 * @brief Restores the renderer-wide face culling for a material.
+		 *
+		 * @param materialName The provider material whose override is removed.
+		 * @return True when the material was found.
+		 */
+		bool clearMaterialCullMode(const std::string &materialName);
+
+		/**
 		 * @brief Get the mirrored view state.
 		 * @return The current view.
 		 */
