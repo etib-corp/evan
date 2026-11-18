@@ -135,12 +135,33 @@ on an idle machine, and compare runs from the same session.
   screen (~25 px at N=100, ~13 px at N=1000 because the grid is fitted to the
   frustum); a RenderDoc capture at N=1000 is the intended cross-check when
   GPU behaviour matters.
-- **Culling.** Back-face culling is currently disabled in the static pipeline
-  state (it used to be declared as a dynamic state that was never set, i.e.
-  undefined, and it was also a spec violation on every pipeline). Both faces
-  are therefore rasterized, which is why `pass0` is a double-sided fill cost.
-  Re-enabling culling needs a front-face decision first, because the
-  projection flips Y for Vulkan.
+- **Culling (settled 2026-11-17).** Back-face culling is now static pipeline
+  state: `VK_CULL_MODE_BACK_BIT` with
+  `VK_FRONT_FACE_COUNTER_CLOCKWISE`, baked into every pipeline.
+  `VK_DYNAMIC_STATE_CULL_MODE` stays out of the dynamic-state list because the
+  device does not enable `VK_EXT_extended_dynamic_state`, so the old
+  undefined-at-draw state and its VUID are gone; only viewport and scissor are
+  dynamic.
+  The winding was settled from the projection itself, not assumed. `ViewF`
+  flips Y for Vulkan NDC, and that flip cancels the framebuffer's Y-down
+  convention, so the counter-clockwise outside-facing winding of the sample
+  cube stays counter-clockwise in framebuffer coordinates and is front-facing
+  with `VK_FRONT_FACE_COUNTER_CLOCKWISE`
+  (`TestRenderSettings.SampleCubeOutwardWindingIsFrontFacing` reproduces the
+  projection and the sample cube). `EVAN_CULL_MODE=none|back|front` selects
+  the policy for A/B runs, and `CullMode::None` per material (or
+  `Engine::setMaterialCullMode`) is the double-sided escape hatch.
+  Validation on macOS/MoltenVK: the N=1000 cube grid renders identically
+  with `none` and `back` (483 differing bytes out of 7.68 M in a full-window
+  capture, i.e. cursor/timing noise), the `EVAN_POC_QUAD=1` single-sided quad
+  renders with its `CullMode::None` override and disappears without it, the
+  `culled` mesh counter stays 0, and validation reports no VUIDs. `pass0` at
+  N=1000 is 0.27 ms with `back` and 0.23 ms with `none` in the final 8-window
+  run (repeated 4-window runs ranged 0.28–0.51 ms vs 0.23–0.49 ms), so the
+  `≤ 0.45 ms` acceptance holds but the delta stays inside the GPU timer's
+  noise: the cubes are ~13 px, and the CPU records draws ~10× more
+  expensively than the GPU executes them, so the double-sided fill this
+  removes only becomes a wall once #175 collapses the draw count.
 - **Fixed while recording this.** The shutdown abort (`std::system_error:
   mutex lock failed`), the 30 objects leaked past `vkDestroyDevice`, the
   dynamic-cull-mode violations and the descriptor-set-free violation are gone

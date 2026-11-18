@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <unordered_map>
@@ -79,6 +80,54 @@ namespace
 			return value != nullptr && value[0] != '\0' && value[0] != '0';
 		}();
 		return disabled;
+	}
+
+	/**
+	 * @brief Face-culling policy requested through EVAN_CULL_MODE.
+	 *
+	 * Accepts `none`, `back` and `front`, so the cost of face culling can be
+	 * A/B measured without a rebuild. Unset, empty or unrecognized values keep
+	 * the construction-time policy.
+	 *
+	 * @param fallback Policy used when the environment does not select one.
+	 * @return The effective face-culling policy.
+	 */
+	evan::CullMode cullModeFromEnv(evan::CullMode fallback)
+	{
+		const char *value = std::getenv("EVAN_CULL_MODE");
+
+		if (value == nullptr || value[0] == '\0') {
+			return fallback;
+		}
+		if (std::strcmp(value, "none") == 0) {
+			return evan::CullMode::None;
+		}
+		if (std::strcmp(value, "back") == 0) {
+			return evan::CullMode::Back;
+		}
+		if (std::strcmp(value, "front") == 0) {
+			return evan::CullMode::Front;
+		}
+		return fallback;
+	}
+
+	/**
+	 * @brief Human-readable name of a face-culling mode, for log records.
+	 *
+	 * @param mode The mode to name.
+	 * @return "none", "back" or "front".
+	 */
+	const char *cullModeName(evan::CullMode mode) noexcept
+	{
+		switch (mode) {
+			case evan::CullMode::None:
+				return "none";
+			case evan::CullMode::Front:
+				return "front";
+			case evan::CullMode::Back:
+				break;
+		}
+		return "back";
 	}
 
 	/**
@@ -241,13 +290,21 @@ evan::Renderer::Renderer(std::shared_ptr<DeviceContext> deviceContext,
 						 VkRenderPass renderPass,
 						 VkSampleCountFlagBits msaaSamples,
 						 std::size_t perFrameSlotCount,
-						 std::shared_ptr<RessourceManager> ressourceManager)
-	: _ressourceManager(ressourceManager)
-	, _deviceContext(deviceContext)
+						 std::shared_ptr<RessourceManager> ressourceManager,
+						 CullMode cullMode)
+	: _deviceContext(deviceContext)
+	, _ressourceManager(ressourceManager)
+	, _cullMode(cullModeFromEnv(cullMode))
 {
 	this->getLogger().info() << "Initializing Renderer...";
 
 	_cullingEnabled = !isCullingDisabledEnv();
+
+	this->getLogger().info()
+		<< "Face culling: " << cullModeName(_cullMode) << " (front face: "
+		<< (kFrontFace == VK_FRONT_FACE_CLOCKWISE ? "clockwise"
+												  : "counter-clockwise")
+		<< ").";
 
 	_ressourceManager->sync();
 	this->_currentFrameIndex = 0;
@@ -334,7 +391,7 @@ void evan::Renderer::destroy(VkDevice device)
 			<< "Destroying pipeline for shader " << variant.shaderID
 			<< " (blend mode "
 			<< (variant.blendMode == BlendMode::Alpha ? "alpha" : "opaque")
-			<< ")";
+			<< ", cull mode " << cullModeName(variant.cullMode) << ")";
 		vkDestroyPipeline(device, pipeline, nullptr);
 	}
 	_pipelines.clear();
@@ -806,6 +863,36 @@ void evan::Renderer::setShaderBlendMode(uint32_t shaderID, BlendMode blendMode)
 	_shaderBlendModes[shaderID] = blendMode;
 }
 
+void evan::Renderer::setMaterialCullMode(uint32_t materialID, CullMode cullMode)
+{
+	this->getLogger().info() << "Setting face culling for material "
+							 << materialID << " to " << cullModeName(cullMode);
+	_materialCullModes[materialID] = cullMode;
+	this->invalidateMaterialCache();
+}
+
+void evan::Renderer::clearMaterialCullMode(uint32_t materialID)
+{
+	if (_materialCullModes.erase(materialID) == 0) {
+		return;
+	}
+	this->getLogger().info() << "Restoring the renderer-wide face culling for "
+							 << "material " << materialID;
+	this->invalidateMaterialCache();
+}
+
+void evan::Renderer::invalidateMaterialCache()
+{
+	if (!_drawScratch) {
+		return;
+	}
+	_drawScratch->materials.clear();
+	_drawScratch->variantMaterials.clear();
+	// Any generation but the next one: the next frame has to re-resolve the
+	// materials whose pipeline selection changed.
+	_drawScratch->materialGeneration = 0;
+}
+
 /////////////
 // Getters //
 /////////////
@@ -831,10 +918,21 @@ evan::BlendMode evan::Renderer::getShaderBlendMode(uint32_t shaderID) const
 	return it != _shaderBlendModes.end() ? it->second : BlendMode::Opaque;
 }
 
-VkPipeline evan::Renderer::pipelineFor(uint32_t shaderID,
-									   BlendMode blendMode) const
+std::optional<evan::CullMode>
+	evan::Renderer::getMaterialCullMode(uint32_t materialID) const
 {
-	const auto it = _pipelines.find(PipelineVariant { shaderID, blendMode });
+	const auto it = _materialCullModes.find(materialID);
+	if (it == _materialCullModes.end()) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+VkPipeline evan::Renderer::pipelineFor(uint32_t shaderID, BlendMode blendMode,
+									   CullMode cullMode) const
+{
+	const auto it =
+		_pipelines.find(PipelineVariant { shaderID, blendMode, cullMode });
 	return it != _pipelines.end() ? it->second : VK_NULL_HANDLE;
 }
 
@@ -969,12 +1067,14 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode			   = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth			   = 1.0f;
-		// Culling is static state: the projection flips Y for Vulkan, so a
-		// counter-clockwise front face would cull the outward faces of the
-		// sample meshes. Turn it on only after settling the winding
-		// convention.
-		rasterizer.cullMode		   = VK_CULL_MODE_NONE;
-		rasterizer.frontFace	   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		// Culling and winding are static state. The front face is settled once
+		// for the Y-flipping projection (see kFrontFace); the cull mode is
+		// selected per variant below, so a material can opt out of culling
+		// without a new dynamic state. VK_DYNAMIC_STATE_CULL_MODE is
+		// deliberately absent: it belongs to VK_EXT_extended_dynamic_state
+		// (Vulkan 1.3), which the device feature chain does not enable.
+		rasterizer.cullMode		   = toVkCullMode(_cullMode);
+		rasterizer.frontFace	   = kFrontFace;
 		rasterizer.depthBiasEnable = VK_FALSE;
 
 #ifdef DEV
@@ -1025,7 +1125,8 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 		}
 
 		// One variant per blend mode: opaque geometry must not pay for the
-		// blender, and blended geometry must not write depth.
+		// blender, and blended geometry must not write depth. Each blend mode
+		// is then paired with every static cull mode below.
 		for (const BlendMode blendMode:
 			 { BlendMode::Opaque, BlendMode::Alpha }) {
 			const bool isAlpha = blendMode == BlendMode::Alpha;
@@ -1090,15 +1191,26 @@ void evan::Renderer::createGraphicsPipelines(VkDevice device,
 			pipelineInfo.basePipelineHandle	 = VK_NULL_HANDLE;
 			pipelineInfo.pDepthStencilState	 = &depthStencil;
 
-			const PipelineVariant variant { id, blendMode };
-			if (vkCreateGraphicsPipelines(
-					device, _deviceContext->getPipelineCache().getHandle(), 1,
-					&pipelineInfo, nullptr, &_pipelines[variant])
-				!= VK_SUCCESS) {
-				this->getLogger().error()
-					<< "Failed to create the " << (isAlpha ? "alpha" : "opaque")
-					<< " graphics pipeline for shader " << id << "!";
-				return;
+			// One pipeline per cull mode: the mode is static rasterization
+			// state, and having all three variants ready is what lets a
+			// material opt out of culling without creating a pipeline at
+			// draw time.
+			for (const CullMode faceCull:
+				 { CullMode::None, CullMode::Back, CullMode::Front }) {
+				rasterizer.cullMode = toVkCullMode(faceCull);
+
+				const PipelineVariant variant { id, blendMode, faceCull };
+				if (vkCreateGraphicsPipelines(
+						device, _deviceContext->getPipelineCache().getHandle(),
+						1, &pipelineInfo, nullptr, &_pipelines[variant])
+					!= VK_SUCCESS) {
+					this->getLogger().error()
+						<< "Failed to create the "
+						<< (isAlpha ? "alpha" : "opaque")
+						<< " graphics pipeline for shader " << id
+						<< " with cull mode " << cullModeName(faceCull) << "!";
+					return;
+				}
 			}
 		}
 		// The GPUShader modules are owned by the RessourceManager. They are
@@ -1393,15 +1505,22 @@ void evan::Renderer::recordCommandBuffer(
 				|| this->getShaderBlendMode(state.pipelineKey)
 					== BlendMode::Alpha;
 			state.blendMode = alpha ? BlendMode::Alpha : BlendMode::Opaque;
+			// The face-culling policy is per material, defaulting to the
+			// renderer-wide mode; the pipeline triple is static, so the
+			// variant is picked here rather than at draw time.
+			const auto cullOverride = _materialCullModes.find(materialID);
+			const CullMode cullMode = cullOverride != _materialCullModes.end()
+				? cullOverride->second
+				: _cullMode;
 			state.pipeline =
-				this->pipelineFor(state.pipelineKey, state.blendMode);
+				this->pipelineFor(state.pipelineKey, state.blendMode, cullMode);
 			if (state.pipeline == VK_NULL_HANDLE) {
 				if (isDrawLogEnabled()) {
 					this->getLogger().debug()
 						<< "No pipeline found for shader ID: "
 						<< state.pipelineKey << " (blend mode "
-						<< (alpha ? "alpha" : "opaque")
-						<< "). Skipping its meshes.";
+						<< (alpha ? "alpha" : "opaque") << ", cull mode "
+						<< cullModeName(cullMode) << "). Skipping its meshes.";
 				}
 				return;
 			}

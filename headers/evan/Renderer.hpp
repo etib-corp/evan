@@ -101,6 +101,10 @@ namespace evan
 		 * RessourceManager to access the necessary resources for rendering
 		 * scenes, such as materials and textures associated with render
 		 * objects.
+		 * @param cullMode Face-culling policy baked into the pipelines created
+		 * by this constructor. It is static pipeline state, so the value must
+		 * be known here. Per-material overrides registered later through
+		 * setMaterialCullMode() select the matching pipeline variant.
 		 *
 		 * @note The constructor may throw exceptions if resource creation
 		 * fails, such as if the graphics pipeline or descriptor pool cannot be
@@ -111,7 +115,8 @@ namespace evan
 		Renderer(std::shared_ptr<DeviceContext> deviceContext,
 				 VkRenderPass renderPass, VkSampleCountFlagBits msaaSamples,
 				 std::size_t perFrameSlotCount,
-				 std::shared_ptr<RessourceManager> ressourceManager);
+				 std::shared_ptr<RessourceManager> ressourceManager,
+				 CullMode cullMode = CullMode::Back);
 
 		~Renderer();
 
@@ -455,14 +460,17 @@ namespace evan
 		/**
 		 * @brief Identifies one graphics pipeline variant.
 		 *
-		 * A variant is the pair of a shader and a blend mode: the opaque and
-		 * the alpha-blended pipelines of a shader share their shader modules,
-		 * layout and vertex input, and differ only in the fixed-function color
-		 * blend and depth write state.
+		 * A variant is the triple of a shader, a blend mode and a face-culling
+		 * mode: the opaque and the alpha-blended pipelines of a shader share
+		 * their shader modules, layout and vertex input, and differ only in
+		 * the fixed-function color blend and depth write state. The culling
+		 * mode is part of the key because it is static rasterization state,
+		 * which is what keeps it out of VK_DYNAMIC_STATE_CULL_MODE.
 		 */
 		struct PipelineVariant {
 			uint32_t shaderID	= 0;
 			BlendMode blendMode = BlendMode::Opaque;
+			CullMode cullMode	= CullMode::Back;
 
 			/**
 			 * @brief Orders variants so they can be stored in a std::map.
@@ -475,8 +483,12 @@ namespace evan
 				if (shaderID != other.shaderID) {
 					return shaderID < other.shaderID;
 				}
-				return static_cast<int>(blendMode)
-					< static_cast<int>(other.blendMode);
+				if (blendMode != other.blendMode) {
+					return static_cast<int>(blendMode)
+						< static_cast<int>(other.blendMode);
+				}
+				return static_cast<int>(cullMode)
+					< static_cast<int>(other.cullMode);
 			}
 		};
 
@@ -507,6 +519,59 @@ namespace evan
 		 * BlendMode::Opaque when no override was registered.
 		 */
 		[[nodiscard]] BlendMode getShaderBlendMode(uint32_t shaderID) const;
+
+		/**
+		 * @brief Retrieves the face-culling mode the pipelines were built
+		 * with.
+		 *
+		 * This is the construction-time policy after the EVAN_CULL_MODE
+		 * environment override, not the per-material override of a specific
+		 * material.
+		 *
+		 * @return The renderer-wide face-culling mode.
+		 */
+		[[nodiscard]] CullMode getCullMode() const
+		{
+			return _cullMode;
+		}
+
+		/**
+		 * @brief Overrides the face-culling mode of one material.
+		 *
+		 * The renderer-wide mode is the default; this override is the escape
+		 * hatch for content whose faces are not oriented like the closed meshes
+		 * of the samples. A camera-facing quad or any other single-sided
+		 * geometry drawn with the back-face policy sets CullMode::None here.
+		 *
+		 * The override is keyed by the uploaded material ID, survives the
+		 * RessourceManager refresh of that material, and applies from the next
+		 * recorded frame. All three culling-mode variants already exist for
+		 * each pipeline, so no pipeline is created on the spot.
+		 *
+		 * @param materialID The material whose draws change policy.
+		 * @param cullMode The face-culling mode used for that material.
+		 *
+		 * @note Not to be confused with setCullingEnabled(), which enables or
+		 * disables frustum and distance culling.
+		 */
+		void setMaterialCullMode(uint32_t materialID, CullMode cullMode);
+
+		/**
+		 * @brief Restores the renderer-wide face-culling mode for a material.
+		 *
+		 * @param materialID The material whose override is removed.
+		 */
+		void clearMaterialCullMode(uint32_t materialID);
+
+		/**
+		 * @brief Retrieves the face-culling override of a material.
+		 *
+		 * @param materialID The material to look up.
+		 * @return The override set by setMaterialCullMode(), or std::nullopt
+		 * when the material follows the renderer-wide mode.
+		 */
+		[[nodiscard]] std::optional<CullMode>
+			getMaterialCullMode(uint32_t materialID) const;
 
 		/**
 		 * @brief Sets the ordering strategy used for opaque draws.
@@ -742,14 +807,26 @@ namespace evan
 		void readGpuTimestamps(const Frame &frame);
 
 		/**
-		 * @brief Finds the graphics pipeline of a (shader, blend mode) pair.
+		 * @brief Finds the graphics pipeline of a (shader, blend mode, culling
+		 * mode) triple.
 		 *
 		 * @param shaderID The shader identifying the pipeline family.
 		 * @param blendMode The blend mode variant to select.
+		 * @param cullMode The static face-culling variant to select.
 		 * @return The matching pipeline, or VK_NULL_HANDLE when no pipeline was
-		 * created for that pair.
+		 * created for that triple.
 		 */
-		VkPipeline pipelineFor(uint32_t shaderID, BlendMode blendMode) const;
+		VkPipeline pipelineFor(uint32_t shaderID, BlendMode blendMode,
+							   CullMode cullMode) const;
+
+		/**
+		 * @brief Drops the per-material draw-state cache.
+		 *
+		 * Called when a per-material pipeline selection changes, so the next
+		 * frame re-resolves affected materials instead of drawing with the
+		 * cached pipeline.
+		 */
+		void invalidateMaterialCache();
 
 		/**
 		 * @brief Creates the Vulkan descriptor set layout for rendering
@@ -850,6 +927,19 @@ namespace evan
 		 * material of each mesh.
 		 */
 		std::map<uint32_t, BlendMode> _shaderBlendModes;
+
+		/**
+		 * @brief Per-material face-culling overrides declared by the
+		 * application.
+		 *
+		 * A material missing from the map uses @c _cullMode.
+		 */
+		std::map<uint32_t, CullMode> _materialCullModes;
+
+		/**
+		 * @brief Renderer-wide face-culling mode baked into the pipelines.
+		 */
+		CullMode _cullMode = CullMode::Back;
 
 		/**
 		 * @brief Ordering strategy applied to the opaque draws of a frame.
