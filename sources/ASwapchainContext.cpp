@@ -13,7 +13,7 @@
 void evan::ASwapchainContext::createRenderPass(
 	const std::shared_ptr<ADeviceBackend> &deviceBackend,
 	VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode,
-	uint32_t viewMask)
+	uint32_t viewMask, VkFormat swapchainFormat)
 {
 	this->getLogger().info() << "Creating render pass for swapchain context...";
 
@@ -28,11 +28,14 @@ void evan::ASwapchainContext::createRenderPass(
 		mode = ColorAttachmentMode::DirectToSwapchain;
 	}
 
-	auto swapchainFormatCount = deviceBackend->countSwapchainFormats();
-	auto swapchainFormats =
-		deviceBackend->enumerateSwapchainFormats(swapchainFormatCount);
-	auto swapchainFormat = selectSwapchainFormat(
-		deviceBackend->getPhysicalDevice(), swapchainFormats);
+	if (swapchainFormat == VK_FORMAT_UNDEFINED) {
+		const auto swapchainFormatCount =
+			deviceBackend->countSwapchainFormats();
+		const auto swapchainFormats =
+			deviceBackend->enumerateSwapchainFormats(swapchainFormatCount);
+		swapchainFormat = selectSwapchainFormat(
+			deviceBackend->getPhysicalDevice(), swapchainFormats);
+	}
 
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format		   = swapchainFormat;

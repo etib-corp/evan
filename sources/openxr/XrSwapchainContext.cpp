@@ -75,13 +75,16 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 			<= static_cast<std::size_t>(MAX_MULTIVIEW_VIEWS)
 		&& viewConfigurationsShareLayout();
 
-	auto swapchainFormat = selectSwapchainFormat(
-		deviceContext.getDeviceBackend()->getPhysicalDevice(),
-		swapchainFormats);
+	_swapchainFormat = selectSwapchainFormat(
+		deviceContext.getDeviceBackend()->getPhysicalDevice(), swapchainFormats,
+		true);
+
+	this->getLogger().info() << "OpenXR swapchain format: " << _swapchainFormat
+							 << " (alpha required)";
 
 	std::vector<SwapchainHandle> handles;
 	if (multiviewWanted) {
-		auto handle = createMultiviewSwapchain(deviceContext, swapchainFormat);
+		auto handle = createMultiviewSwapchain(deviceContext, _swapchainFormat);
 		if (handle.has_value()) {
 			_multiviewEnabled = true;
 			handles.push_back(handle.value());
@@ -96,7 +99,7 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 		}
 	}
 	if (!_multiviewEnabled) {
-		handles = createPerViewSwapchains(deviceContext, swapchainFormat);
+		handles = createPerViewSwapchains(deviceContext, _swapchainFormat);
 	}
 	if (multiviewMode() == MultiviewMode::On && !_multiviewEnabled) {
 		this->getLogger().error()
@@ -113,7 +116,8 @@ evan::XrSwapchainContext::XrSwapchainContext(const DeviceContext &deviceContext)
 
 	createRenderPass(
 		deviceContext.getDeviceBackend(), _msaaSamples, _colorAttachmentMode,
-		_multiviewEnabled ? multiviewViewMask(_viewSet.size()) : 0u);
+		_multiviewEnabled ? multiviewViewMask(_viewSet.size()) : 0u,
+		_swapchainFormat);
 
 	buildSwapchainImages(deviceContext, handles);
 }
@@ -327,17 +331,20 @@ void evan::XrSwapchainContext::recreateSwapchain(
 	}
 	_swapchainImages.clear();
 
-	auto swapchainFormat = selectSwapchainFormat(
-		deviceContext.getDeviceBackend()->getPhysicalDevice(),
-		deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
-			deviceContext.getDeviceBackend()->countSwapchainFormats()));
+	if (_swapchainFormat == VK_FORMAT_UNDEFINED) {
+		_swapchainFormat = selectSwapchainFormat(
+			deviceContext.getDeviceBackend()->getPhysicalDevice(),
+			deviceContext.getDeviceBackend()->enumerateSwapchainFormats(
+				deviceContext.getDeviceBackend()->countSwapchainFormats()),
+			true);
+	}
 
 	// The render pass (and therefore the view mask and the pipeline
 	// compatibility) is fixed for the session, so recreation has to reuse the
-	// mode that was established at construction.
+	// format and mode that were established at construction.
 	std::vector<SwapchainHandle> handles;
 	if (_multiviewEnabled) {
-		auto handle = createMultiviewSwapchain(deviceContext, swapchainFormat);
+		auto handle = createMultiviewSwapchain(deviceContext, _swapchainFormat);
 		if (handle.has_value()) {
 			handles.push_back(handle.value());
 		} else {
@@ -346,7 +353,7 @@ void evan::XrSwapchainContext::recreateSwapchain(
 				   "context without swapchain images.";
 		}
 	} else {
-		handles = createPerViewSwapchains(deviceContext, swapchainFormat);
+		handles = createPerViewSwapchains(deviceContext, _swapchainFormat);
 	}
 
 	buildSwapchainImages(deviceContext, handles);

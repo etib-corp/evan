@@ -452,7 +452,8 @@ namespace evan
 		void createRenderPass(
 			const std::shared_ptr<ADeviceBackend> &deviceBackend,
 			VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode,
-			uint32_t viewMask = 0);
+			uint32_t viewMask		 = 0,
+			VkFormat swapchainFormat = VK_FORMAT_UNDEFINED);
 
 		/**
 		 * @brief Selects the appropriate swapchain format from the available
