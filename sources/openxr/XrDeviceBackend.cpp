@@ -222,6 +222,7 @@ evan::Error
 	XrCompositionLayerProjection projectionLayer {
 		XR_TYPE_COMPOSITION_LAYER_PROJECTION
 	};
+	projectionLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 	projectionLayer.space = _space;
 	projectionLayer.viewCount =
 		static_cast<uint32_t>(projectionLayerViews.size());
