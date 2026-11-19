@@ -1364,8 +1364,12 @@ void evan::Renderer::recordCommandBuffer(
 	renderPassInfo.renderArea.extent = swapChainExtent;
 
 	std::array<VkClearValue, 2> clearValues {};
-	clearValues[0].color		= { { 0.184313729f, 0.309803933f, 0.309803933f,
-									  1.0f } };
+	if (_transparentBackground) {
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+	} else {
+		clearValues[0].color = { { 0.184313729f, 0.309803933f, 0.309803933f,
+								   1.0f } };
+	}
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -2024,8 +2028,8 @@ void evan::Renderer::reportStatsIfDue()
 
 	auto log = this->getLogger().info();
 
-	log << "evan stats: frames=" << _stats.frames << " | cpu_ms(avg):"
-		<< " flush=" << formatPhaseMs(_stats.transferFlush)
+	log << "evan stats: frames=" << _stats.frames
+		<< " | cpu_ms(avg):" << " flush=" << formatPhaseMs(_stats.transferFlush)
 		<< " pre=" << formatPhaseMs(_stats.preprocess)
 		<< " acq=" << formatPhaseMs(_stats.acquire)
 		<< " wait=" << formatPhaseMs(_stats.inFlightWait)
