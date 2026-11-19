@@ -492,6 +492,9 @@ evan::Error evan::Engine::setAREnabled(bool enabled)
 	const Error result = _platform->setAREnabled(enabled);
 	if (result == Error::Ok) {
 		_arEnabled = enabled;
+		if (_renderer != nullptr) {
+			_renderer->setTransparentBackground(enabled);
+		}
 	}
 	return result;
 }

@@ -370,6 +370,31 @@ namespace evan
 		}
 
 		/**
+		 * @brief Enables or disables a transparent render-pass clear.
+		 *
+		 * Used by AR: the background becomes RGBA(0,0,0,0) so the runtime
+		 * passthrough layer shows through. VR and desktop keep the opaque
+		 * clear.
+		 *
+		 * @param enabled True for a transparent clear, false for the opaque
+		 * clear.
+		 */
+		void setTransparentBackground(bool enabled)
+		{
+			_transparentBackground = enabled;
+		}
+
+		/**
+		 * @brief Checks whether the render-pass clear is transparent.
+		 *
+		 * @return True when the transparent background is enabled.
+		 */
+		[[nodiscard]] bool isTransparentBackground() const
+		{
+			return _transparentBackground;
+		}
+
+		/**
 		 * @brief Sets the maximum draw distance for distance culling.
 		 *
 		 * Meshes whose bounding sphere is entirely beyond this distance from
@@ -901,6 +926,14 @@ namespace evan
 		 * @brief Whether frustum and distance culling are active.
 		 */
 		bool _cullingEnabled = true;
+
+		/**
+		 * @brief Whether the render pass clears to RGBA(0,0,0,0).
+		 *
+		 * AR enables this so passthrough shows through empty areas. Desktop
+		 * and VR keep the opaque clear.
+		 */
+		bool _transparentBackground = false;
 
 		/**
 		 * @brief Maximum draw distance for distance culling (0 disables it).
