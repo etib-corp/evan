@@ -262,7 +262,7 @@ glm::mat4 evan::ASwapchainContext::getProjection(std::size_t index) const
 
 VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 	VkPhysicalDevice physicalDevice,
-	const std::vector<int64_t> &swapchainFormats)
+	const std::vector<int64_t> &swapchainFormats, bool requireAlpha)
 {
 	this->getLogger().info()
 		<< "Selecting swapchain format from " << swapchainFormats.size()
@@ -272,6 +272,13 @@ VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM
 	};
+
+	if (requireAlpha) {
+		this->getLogger().info()
+			<< "Alpha channel is required. Prioritizing formats with alpha.";
+	} else {
+		this->getLogger().info() << "Alpha channel is not required.";
+	}
 
 	for (size_t i = 0; i < swapchainFormats.size(); ++i) {
 		this->getLogger().info() << "Available swapchain format " << i << ": "
@@ -303,6 +310,11 @@ VkFormat evan::ASwapchainContext::selectSwapchainFormat(
 		}
 
 		VkFormat format = static_cast<VkFormat>(candidate);
+		if (requireAlpha && !hasAlphaChannel(format)) {
+			this->getLogger().warning()
+				<< "Ignoring swapchain format without alpha: " << format;
+			continue;
+		}
 		if (physicalDevice == VK_NULL_HANDLE
 			|| supportsColorAttachment(physicalDevice, format)) {
 			this->getLogger().info() << "Selected swapchain format: " << format;
@@ -396,6 +408,37 @@ bool evan::ASwapchainContext::isPlausibleVkFormat(int64_t value)
 {
 	return value > static_cast<int64_t>(VK_FORMAT_UNDEFINED)
 		&& value < static_cast<int64_t>(VK_FORMAT_MAX_ENUM);
+}
+
+bool evan::ASwapchainContext::hasAlphaChannel(VkFormat format) noexcept
+{
+	switch (format) {
+		case VK_FORMAT_R8G8B8A8_UNORM:
+		case VK_FORMAT_R8G8B8A8_SNORM:
+		case VK_FORMAT_R8G8B8A8_SRGB:
+		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_B8G8R8A8_SNORM:
+		case VK_FORMAT_B8G8R8A8_SRGB:
+		case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+		case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+		case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+		case VK_FORMAT_A2B10G10R10_SINT_PACK32:
+		case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+		case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+		case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+		case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+		case VK_FORMAT_R16G16B16A16_UNORM:
+		case VK_FORMAT_R16G16B16A16_SNORM:
+		case VK_FORMAT_R16G16B16A16_UINT:
+		case VK_FORMAT_R16G16B16A16_SINT:
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+		case VK_FORMAT_R32G32B32A32_UINT:
+		case VK_FORMAT_R32G32B32A32_SINT:
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+			return true;
+		default:
+			return false;
+	}
 }
 
 bool evan::ASwapchainContext::supportsColorAttachment(
