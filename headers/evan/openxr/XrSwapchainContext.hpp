@@ -367,6 +367,14 @@ namespace evan
 		VkSampleCountFlagBits _msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		/**
+		 * @brief The color format shared by the swapchain and the render pass.
+		 *
+		 * Selected once at construction so recreation cannot pick a different
+		 * format and invalidate the render pass or the graphics pipelines.
+		 */
+		VkFormat _swapchainFormat = VK_FORMAT_UNDEFINED;
+
+		/**
 		 * @brief Whether every view renders into one layered swapchain.
 		 *
 		 * Decided once at construction (and never changed: the render pass and

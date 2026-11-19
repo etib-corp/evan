@@ -452,7 +452,8 @@ namespace evan
 		void createRenderPass(
 			const std::shared_ptr<ADeviceBackend> &deviceBackend,
 			VkSampleCountFlagBits msaaSamples, ColorAttachmentMode mode,
-			uint32_t viewMask = 0);
+			uint32_t viewMask		 = 0,
+			VkFormat swapchainFormat = VK_FORMAT_UNDEFINED);
 
 		/**
 		 * @brief Selects the appropriate swapchain format from the available
@@ -480,6 +481,10 @@ namespace evan
 		 * available swapchain formats provided by the runtime or Vulkan
 		 * physical device. These formats should be evaluated to determine the
 		 * most suitable format for the swapchain.
+		 * @param requireAlpha A boolean flag indicating whether an alpha
+		 * channel is required in the selected swapchain format. If true, the
+		 * function will prioritize formats that include an alpha channel when
+		 * selecting the appropriate swapchain format.
 		 *
 		 * @return The selected VkFormat that best matches the requirements of
 		 * the rendering system for the swapchain. This format should be
@@ -498,7 +503,8 @@ namespace evan
 		 */
 		VkFormat
 			selectSwapchainFormat(VkPhysicalDevice physicalDevice,
-								  const std::vector<int64_t> &swapchainFormats);
+								  const std::vector<int64_t> &swapchainFormats,
+								  bool requireAlpha = false);
 
 		/**
 		 * @brief Finds a supported format from a list of candidates based on
@@ -560,6 +566,14 @@ namespace evan
 		 * @return True when the value can be narrowed to a VkFormat.
 		 */
 		static bool isPlausibleVkFormat(int64_t value);
+
+		/**
+		 * @brief Checks whether a Vulkan format carries an alpha channel.
+		 *
+		 * @param format The format to inspect.
+		 * @return True when the format has an alpha component.
+		 */
+		static bool hasAlphaChannel(VkFormat format) noexcept;
 
 		/**
 		 * @brief Checks whether a physical device supports a format as an
