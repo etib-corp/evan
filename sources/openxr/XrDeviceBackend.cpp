@@ -193,17 +193,20 @@ evan::Error
 		evan::checkedCast<evan::XrSwapchainContext>(swapchainContext);
 	xrContext.updateProjectionLayerViews();
 	auto &projectionLayerViews = xrContext.getProjectionLayerViews();
-	XrCompositionLayerProjection layer { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-	layer.space		= _space;
-	layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
-	layer.views		= projectionLayerViews.data();
+	XrCompositionLayerProjection projectionLayer {
+		XR_TYPE_COMPOSITION_LAYER_PROJECTION
+	};
+	projectionLayer.space = _space;
+	projectionLayer.viewCount =
+		static_cast<uint32_t>(projectionLayerViews.size());
+	projectionLayer.views = projectionLayerViews.data();
 	std::array<XrCompositionLayerBaseHeader *, 1> layers = {
-		reinterpret_cast<XrCompositionLayerBaseHeader *>(&layer)
+		reinterpret_cast<XrCompositionLayerBaseHeader *>(&projectionLayer)
 	};
 	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 	frameEndInfo.displayTime		  = _predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = _environmentBlendMode;
-	frameEndInfo.layerCount			  = (layer.viewCount > 0) ? 1u : 0u;
+	frameEndInfo.layerCount = (projectionLayer.viewCount > 0) ? 1u : 0u;
 	frameEndInfo.layers =
 		(frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
 
