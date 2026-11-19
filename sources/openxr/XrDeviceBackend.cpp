@@ -200,15 +200,45 @@ evan::Error
 	projectionLayer.viewCount =
 		static_cast<uint32_t>(projectionLayerViews.size());
 	projectionLayer.views = projectionLayerViews.data();
-	std::array<XrCompositionLayerBaseHeader *, 1> layers = {
-		reinterpret_cast<XrCompositionLayerBaseHeader *>(&projectionLayer)
+	const bool arEnabled  = isAREnabled();
+	const XrPassthroughLayerFB passthroughHandle =
+		_passthrough != nullptr ? _passthrough->getLayer() : XR_NULL_HANDLE;
+	const bool submitPassthrough = arEnabled && _passthrough != nullptr
+		&& _passthrough->isRunning() && passthroughHandle != XR_NULL_HANDLE;
+
+	XrCompositionLayerPassthroughFB passthroughLayer {
+		XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB
 	};
+	if (submitPassthrough) {
+		passthroughLayer.flags =
+			XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+		passthroughLayer.space		 = XR_NULL_HANDLE;
+		passthroughLayer.layerHandle = passthroughHandle;
+	}
+
+	// Passthrough is the background: submit it before the projection layer.
+	std::array<XrCompositionLayerBaseHeader *, 2> layers {};
+	uint32_t layerCount = 0;
+	if (submitPassthrough) {
+		layers[layerCount++] =
+			reinterpret_cast<XrCompositionLayerBaseHeader *>(&passthroughLayer);
+	}
+	if (projectionLayer.viewCount > 0) {
+		layers[layerCount++] =
+			reinterpret_cast<XrCompositionLayerBaseHeader *>(&projectionLayer);
+	}
+
+	if (arEnabled && !submitPassthrough) {
+		this->getLogger().warning()
+			<< "AR is enabled but the passthrough layer is not running; "
+			   "submitting projection only.";
+	}
+
 	XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 	frameEndInfo.displayTime		  = _predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = _environmentBlendMode;
-	frameEndInfo.layerCount = (projectionLayer.viewCount > 0) ? 1u : 0u;
-	frameEndInfo.layers =
-		(frameEndInfo.layerCount > 0) ? layers.data() : nullptr;
+	frameEndInfo.layerCount			  = layerCount;
+	frameEndInfo.layers = (layerCount > 0) ? layers.data() : nullptr;
 
 	XrResult result = xrEndFrame(_session, &frameEndInfo);
 	if (result != XR_SUCCESS) {
