@@ -135,12 +135,38 @@ evan::Error
 	}
 	_predictedDisplayTime = frameState.predictedDisplayTime;
 	if (frameState.shouldRender == XR_FALSE) {
+		const XrPassthroughLayerFB passthroughHandle =
+			_passthrough != nullptr ? _passthrough->getLayer() : XR_NULL_HANDLE;
+		const bool submitPassthrough = isAREnabled() && _passthrough != nullptr
+			&& _passthrough->isRunning() && passthroughHandle != XR_NULL_HANDLE;
+
+		XrCompositionLayerPassthroughFB passthroughLayer {
+			XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB
+		};
+		std::array<XrCompositionLayerBaseHeader *, 1> layers {};
+		uint32_t layerCount = 0;
+
+		if (submitPassthrough) {
+			passthroughLayer.flags =
+				XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+			passthroughLayer.space		 = XR_NULL_HANDLE;
+			passthroughLayer.layerHandle = passthroughHandle;
+			layers[layerCount++] =
+				reinterpret_cast<XrCompositionLayerBaseHeader *>(
+					&passthroughLayer);
+		}
+
 		XrFrameEndInfo frameEndInfo { XR_TYPE_FRAME_END_INFO };
 		frameEndInfo.displayTime		  = _predictedDisplayTime;
 		frameEndInfo.environmentBlendMode = _environmentBlendMode;
-		frameEndInfo.layerCount			  = 0;
-		frameEndInfo.layers				  = nullptr;
-		xrEndFrame(_session, &frameEndInfo);
+		frameEndInfo.layerCount			  = layerCount;
+		frameEndInfo.layers = (layerCount > 0) ? layers.data() : nullptr;
+
+		const XrResult endResult = xrEndFrame(_session, &frameEndInfo);
+		if (endResult != XR_SUCCESS) {
+			this->getLogger().error()
+				<< "Failed to end skipped OpenXR frame: " << endResult;
+		}
 		return Error::NotReady;
 	}
 	XrViewState viewState { XR_TYPE_VIEW_STATE };
