@@ -125,7 +125,8 @@ Per frame, `_ressourceManager->sync()` (`Renderer.cpp`, once per view):
 - For each material calls `_ressourceProvider->getShaderID(name)`, which scans
   `_elementsIDs` with `starts_with` — **O(M·E)**.
 
-Renderer scaling:
+Renderer scaling (static analysis of the pre-P3 build; the measured shape
+after #175–#177 follows):
 
 - Draw-call scaling: **O(N)** (no culling/batching/instancing).
 - CPU recording scaling: **O(N · V)** with a very large constant (logging +
@@ -135,6 +136,37 @@ Renderer scaling:
 - Object *addition* cost: `addMesh/addModel/addText` runs `sync()` and
   constructs a `GPUMesh` with staging buffer + `copyBuffer` →
   `vkQueueWaitIdle`. Adding N objects at once is **O(N·(M·E + GPU sync))**.
+
+**Measured shape after #175–#177** (`docs/POC_RESULTS_P3.md` §10, medians of
+five interleaved runs, Apple M3 / MoltenVK):
+
+| N | workload | `rec` (ms) | `rec`/mesh or draw | `draws` | `pass0` (ms) |
+| - | -------- | ---------- | ------------------ | ------- | ------------ |
+| 100 | one shared `GPUMesh`, merged | 0.25 | 2.5 µs per mesh | 1 | 0.08 |
+| 1000 | one shared `GPUMesh`, merged | 0.76 | 0.76 µs per mesh | 1 | 0.09 |
+| 100 | distinct meshes | 0.71 | 7.1 µs per draw | 100 | 0.13 |
+| 1000 | distinct meshes | 2.50 | 2.50 µs per draw | 1000 | 0.26 |
+
+Reference configuration (Debug + validation); the Release/validation-off
+control measures the same workloads at 0.20 ms (merged, N=1000) and 0.49 ms
+(1000 draws), i.e. 0.49 µs per draw. Three terms remain:
+
+- **`recbuild` — O(N), per mesh.** Frustum setup, culling, material cache
+  lookup, sort-key finalize and sort: 0.70 ms for 1000 meshes at N=1000 (0.17
+  ms in the control), independent of how many draws the scene needs. The
+  2026-10-29 record fitted `rec(N) ≈ 0.44 ms + 5.36 µs·N`; the per-mesh term
+  is now 0.76 µs (reference) and 0.20 µs (control) at N=1000, and `recbuild`
+  is the only term that still scales with the object count.
+- **`recenc` — O(draws), per draw.** 0.02 ms for the merged scene and 1.72 ms
+  for 1000 distinct meshes in the reference configuration (0.28 ms in the
+  control). This is the draw-submission term; 2.50 µs per draw in the
+  reference and 0.49 µs in the control, against 3.0 µs targeted by #176.
+- **GPU — O(draws) but small.** `pass0` 0.09 ms merged, 0.26 ms with 1000
+  distinct draws, so the recorder still saturates well before the GPU.
+
+Draw-call count therefore no longer decides the CPU cost of identical
+geometry (one instanced draw), and for distinct geometry it is priced at
+~0.5–2.5 µs per draw instead of a shared per-draw state rebind.
 
 ---
 
@@ -307,7 +339,7 @@ frame in flight during stereo.
 | - | ------- | -------- | ------ | ---------- | ------ |
 | P1.1 | No culling; all meshes drawn | `Renderer.cpp:675` | GPU + CPU linear in N | Medium | 3–5 days |
 | P1.2 | `Scene::getMeshes()` allocates per frame | `Scene.cpp:69` | O(N) allocation/copies per view | Easy | 1 day |
-| P1.3 | No batching/instancing; redundant state binds | `Renderer.cpp:675-748` | Draw-call + CPU overhead | Medium–Hard | 1–2 weeks |
+| P1.3 | Done: batching/instancing (geometry cache + shader-gated merged runs, #175); measured `draws` 1000 → 1 and `rec` 5.95 → 0.76 ms at N=1000 (`docs/POC_RESULTS_P3.md` §10) | `Renderer.cpp`; `GeometryCache` | Draw-call + CPU overhead (removed for identical geometry) | Medium–Hard | 1–2 weeks |
 | P1.4 | Done: `getDescriptorSets()` returns const reference | `GPUMaterial.hpp:150`; `Renderer.cpp:876,1035` | Allocation per material bind (removed) | Done | Done |
 | P1.5 | `vkQueueWaitIdle` per upload | `ADeviceBackend.cpp:233` | Queue drain on every upload | Medium | 3–5 days |
 | P1.6 | Done: `VkPipelineCache` created on the device, used by every pipeline and persisted across runs | `PipelineCache.hpp`; `DeviceContext.cpp`; `Renderer.cpp` | Startup + runtime compile | Done | Done |
@@ -332,11 +364,23 @@ A staged proposal for these items — what is already resolved at v2026.1.4,
 what remains, and the measurement gates for the gated ones — lives in
 [`DESIGN_P3_OPTIMIZATIONS.md`](DESIGN_P3_OPTIMIZATIONS.md).
 
-- Object pools/arenas for `RenderObject`/`GPUMesh`.
+- Object pools/arenas for `RenderObject`/`GPUMesh` — still open; the geometry
+  cache reduced startup churn to `+1/-0` for identical content and to
+  `+N/-0` for distinct content.
 - SoA/contiguous scene storage instead of `shared_ptr` maps.
 - `getPipelineLayer()` by value, `getUniformBuffers()` by value.
-- Multithreaded command recording.
-- Timeline semaphores, bindless/descriptor indexing.
+- Done: frame-build scratch reuse, dense object registry and getter cleanup
+  (WS1–WS3).
+- Multithreaded command recording — measured and kept deferred: with 1000
+  distinct meshes a stereo frame records ≈1.0 ms in the validation-off
+  control, ≈9 % of the 90 Hz budget, inside the ≈15 % trigger
+  (`docs/POC_RESULTS_P3.md` §10; the XR stereo per-view split is still
+  missing).
+- Timeline semaphores, bindless/descriptor indexing — measured and kept
+  deferred: `wait` ≤0.30 ms, one submission per frame, `ds` = 1 per draw run
+  at both N and both workloads.
+- Done: draw-list build and per-draw recording (#176) — `rec`/draw 5.95 →
+  2.50 µs in the reference configuration, 0.49 µs in the control.
 - Fix the `materialBound` correctness bug (`Renderer.cpp`) — done; the bind
   site now resolves the descriptor set once per command buffer.
 
@@ -375,8 +419,11 @@ record every N frames, and the `docs/PROFILING.md` tooling runbook.
 - **P0.4 (`sync`):** removes per-frame `O(M·E)` work and map allocations.
 - **P1.x:** draw-call and bandwidth reductions; effect grows with N.
 
-No measured numbers exist yet; all figures are engineering estimates from the
-static call graph.
+The estimates above predate the P3 instrumentation. The measured record is
+[`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §10: at N=1000 the validation-off
+control records a merged 1000-mesh scene in 0.20 ms and 1000 distinct meshes
+in 0.49 ms, against 5.95 ms on the pre-optimization build; `gpu pass0` is
+0.09–0.26 ms, so the CPU recorder, not the GPU, is still the wall.
 
 ---
 

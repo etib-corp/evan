@@ -171,6 +171,29 @@ and in debug builds (which otherwise log every vertex); `NO_COLOR=1` keeps the
 parsed values free of ANSI escapes. Keep the window size (800×600) and MSAA
 the same for every N.
 
+**Reference and control.** `enableValidationLayers` is `#ifdef NDEBUG`
+(`headers/evan/EvanPlatform.hpp`), so a Debug build records with
+`VK_LAYER_KHRONOS_validation` active and a Release build does not. Record both:
+
+- the **reference** (Debug + validation) is what the P3 criteria of
+  `docs/DESIGN_P3_OPTIMIZATIONS.md` §4 were written against;
+- the **control** (Release, validation off) is the engine's own recording
+  cost — at N=1000 with 1000 distinct meshes it measures 0.49 ms against
+  2.50 ms in the reference, so the layer and `-O0` are ~80 % of what the
+  reference reports.
+
+```sh
+cmake -S . -B build-release -DBUILD_FOR_GLFW=ON -DBUILD_FOR_MACOS=ON \
+  -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release --target GLFW-macos-poc -j
+scripts/run-poc.sh --build-root build-release
+scripts/run-poc.sh --build-root build-release --unique-meshes
+```
+
+New numbers are recorded on the control build and quoted with the reference
+measured in the same session; never compare a number from one configuration
+with a number from the other.
+
 Counters in a `evan stats:` line are **sums over the window**, not per-frame
 values (`cpu_ms`/`gpu_ms` are already per-frame averages), so divide them by
 `frames=` before comparing; `run-poc.sh` does that.
