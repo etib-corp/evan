@@ -8,7 +8,9 @@ design so the raw windows stay reviewable.
 
 Date: 2026-10-29 (numbers re-recorded after the shutdown/validation fixes
 described in §7; the first record of the same day was taken on the pre-fix
-build and is superseded)
+build and is superseded). §10 (2026-11-19) is the latest record: it re-runs
+the harness on the post-#175–#177 build and adds the Release/validation-off
+control.
 Harness: [`scripts/run-poc.sh`](../scripts/run-poc.sh)
 Workload: [`examples/GLFW-macos-poc`](../examples/GLFW-macos-poc) with
 `EVAN_POC_MESHES=100` / `EVAN_POC_MESHES=1000`
@@ -118,6 +120,9 @@ on an idle machine, and compare runs from the same session.
 
 ## 6. Decision
 
+The decisions below are the ones this record was written for (2026-10-29,
+pre-optimization build). They were re-taken after #175–#177 in §10.
+
 | Workstream | Trigger (design §4) | Measured | Decision |
 | ---------- | ------------------- | -------- | -------- |
 | WS4 — parallel command recording | XR stereo per-view `rec` > ≈15 % of the frame CPU budget (≈1.7 ms at 90 Hz) | desktop single view, no per-view split; `rec` 0.76–1.19 ms at N=100 and 6.2–12.9 ms at N=1000, growing linearly with the draw count | **keep serial** — a desktop run cannot answer the trigger; re-run this harness on the OpenXR stereo build |
@@ -161,7 +166,10 @@ on an idle machine, and compare runs from the same session.
   `≤ 0.45 ms` acceptance holds but the delta stays inside the GPU timer's
   noise: the cubes are ~13 px, and the CPU records draws ~10× more
   expensively than the GPU executes them, so the double-sided fill this
-  removes only becomes a wall once #175 collapses the draw count.
+  removes only becomes a wall once #175 collapses the draw count. With #175
+  in (§10) the draw count has collapsed and it still is not: `pass0` at
+  N=1000 is 0.09 ms (merged scene) to 0.27 ms (1000 distinct meshes) against
+  `rec` 0.76–2.50 ms, so the CPU recorder stays the wall.
 - **Fixed while recording this.** The shutdown abort (`std::system_error:
   mutex lock failed`), the 30 objects leaked past `vkDestroyDevice`, the
   dynamic-cull-mode violations and the descriptor-set-free violation are gone
@@ -332,4 +340,205 @@ The remaining per-draw cost is almost entirely `recenc` (1.57–1.62 ms for
 1000 draws, i.e. ~1.6 µs per draw at `-O0` with validation active). It is now
 the dominant term, which is consistent with the validation-layer overhead
 noted in §5: the Release/validation-off control is the next measurement, not
-another change to the shared per-item code.
+another change to the shared per-item code. §10 records it.
+
+## 10. Post-optimization record and control (2026-11-19)
+
+§3 is the 2026-10-29 baseline on the per-object-`GPUMesh` build, §8 adds the
+geometry cache and the instanced merge (#175) and §9 adds the draw-list build
+and per-draw recording work (#176). None of them records the engine *after*
+the milestone, and §9.3 leaves the Release/validation-off control as the next
+measurement. This section closes both gaps: the same harness on the build
+after #175–#177, against the pre-optimization build in the same session, with
+the control next to the reference.
+
+**Environment.** Apple M3 (macOS 27.2.1, build 26B131, Darwin 27.2.0, arm64),
+MoltenVK from Vulkan SDK 1.4.304.1, 800×600, default MSAA, single view,
+`EVAN_STATS=1 EVAN_STATS_INTERVAL=60`, `UTILITY_LOG_LEVEL=info`,
+`NO_COLOR=1`, `scripts/run-poc.sh` defaults (420 frames per N, 2 warm-up
+windows, 5 kept windows). Host load average 3.2–7.7 during the session — the
+host was **not** idle, see §10.5.
+
+**Configurations.**
+
+| Label | Build | Validation | Purpose |
+| ----- | ----- | ---------- | ------- |
+| before | `82ee737` (main before #175), `CMAKE_BUILD_TYPE=Debug` | `VK_LAYER_KHRONOS_validation` on | the pre-optimization baseline |
+| reference | current tree, `CMAKE_BUILD_TYPE=Debug` | on | comparable with §1–§9 |
+| control | current tree, `CMAKE_BUILD_TYPE=Release` | off | the engine's own cost |
+
+The validation layer is selected by `NDEBUG` (`EvanPlatform.hpp`), and the
+Release build defines it, so the control build has no validation layer, no
+debug messenger and no `-O0`.
+
+**Method.** Five runs per configuration, interleaved as
+`before, reference/shared, reference/unique, control/shared, control/unique`
+per round, so host load hits every side of every comparison equally. Each
+table below quotes the **median of the five runs**; §10.3 has the per-run
+spread. The pre-#175 build has no `EVAN_POC_UNIQUE_MESHES` knob and does not
+need one: it uploads one `GPUMesh` per object even for identical content, so
+its default run already *is* the per-draw workload (1000 draws for 1000
+meshes, `inst=0`). It also predates the `recbuild`/`recenc` split, so those
+cells are `–`.
+
+### 10.1 Reference configuration (Debug + validation)
+
+Shared-geometry workload (the default, #175):
+
+| N | build | `rec` (ms) | `rec`/mesh (µs) | `recbuild` (ms) | `recenc` (ms) | `draws` | `inst` | `pso` | `ds` | start `mesh_churn` | steady `mesh_churn` | `uploadwaits` | `culled` | `pass0` (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | before | 1.62 | 16.2 | – | – | 100 | 0 | 1 | 1 | +100/-0 | +0/-0 | 0 | 0 | 0.13 |
+| 100 | after | 0.25 | 2.5 | 0.14 | 0.04 | 1 | 1 | 1 | 1 | +1/-0 | +0/-0 | 0 | 0 | 0.08 |
+| 1000 | before | 5.95 | 5.95 | – | – | 1000 | 0 | 1 | 1 | +1000/-0 | +0/-0 | 0 | 0 | 0.23 |
+| 1000 | after | 0.76 | 0.76 | 0.70 | 0.02 | 1 | 1 | 1 | 1 | +1/-0 | +0/-0 | 0 | 0 | 0.09 |
+
+Distinct-geometry workload (`EVAN_POC_UNIQUE_MESHES=1`, #176):
+
+| N | build | `rec` (ms) | `rec`/draw (µs) | `recbuild` (ms) | `recenc` (ms) | `draws` | `inst` | `pso` | `ds` | start `mesh_churn` | steady `mesh_churn` | `uploadwaits` | `culled` | `pass0` (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | before | 1.62 | 16.2 | – | – | 100 | 0 | 1 | 1 | +100/-0 | +0/-0 | 0 | 0 | 0.13 |
+| 100 | after | 0.71 | 7.1 | 0.16 | 0.46 | 100 | 0 | 1 | 1 | +100/-0 | +0/-0 | 0 | 0 | 0.13 |
+| 1000 | before | 5.95 | 5.95 | – | – | 1000 | 0 | 1 | 1 | +1000/-0 | +0/-0 | 0 | 0 | 0.23 |
+| 1000 | after | 2.50 | 2.50 | 0.59 | 1.72 | 1000 | 0 | 1 | 1 | +1000/-0 | +0/-0 | 0 | 0 | 0.26 |
+
+`mesh_churn` is the startup window (`uploadwaits=1`) and the steady state;
+`uploadwaits` the steady state. `pso`/`ds` is one bind per draw *run*: the
+engine registers a debug-ray object when the pointer enters the window, which
+adds a second run and makes those counters read 2 (and `draws` N→N+1) in that
+run. It registered in four of the fifty workload runs, all in the session's
+first round; the medians do not show it.
+
+Paired per-round ratios (before ÷ after, same workload and round): 7.7–9.4×
+at N=1000 and 3.9–6.7× at N=100 on the shared workload, 2.2–2.4× and
+1.7–2.3× on the distinct-geometry one. The N=100 shared low end comes from
+the one pre-optimization run that reproduced the idle-host value of §3
+(1.00 ms), the rest of its spread is host load.
+
+### 10.2 Control (Release, validation off)
+
+| Workload | N | `rec` (ms) | `rec`/draw (µs) | `recbuild` (ms) | `recenc` (ms) | `draws` | `inst` | `pso`/`ds` | `pass0` (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| shared | 100 | 0.048 | 0.48 per mesh | 0.022 | 0.010 | 1 | 1 | 1 / 1 | 0.11 |
+| shared | 1000 | 0.200 | 0.20 per mesh | 0.172 | 0.012 | 1 | 1 | 1 / 1 | 0.11 |
+| unique | 100 | 0.116 | 1.16 | 0.028 | 0.064 | 100 | 0 | 1 / 1 | 0.19 |
+| unique | 1000 | 0.492 | 0.49 | 0.170 | 0.284 | 1000 | 0 | 1 / 1 | 0.74 |
+
+What the control separates:
+
+- **The remaining `rec` is mostly not the engine.** At N=1000 with 1000
+  distinct meshes the reference measures 2.50 ms and the control 0.49 ms, a
+  factor of 5.1 (4.9–5.2 in the last four rounds). The 2.0 ms difference is
+  the `-O0` build plus validation-layer interception of every recorded
+  command — the recorder's own cost is ~0.5 µs per draw.
+- **The optimizations still hold without validation.** The control keeps the
+  same shape: merged scene 0.20 ms / 1 draw, 1000 distinct meshes 0.49 ms /
+  1000 draws, `recbuild` ≈ 0.17 ms in both (the draw-list build is per mesh,
+  so it does not collapse with the merge).
+- **`pass0` is not comparable across the two columns.** The control ran last
+  in each round and its 1000-draw `pass0` (0.53–0.78 ms) is higher than the
+  reference's (0.24–0.47 ms) for identical GPU work; the timer is coarse
+  (§7). Read `pass0` inside one configuration only.
+
+**Configuration future numbers must use.** Record new numbers on the
+**control build (Release, validation off)** — that is the engine's cost, and
+it is the only number that answers "did this change the engine". Keep the
+Debug/validation reference in the same session as a regression baseline
+against §1–§9, because the two differ by ~5× on `rec`. A number quoted without
+its configuration is meaningless from here on.
+
+### 10.3 Spread across runs
+
+Five runs per configuration, 5 steady-state windows each:
+
+| Configuration | N | `rec` (ms) | `recbuild` (ms) | `recenc` (ms) | `pass0` (ms) |
+| --- | --- | --- | --- | --- | --- |
+| before | 100 | 1.00–1.67 | – | – | 0.11–0.26 |
+| before | 1000 | 5.92–6.17 | – | – | 0.21–0.44 |
+| reference, shared | 100 | 0.23–0.30 | 0.14–0.17 | 0.04–0.05 | 0.08–0.22 |
+| reference, shared | 1000 | 0.66–0.77 | 0.59–0.73 | 0.02–0.03 | 0.08–0.25 |
+| reference, unique | 100 | 0.61–0.75 | 0.12–0.16 | 0.38–0.47 | 0.11–0.23 |
+| reference, unique | 1000 | 2.45–2.86 | 0.58–0.60 | 1.70–2.01 | 0.24–0.47 |
+| control, shared | 100 | 0.04–0.06 | 0.02 | 0.01 | 0.08–0.23 |
+| control, shared | 1000 | 0.09–0.24 | 0.08–0.20 | 0.00–0.02 | 0.09–0.23 |
+| control, unique | 100 | 0.07–0.14 | 0.02–0.03 | 0.04–0.08 | 0.16–0.29 |
+| control, unique | 1000 | 0.30–0.52 | 0.09–0.18 | 0.17–0.30 | 0.53–0.78 |
+
+`recbuild` in the reference unique workload is the stable one (0.58–0.60 ms
+at N=1000): it is per-mesh work, and 1000 meshes cost the same every run. The
+control is a ~0.2–0.5 ms quantity, so a single timer/load step is a large
+share of its range; its N=1000 values drifted upward across the session
+(0.30 → 0.52 ms) while the reference did not (2.45–2.86 ms), which is the
+expected shape of background load on a small number.
+
+`draws`, `inst`, `pso`, `ds`, `mesh_churn`, `uploadwaits` and `culled` are
+stable across all 25 runs: 1 draw / `inst=1` for the merged scene and one
+draw per mesh for the distinct-geometry one, `pso`/`ds` one bind per run
+(2 only in the runs with the debug ray), startup churn as listed in §10.1,
+steady churn `+0/-0`, `uploadwaits` 0, `culled` 0 — except one shared N=1000
+run that reported `vis` 905 / `culled` 96 per frame throughout, i.e. the view
+in that run covered the grid differently; it is the same run that registered
+the ray, and its `recbuild` (0.59 ms) is the lowest of the five.
+
+### 10.4 Reading
+
+**Milestone exit criteria** (issue acceptance lists):
+
+| Criterion | Target | Measured | Verdict |
+| --- | --- | --- | --- |
+| #175 N=1000 `draws` | ≤ 2 | 1 (2 with the debug ray) | met |
+| #175 N=1000 `instancedDraws` | ≥ 1 | 1 per frame | met |
+| #175 N=1000 `rec` | ≤ 1.0 ms | 0.76 reference, 0.20 control | met |
+| #175 `pso`, `ds` | 1 / 1 | 1 / 1 per run | met |
+| #175 startup `mesh_churn`, steady, `uploadwaits` | +1/0, +0/-0, 0 | +1/-0, +0/-0, 0 | met |
+| #175 image, shader gate | identical, never merge without instance inputs | §8.3 | met |
+| #176 unique N=1000 `rec`/draw | ≤ 3.0 µs | 2.50 reference, 0.49 control | met |
+| #176 unique N=1000 `rec` | ≤ 3.5 ms | 2.50 | met |
+| #176 `recbuild` share | ≤ 25 % of `rec` | 23.4 % (0.586 / 2.500) | met |
+| #176 mergeable `draws`, `rec` | ≤ 2, ≤ 1.0 ms | 1, 0.76 | met |
+| #176 draw order, culling, image; phases parsed | unchanged; `run-poc.sh` parses them | §9.3; harness | met |
+| #177 N=1000 `pass0` | ≤ 0.45 ms | 0.09 merged, 0.26 distinct (median); 0.47 worst run | met at the median, one run one timer step over |
+| #177 closed meshes, `None` override, no VUID | identical; override works; clean | §7, §9; 25 runs, no validation output, `rc=0` | met |
+| `ctest` | green | 390/390 | met |
+
+**The milestone's per-draw target is met.** At N=1000 with 1000 distinct
+meshes the recorder costs 2.50 µs per draw in the reference configuration and
+0.49 µs in the control; #176 targeted 3.0 µs from a measured 5.36 µs, and the
+pre-optimization build re-measures at 5.95 µs in the same session.
+
+**#179's trigger did not fire.** It asks for a distinct-geometry N=1000 run
+that *still* spends more than 3.0 µs of `rec` per draw, or a 50 % recording
+budget at the target refresh below the scene's draw count, *with* `recenc`
+dominating. `recenc` does dominate (1.72 of 2.50 ms in the reference, 0.28 of
+0.49 ms in the control — 58–69 %), but the absolute numbers are inside the
+target: 2.50 µs/draw in the reference and 0.49 µs in the control, and 50 % of
+a 120 Hz frame (4.17 ms) holds 1667 draws in the reference configuration and
+≈8500 in the control, both above the 1000 draws of the workload. GPU-driven
+multi-draw stays a design note.
+
+### 10.5 Caveats
+
+- **Host load.** The session ran at load average 3.2–7.7, not the <1 of the
+  2026-10-29 record, so absolute `rec` values are inflated. The
+  pre-optimization build re-measures at 5.92–6.17 ms for N=1000 against
+  5.80 ms in §3, and at 1.00–1.67 ms for N=100 against 0.98 ms — the low end
+  reproduces the idle record, the rest is load. Every before/after and
+  reference/control comparison above is therefore *within* one round, and the
+  ratios are what transfer; re-recording on an idle host should move the
+  absolute numbers down, not reorder them.
+- **Validation cost is not isolated from `-O0`.** `enableValidationLayers` is
+  `#ifdef NDEBUG`, so the control is Release *and* validation-off. A ~5×
+  factor is the sum of both. Separating them needs a Release build with
+  `NDEBUG` undefined and the layer force-enabled
+  (`VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`); that is a build-system
+  change and is not done here.
+- **GPU timer.** `pass0` moves in ~0.1 ms steps and the cubes are ~13 px at
+  N=1000; treat it as an order-of-magnitude signal within one configuration,
+  as in §7.
+- **Two objects outside the workload.** The debug-ray object (first
+  mouse-motion event) adds one non-mergeable draw, one pipeline bind and one
+  descriptor bind in the runs where it registers, which is why `draws` reads
+  N+1 and `pso`/`ds` read 2 there.
+- **Still missing for WS4.** A per-view `rec` split on the OpenXR stereo
+  build. §10.2 now bounds the engine-side recording cost well enough to keep
+  serial recording deferred (§4 of the design), but the per-view number is
+  still the only input that closes the trigger.

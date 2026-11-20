@@ -59,6 +59,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Geometry sharing and instanced merging (issue #175): objects built from
+  identical mesh content (vertices, indices, counts and material) now share
+  one `GPUMesh` through a content-keyed cache instead of uploading a copy
+  each, and the renderer merges consecutive draws that share geometry,
+  pipeline and material into one instanced draw when the vertex shader
+  declares the per-instance model matrix (locations 3–6). At N=1000 identical
+  cubes this takes `draws` from 1000 to 1, startup `mesh_churn` from
+  +1000 to +1 and `rec` from 5.95 ms to 0.76 ms
+  (`docs/POC_RESULTS_P3.md` §10). Shaders without the instance input
+  (`default.vert`, `text.vert`) are never merged; `Engine::setInstancingEnabled`
+  still turns the merge off.
+- Per-draw measurement and workload (issue #176): `rec` is split into
+  `recbuild` (draw-list build, sort) and `recenc` (state binds, draw emission)
+  in `FrameStats` and in the `evan stats:` line, and the PoC examples take
+  `EVAN_POC_UNIQUE_MESHES=1` (one distinct mesh per cube, so the draw count
+  cannot fall) with `scripts/run-poc.sh --unique-meshes` to drive it. `rec`
+  per draw at N=1000 drops from 5.95 µs to 2.50 µs in the reference
+  configuration and to 0.49 µs in the validation-off control.
+- Face-culling policy (issue #177): `RenderSettings::cullMode`
+  (`CullMode { None, Back, Front }`, default `Back`), `Renderer`/
+  `Engine::setMaterialCullMode()` for double-sided content and
+  `EVAN_CULL_MODE=none|back|front` for A/B runs. Culling is static pipeline
+  state with `VK_FRONT_FACE_COUNTER_CLOCKWISE`, the winding settled from the
+  projection (`TestRenderSettings.SampleCubeOutwardWindingIsFrontFacing`).
+  The PoC examples take `EVAN_POC_QUAD` / `EVAN_POC_QUAD_DOUBLE_SIDED` to
+  exercise the per-material `CullMode::None` override.
 - `IPlatform`: AR capability surface — `isARSupported()`, `isAREnabled()` and
   `setAREnabled()` — with desktop-safe defaults (`false` / `false` /
   `Error::Unsupported`), so GLFW platforms are gated without per-platform
@@ -193,8 +219,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `VK_EXT_extended_dynamic_state`/Vulkan 1.3 and never called
   `vkCmdSetCullMode`, so the cull state was undefined at draw time
   (`VUID-VkGraphicsPipelineCreateInfo-pDynamicStates-03378`,
-  `VUID-vkCmdDrawIndexed-None-07840`). Culling is now part of the static
-  pipeline state and disabled, because the projection flips Y for Vulkan.
+  `VUID-vkCmdDrawIndexed-None-07840`). Culling is now static pipeline state;
+  back-face culling is enabled with `VK_FRONT_FACE_COUNTER_CLOCKWISE`, the
+  winding settled from the projection (see the `RenderSettings::cullMode`
+  entry above).
 - The descriptor pool is created with
   `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT`; `GPUMaterial` frees its
   sets individually, which the spec only allows for such a pool

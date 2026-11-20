@@ -1,7 +1,8 @@
 # Design: P3 optimizations — data-oriented storage, frame-build scratch and advanced Vulkan features
 
 Status: partially implemented (WS1–WS3 landed; WS4–WS6 measured on the
-2026-10-29 PoC and kept deferred — see §4 and §9)
+2026-10-29 PoC, re-measured after the 2026-11-19 optimizations with a
+validation-off control, and kept deferred — see §4 and §9)
 Scope: evan (`Renderer`, `RenderObject`, `GPUMesh`, `Frame`, `DeviceContext`/
 `ADeviceBackend`, `TransferManager`); guillaume/xider only through the
 unchanged public `Engine` API (plus opt-in shader artifacts for the bindless
@@ -432,7 +433,8 @@ Reading:
   measurement: the engine registers a debug ray mesh on the first
   mouse-motion event.
 
-Decision against the trigger table:
+Decision against the trigger table (superseded by the post-optimization
+record below):
 
 | Workstream | Measured on this run | Decision |
 | ---------- | -------------------- | -------- |
@@ -448,6 +450,71 @@ back-face culling is static pipeline state
 (`VK_CULL_MODE_BACK_BIT` with `VK_FRONT_FACE_COUNTER_CLOCKWISE`) and is on by
 default, with a per-material `CullMode::None` escape hatch for double-sided
 content (see §9).
+
+### Post-optimization results (macOS / MoltenVK, 2026-11-19)
+
+The gate above was taken before the changes it triggered (§3.1a geometry
+sharing, §3.1b draw-list and per-draw work) and before #177 settled culling.
+The same harness was re-run afterwards, with a control build next to the
+reference so the engine's own recording cost is separable from the validation
+layer the reference enables. Full record, per-run spread and caveats:
+[`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §10.
+
+Reference = Debug with `VK_LAYER_KHRONOS_validation`; control = Release, no
+validation layer; before = `82ee737` (main before #175), Debug with
+validation. Medians of five interleaved runs, five steady-state windows each,
+Apple M3, macOS 27.2.1, 800×600, one view:
+
+| Workload | N | build | `rec` (ms) | `rec`/draw (µs) | `recbuild` (ms) | `recenc` (ms) | `draws` | `inst` | `pso` | `ds` | `pass0` (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| shared (#175) | 100 | before | 1.62 | 16.2 per mesh | – | – | 100 | 0 | 1 | 1 | 0.13 |
+| shared | 100 | after | 0.25 | 2.5 per mesh | 0.14 | 0.04 | 1 | 1 | 1 | 1 | 0.08 |
+| shared | 1000 | before | 5.95 | 5.95 per mesh | – | – | 1000 | 0 | 1 | 1 | 0.23 |
+| shared | 1000 | after | 0.76 | 0.76 per mesh | 0.70 | 0.02 | 1 | 1 | 1 | 1 | 0.09 |
+| distinct (#176) | 100 | before | 1.62 | 16.2 | – | – | 100 | 0 | 1 | 1 | 0.13 |
+| distinct | 100 | after | 0.71 | 7.1 | 0.16 | 0.46 | 100 | 0 | 1 | 1 | 0.13 |
+| distinct | 1000 | before | 5.95 | 5.95 | – | – | 1000 | 0 | 1 | 1 | 0.23 |
+| distinct | 1000 | after | 2.50 | 2.50 | 0.59 | 1.72 | 1000 | 0 | 1 | 1 | 0.26 |
+| shared | 1000 | control | 0.20 | 0.20 per mesh | 0.17 | 0.01 | 1 | 1 | 1 | 1 | 0.11 |
+| distinct | 1000 | control | 0.49 | 0.49 | 0.17 | 0.28 | 1000 | 0 | 1 | 1 | 0.74 |
+
+The host ran at load average 3.2–7.7, not the <1 of the record above; the
+before build re-measures at 5.92–6.17 ms for N=1000 against 5.80 ms, so the
+ratios transfer and the absolutes are load-inflated. `pass0` is only
+comparable inside one configuration (the control ran last in each round and
+the GPU timer is coarse).
+
+Reading:
+
+- **The per-draw target is met.** 2.50 µs per draw at N=1000 with 1000
+  distinct meshes in the reference configuration, 0.49 µs in the control,
+  against a target of 3.0 µs from the 5.36 µs it was set on — and the
+  pre-optimization build re-measures at 5.95 µs in the same session.
+- **Most of what is left is not the engine.** The 2.0 ms gap between 2.50
+  and 0.49 ms is the `-O0` build plus validation-layer interception of every
+  recorded command; the control measures the recorder itself.
+- **The merged scene is per-mesh work now.** 0.76 ms for 1000 meshes, of
+  which 0.70 ms is `recbuild` and 0.02 ms the single draw.
+- **#179's trigger did not fire.** `recenc` dominates the distinct-geometry
+  workload (1.72 of 2.50 ms, 69 %; 0.28 of 0.49 ms, 58 % in the control), as
+  the issue anticipated, but the per-draw cost is inside 3.0 µs and 50 % of a
+  120 Hz frame (4.17 ms) holds 1667 draws in the reference configuration and
+  ≈8500 in the control, both above the workload's 1000. GPU-driven multi-draw
+  stays a design note.
+
+Decision against the trigger table, refreshed:
+
+| Workstream | Measured on this run | Decision |
+| ---------- | -------------------- | -------- |
+| WS4 parallel recording | 1000 distinct meshes cost 0.49 ms of `rec` in the control — ≈4 % of a 90 Hz frame per view, ≈9 % for two — and 2.50 ms in the reference, where the validation layer dominates | **keep serial** — the engine cost is inside the ≈15 % per-view threshold even before a per-view split; the XR stereo run is still the only configuration that closes the trigger |
+| WS5 timeline semaphores | `wait` 0.01–0.30 ms, no `renderwait`, one submission per frame | **keep binary fence** — no ordering need is visible |
+| WS6 bindless | `ds` = 1 per run at both N and on both workloads, independent of the draw count | **keep per-material sets** — binds scale with neither objects nor draw runs |
+
+**Which configuration future numbers use.** Record and quote new numbers on
+the control build (Release, validation off): that is the engine's cost. Keep
+the Debug/validation reference as a same-session baseline while §9 is the
+comparison point, because the two differ by ~5× on `rec`; a number without its
+configuration is not comparable.
 
 ## 5. File-by-file change map
 
@@ -626,4 +693,11 @@ AGENTS.md checklist applies per PR: build one platform/backend combo, `ctest`,
   an XR stereo per-view `rec`), WS5 stays on binary fences (`wait` 0.02 ms,
   one submission per frame), WS6 stays per-material (`ds` = 1 per frame at
   both N). Reopening one of them requires the measurement named in the
-  trigger table, not a code change.
+  trigger table, not a code change. Re-measured on 2026-11-19 after WS1b,
+  WS1c and the culling policy ([`POC_RESULTS_P3.md`](POC_RESULTS_P3.md) §10):
+  the validation-off control records 1000 distinct meshes in 0.49 ms
+  (0.49 µs per draw) and the merged scene in 0.20 ms, so WS4's per-view cost
+  is ≈4 % of a 90 Hz frame — inside its threshold — WS5 still has no ordering
+  need and WS6's `ds` is still 1 per draw run. The decisions stand with
+  positive evidence; the XR stereo per-view split remains the only missing
+  input.

@@ -51,12 +51,15 @@ cmake --build build --target GLFW-macos-base
 
 The P3 proof-of-concept workload used to fill the trigger table of
 `docs/DESIGN_P3_OPTIMIZATIONS.md` §4. It is the same GLFW/macOS sample as
-`GLFW-macos-base` plus an N-object scene driven by two knobs, both `0` by
+`GLFW-macos-base` plus an N-object scene driven by these knobs, all `0` by
 default:
 
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
 | `EVAN_POC_MESHES` | `0` | Cubes to spawn: one shared local-space cube mesh, one `Primitive` per object, laid out on a grid in front of the camera with `Engine::setObjectTransform`. |
+| `EVAN_POC_UNIQUE_MESHES` | `0` | `1` gives every cube its own geometry (one perturbed vertex), so the geometry cache cannot share one `GPUMesh` and the draw count cannot collapse. This is the per-draw workload: only the per-draw CPU cost matters. |
+| `EVAN_POC_QUAD` | `0` | `1` adds one single-sided quad that faces away from the camera. |
+| `EVAN_POC_QUAD_DOUBLE_SIDED` | `1` | With `EVAN_POC_QUAD=1`, applies the `CullMode::None` material override so the quad is visible; `0` leaves it under the default back-face culling, so it must disappear. |
 | `EVAN_POC_FRAMES` | `0` | Stop after that many frames and exit. |
 
 ### Building
@@ -79,12 +82,14 @@ EVAN_STATS=1 EVAN_STATS_INTERVAL=60 \
 ```
 
 `scripts/run-poc.sh` wraps this for N=100 and N=1000, averages the report
-windows and writes a markdown table; see `docs/PROFILING.md` §6.
+windows and writes a markdown table; `--unique-meshes` selects the per-draw
+workload. See `docs/PROFILING.md` §6.
 
 ## GLFW-linux-poc
 
 The same P3 proof-of-concept workload as `GLFW-macos-poc`, on the Linux
-backend. It takes the same `EVAN_POC_MESHES` / `EVAN_POC_FRAMES` knobs.
+backend. It takes the same `EVAN_POC_MESHES`, `EVAN_POC_UNIQUE_MESHES`,
+`EVAN_POC_QUAD` / `EVAN_POC_QUAD_DOUBLE_SIDED` and `EVAN_POC_FRAMES` knobs.
 
 ### Building
 

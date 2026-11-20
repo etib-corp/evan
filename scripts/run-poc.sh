@@ -542,24 +542,31 @@ fi
 		echo ""
 	fi
 	awk -F'\t' '
+		function num(value, fmt) {
+			if (value == "" || value == "n/a")
+				return "n/a"
+			return sprintf(fmt, value)
+		}
+
 		NR == 1 {
-			print "| N | windows | frames/window | rec (ms) | recbuild (ms) | recenc (ms) | submit (ms) | wait (ms) | ubo (ms) | pres (ms) | gpu pass0 (ms) | draws calls | pso | ds | mesh_churn (per frame) | uploadwaits | vis | culled |"
-			print "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+			print "| N | windows | frames/window | rec (ms) | recbuild (ms) | recenc (ms) | submit (ms) | wait (ms) | ubo (ms) | pres (ms) | gpu pass0 (ms) | draws calls | inst | pso | ds | mesh_churn (per frame) | uploadwaits | vis | culled |"
+			print "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
 			next
 		}
 		{
-			gpu = $16
 			churn = "n/a"
 			if ($27 != "n/a" && $28 != "n/a")
 				churn = sprintf("+%.1f/-%.1f", $27, $28)
-			printf "| %s | %s | %.0f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | ",
-				$1, $2, $3 / $2, $9, $10, $11, $12, $7, $8, $14
-			if (gpu == "n/a")
-				printf "n/a | "
-			else
-				printf "%.2f | ", gpu
-			printf "%.0f | %.0f | %.0f | %s | %.0f | %.0f | %.0f |\n",
-				$21, $23, $24, churn, $29, $18, $19
+			# A build without the recbuild/recenc phases reports "n/a"; print
+			# that instead of formatting it as 0.00.
+			printf "| %s | %s | %.0f | %s | %s | %s | %s | %s | %s | %s | ",
+				$1, $2, $3 / $2, num($9, "%.2f"), num($10, "%.2f"),
+				num($11, "%.2f"), num($12, "%.2f"), num($7, "%.2f"),
+				num($8, "%.2f"), num($14, "%.2f")
+			printf "%s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				num($16, "%.2f"), num($21, "%.0f"), num($22, "%.0f"),
+				num($23, "%.0f"), num($24, "%.0f"), churn,
+				num($29, "%.0f"), num($18, "%.0f"), num($19, "%.0f")
 		}
 	' "$SUMMARY_TSV"
 	echo ""
@@ -593,7 +600,7 @@ awk -F'\t' -v window_label="$WINDOW_LABEL" -v interval="$INTERVAL" '
 		printf "  wait+renderwait share:           %.1f %% (WS5 trigger: these dominate the frame)\n", wait_share
 		printf "  descriptor binds per frame:      %.0f (WS6 trigger: grows with material count)\n", ds
 		if (rec != "n/a" && recbuild != "n/a" && rec > 0)
-			printf "  recbuild share of rec:           %.1f %% (per-draw target: <= 25 %%)\n", 100 * recbuild / rec
+			printf "  recbuild share of rec:           %.1f %% (per-draw target: <= 25 %% when draws == meshes)\n", 100 * recbuild / rec
 		if (rec != "n/a" && vis > 0)
 			printf "  rec per mesh:                    %.2f us (per-draw target: <= 3.0 us when draws == meshes)\n", rec * 1000 / vis
 
